@@ -27,7 +27,7 @@ const IndexLazyRoute = IndexLazyImport.update({
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/index.lazy').then((d) => d.Route))
 
-export const RoomRoomIdLazyRoute = RoomRoomIdLazyImport.update({
+const RoomRoomIdLazyRoute = RoomRoomIdLazyImport.update({
   id: '/room/$roomId',
   path: '/room/$roomId',
   getParentRoute: () => rootRoute,
