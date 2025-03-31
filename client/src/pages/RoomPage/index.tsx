@@ -1,9 +1,11 @@
 import { useParams } from "@tanstack/react-router";
-import { ReactElement, useEffect, useRef } from "react";
+import { JSXElementConstructor, ReactElement, useEffect, useRef } from "react";
 
 import { useJoinRoomMutation, useRoomSubscription } from "@/api";
-import { Deck, PageLayout, Room } from "@/components";
 import { CreateUserDialog } from "@/components/CreateUserDialog";
+import { Deck } from "@/components/Deck";
+import { PageLayout } from "@/components/PageLayout";
+import { Room } from "@/components/Room";
 import { VoteDistributionChart } from "@/components/vote-distribution-chart";
 import { useAuth } from "@/contexts";
 import { useToast } from "@/hooks/use-toast";
@@ -68,7 +70,7 @@ export function RoomPage(): ReactElement {
   const room = subscriptionData?.room || joinRoomData?.joinRoom;
 
   return (
-    <>
+    <div>
       <PageLayout room={room} users={room?.users}>
         {room && (
           <>
@@ -91,6 +93,6 @@ export function RoomPage(): ReactElement {
         )}
       </PageLayout>
       <CreateUserDialog handleJoinRoomMutation={handleJoinRoomMutation} />
-    </>
-  );
+    </div>
+  ) as ReactElement<string | JSXElementConstructor<ReactElement>>;
 }
