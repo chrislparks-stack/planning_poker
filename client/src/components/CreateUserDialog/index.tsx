@@ -41,12 +41,22 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({ onJoin }) => {
 
   const [createUserMutation, { loading }] = useCreateUserMutation({
     onCompleted: (data) => {
+      const sortedSelectedCards = [...selectedCards].sort(
+        (a, b) =>
+          DEFAULT_CARDS.findIndex((card) => card === a) -
+          DEFAULT_CARDS.findIndex((card) => card === b),
+      );
+
+      console.log(data.createUser);
+
       login?.({
         id: data.createUser.id,
         username: data.createUser.username,
       });
+
       setOpen(false);
-      onJoin(data.createUser, selectedCards);
+      onJoin(data.createUser, sortedSelectedCards);
+
       toast({
         title: "User created successfully",
         variant: "default",
@@ -72,6 +82,15 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({ onJoin }) => {
       toast({
         title: "Error",
         description: "Username cannot be empty",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (selectedCards.length < 1) {
+      toast({
+        title: "Error",
+        description: "You must have at least one card selected",
         variant: "destructive",
       });
       return;
@@ -124,12 +143,12 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({ onJoin }) => {
                   key={card}
                   onClick={() => toggleCardSelection(card)}
                   className={`absolute w-12 h-20 rounded-md text-sm font-semibold transition-transform duration-300 ease-out
-            flex items-center justify-center shadow-md
-            ${
-              selectedCards.includes(card)
-                ? "bg-[#6D28D9] text-white hover:bg-[#5B21B6]"
-                : "bg-zinc-800 text-zinc-300 border border-zinc-700 hover:bg-zinc-700"
-            }`}
+                              flex items-center justify-center shadow-md
+                              ${
+                                selectedCards.includes(card)
+                                  ? "bg-[#6D28D9] text-white hover:bg-[#5B21B6]"
+                                  : "bg-zinc-800 text-zinc-300 border border-zinc-700 hover:bg-zinc-700"
+                              }`}
                   style={{
                     transform: `translateX(${translateX}px) translateY(${arc}px) rotate(${rotate}deg)`,
                     zIndex: 1000 - Math.abs(offset),
