@@ -22,13 +22,17 @@ impl Deck {
                 "8".to_string(),
                 "13".to_string(),
                 "21".to_string(),
-                "34".to_string(),
-                "55".to_string(),
-                "89".to_string(),
                 "∞".to_string(),
                 "?".to_string(),
                 "☕".to_string(),
             ],
+        }
+    }
+
+    pub fn new_with_cards(cards: Vec<Card>) -> Self {
+        Deck {
+            id: Uuid::new_v4(),
+            cards,
         }
     }
 }

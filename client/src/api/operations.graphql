@@ -35,8 +35,8 @@ fragment RoomFragment on Room {
   }
 }
 
-mutation CreateRoom($name: String) {
-  createRoom(name: $name) {
+mutation CreateRoom($name: String, $cards: [String]) {
+  createRoom(name: $name, cards: $cards) {
     ...RoomFragment
   }
 }
@@ -49,6 +49,12 @@ mutation CreateUser($username: String!) {
 
 mutation JoinRoom($roomId: UUID!, $user: UserInput!) {
   joinRoom(roomId: $roomId, user: $user) {
+    ...RoomFragment
+  }
+}
+
+mutation UpdateDeck($room_id: UUID!, $cards: [String!]!) {
+  updateDeck(input: { room_id: $room_id, cards: $cards }) {
     ...RoomFragment
   }
 }

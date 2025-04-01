@@ -1,7 +1,11 @@
 import { useParams } from "@tanstack/react-router";
 import { JSXElementConstructor, ReactElement, useEffect, useRef } from "react";
 
-import { useJoinRoomMutation, useRoomSubscription } from "@/api";
+import {
+  useJoinRoomMutation,
+  useRoomSubscription,
+  useUpdateDeckMutation,
+} from "@/api";
 import { CreateUserDialog } from "@/components/CreateUserDialog";
 import { Deck } from "@/components/Deck";
 import { PageLayout } from "@/components/PageLayout";
@@ -16,6 +20,7 @@ export function RoomPage(): ReactElement {
   const { user } = useAuth();
   const { toast } = useToast();
   const isJoinRoomCalledRef = useRef(false);
+  const [updateDeck] = useUpdateDeckMutation();
 
   const { data: subscriptionData, error: roomSubscriptionError } =
     useRoomSubscription({
@@ -51,7 +56,6 @@ export function RoomPage(): ReactElement {
             id: user.id,
             username: user.username,
           },
-          cards: [],
         },
       });
 
@@ -59,17 +63,33 @@ export function RoomPage(): ReactElement {
     }
   }, [joinRoomMutation, roomId, user]);
 
-  function handleJoinRoomMutation(
+  async function handleJoinRoomMutation(
     user: User,
     selectedCards: (string | number)[],
   ) {
-    joinRoomMutation({
-      variables: {
-        roomId,
-        user: { id: user.id, username: user.username },
-        cards: selectedCards,
-      },
-    });
+    try {
+      await joinRoomMutation({
+        variables: {
+          roomId: roomId,
+          user: { id: user.id, username: user.username },
+        },
+      });
+
+      await updateDeck({
+        variables: {
+          input: {
+            roomId,
+            cards: selectedCards.map(String),
+          },
+        },
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Something went wrong while joining: ${error}`,
+        variant: "destructive",
+      });
+    }
   }
 
   const room = subscriptionData?.room || joinRoomData?.joinRoom;

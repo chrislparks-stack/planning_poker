@@ -1,7 +1,7 @@
 use async_graphql::SimpleObject;
 use uuid::Uuid;
 
-use crate::types::EntityId;
+use crate::types::{Card, EntityId};
 
 use super::{
     deck::Deck,
@@ -20,12 +20,12 @@ pub struct Room {
 }
 
 impl Room {
-    pub fn new(name: Option<String>) -> Self {
+    pub fn new(name: Option<String>, cards: Vec<Card>) -> Self {
         Room {
             id: Uuid::new_v4(),
             name,
             users: vec![],
-            deck: Deck::new(),
+            deck: Deck::new_with_cards(cards),
             game: Game::new(),
             is_game_over: false,
         }

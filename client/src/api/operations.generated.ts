@@ -15,6 +15,7 @@ export type RoomFragmentFragment = { __typename?: 'Room', id: string, name?: str
 
 export type CreateRoomMutationVariables = Types.Exact<{
   name?: Types.InputMaybe<Types.Scalars['String']>;
+  cards: Array<Types.Scalars["String"]>;
 }>;
 
 
@@ -34,6 +35,19 @@ export type JoinRoomMutationVariables = Types.Exact<{
 
 
 export type JoinRoomMutation = { __typename?: 'MutationRoot', joinRoom: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
+
+export type UpdateDeckMutationVariables = Types.Exact<{
+    input: {
+        roomId: Types.Scalars["UUID"];
+        cards: Array<Types.Scalars["String"]>;
+    };
+}>;
+
+export type UpdateDeckMutation = {
+    __typename?: "MutationRoot";
+    updateDeck: Types.RoomFragmentFragment;
+};
+
 
 export type EditUserMutationVariables = Types.Exact<{
   userId: Types.Scalars['UUID'];
@@ -124,9 +138,19 @@ export const RoomFragmentFragmentDoc = gql`
     ${UserFragmentFragmentDoc}
 ${DeckFragmentFragmentDoc}
 ${GameFragmentFragmentDoc}`;
+
+export const UpdateDeckDocument = gql`
+    mutation UpdateDeck($input: UpdateDeckInput!) {
+        updateDeck(input: $input) {
+            ...RoomFragment
+        }
+    }
+    ${RoomFragmentFragmentDoc}
+`;
+
 export const CreateRoomDocument = gql`
-    mutation CreateRoom($name: String) {
-  createRoom(name: $name) {
+    mutation CreateRoom($name: String, $cards: [String]) {
+  createRoom(name: $name, cards: $cards) {
     ...RoomFragment
   }
 }
@@ -231,6 +255,30 @@ export const EditUserDocument = gql`
   }
 }
     ${UserFragmentFragmentDoc}`;
+
+export function useUpdateDeckMutation(
+    baseOptions?: Apollo.MutationHookOptions<
+        UpdateDeckMutation,
+        UpdateDeckMutationVariables
+        >,
+) {
+    const options = { ...defaultOptions, ...baseOptions };
+    return Apollo.useMutation<UpdateDeckMutation, UpdateDeckMutationVariables>(
+        UpdateDeckDocument,
+        options,
+    );
+}
+
+export type UpdateDeckMutationHookResult = ReturnType<
+    typeof useUpdateDeckMutation
+    >;
+export type UpdateDeckMutationResult =
+    Apollo.MutationResult<UpdateDeckMutation>;
+export type UpdateDeckMutationOptions = Apollo.BaseMutationOptions<
+    UpdateDeckMutation,
+    UpdateDeckMutationVariables
+    >;
+
 export type EditUserMutationFn = Apollo.MutationFunction<EditUserMutation, EditUserMutationVariables>;
 
 /**

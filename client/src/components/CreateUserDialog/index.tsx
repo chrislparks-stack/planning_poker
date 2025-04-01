@@ -20,7 +20,7 @@ interface CreateUserDialogProps {
   onJoin: (user: User, selectedCards: (string | number)[]) => void;
 }
 
-const DEFAULT_CARDS = [0, 1, 2, 3, 5, 8, 13, 21, "?", "☕"];
+const DEFAULT_CARDS = [0, 1, 2, 3, 5, 8, 13, 21, "?", "∞", "☕"];
 
 export const CreateUserDialog: FC<CreateUserDialogProps> = ({ onJoin }) => {
   const { user, login } = useAuth();
@@ -85,7 +85,7 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({ onJoin }) => {
   };
 
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
+    <AlertDialog open={open}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Enter your username</AlertDialogTitle>

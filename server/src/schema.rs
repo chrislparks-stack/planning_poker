@@ -7,7 +7,7 @@ use crate::{
         user::{User, UserInput},
     },
     simple_broker::SimpleBroker,
-    types::{EntityId, Storage},
+    types::{Card, EntityId, Storage},
 };
 use async_graphql::*;
 use futures_util::{lock::MutexGuard, Stream, StreamExt};
@@ -51,13 +51,19 @@ impl QueryRoot {
     }
 }
 
+#[derive(InputObject)]
+pub struct UpdateDeckInput {
+    pub room_id: Uuid,
+    pub cards: Vec<String>,
+}
+
 pub struct MutationRoot;
 
 #[Object]
 impl MutationRoot {
-    async fn create_room(&self, ctx: &Context<'_>, name: Option<String>) -> Result<Room> {
+    async fn create_room(&self, ctx: &Context<'_>, name: Option<String>, cards: Vec<Card>) -> Result<Room> {
         let mut storage = get_storage(ctx).await;
-        let room = Room::new(name);
+        let room = Room::new(name, cards);
 
         storage.insert(room.id, room.clone());
 
@@ -91,6 +97,21 @@ impl MutationRoot {
 
                     Ok(room.get_room())
                 }
+            }
+            None => Err(Error::new("Room not found")),
+        }
+    }
+
+    async fn update_deck(&self, ctx: &Context<'_>, input: UpdateDeckInput) -> Result<Room> {
+        let mut storage = get_storage(ctx).await;
+
+        match storage.get_mut(&input.room_id) {
+            Some(room) => {
+                room.deck.cards = input.cards.clone();
+
+                SimpleBroker::publish(room.get_room());
+
+                Ok(room.get_room())
             }
             None => Err(Error::new("Room not found")),
         }

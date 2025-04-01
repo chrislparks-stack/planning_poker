@@ -35,6 +35,7 @@ export type MutationRoot = {
   pickCard: Room;
   resetGame: Room;
   showCards: Room;
+  cards: Deck;
 };
 
 

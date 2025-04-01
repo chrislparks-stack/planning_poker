@@ -29,7 +29,11 @@ export const HomePage: FC = () => {
   });
 
   function onCreateRoom() {
-    createRoomMutation();
+    createRoomMutation({
+      variables: {
+        cards: [],
+      },
+    });
   }
 
   return (
