@@ -57,6 +57,7 @@ export type MutationRootEditUserArgs = {
 export type MutationRootJoinRoomArgs = {
   roomId: Scalars['UUID'];
   user: UserInput;
+  cards: Scalars["String"]
 };
 
 

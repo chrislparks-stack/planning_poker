@@ -51,6 +51,7 @@ export function RoomPage(): ReactElement {
             id: user.id,
             username: user.username,
           },
+          cards: [],
         },
       });
 
@@ -58,11 +59,15 @@ export function RoomPage(): ReactElement {
     }
   }, [joinRoomMutation, roomId, user]);
 
-  function handleJoinRoomMutation(user: User) {
+  function handleJoinRoomMutation(
+    user: User,
+    selectedCards: (string | number)[],
+  ) {
     joinRoomMutation({
       variables: {
         roomId,
         user: { id: user.id, username: user.username },
+        cards: selectedCards,
       },
     });
   }
@@ -92,7 +97,11 @@ export function RoomPage(): ReactElement {
           </>
         )}
       </PageLayout>
-      <CreateUserDialog handleJoinRoomMutation={handleJoinRoomMutation} />
+      <CreateUserDialog
+        onJoin={(user, selectedCards) =>
+          handleJoinRoomMutation(user, selectedCards)
+        }
+      />
     </div>
   ) as ReactElement<string | JSXElementConstructor<ReactElement>>;
 }
