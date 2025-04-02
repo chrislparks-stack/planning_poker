@@ -1,7 +1,7 @@
 import { GalleryHorizontalEnd, LogOut, Settings } from "lucide-react";
 import { FC, useEffect, useState } from "react";
 
-import { useLogoutMutation, useSetRoomOwnerMutation } from "@/api";
+import { useLogoutMutation, useSetRoomOwnerMutation, useUpdateDeckMutation } from "@/api";
 import { EditCardsDialog } from "@/components/EditCardsDialog";
 import { EditUserDialog } from "@/components/EditUserDialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -30,6 +30,7 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
   const [openEditUserDialog, setOpenEditUserDialog] = useState(false);
   const [openEditCardsDialog, setOpenEditCardsDialog] = useState(false);
   const [setRoomOwner] = useSetRoomOwnerMutation();
+  const [updateDeck] = useUpdateDeckMutation();
   const [logoutMutation] = useLogoutMutation({
     onCompleted() {
       logout?.();
@@ -49,17 +50,25 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
     }
   }, [room]);
 
-  function handleLogout() {
+  async function handleLogout() {
     if (user) {
-      logoutMutation({
-        variables: {
-          userId: user.id,
-        },
-      });
-      setRoomOwner({
+      await setRoomOwner({
         variables: {
           roomId: roomId,
           userId: null,
+        },
+      });
+      await updateDeck({
+        variables: {
+          input: {
+            roomId,
+            cards: [],
+          },
+        },
+      });
+      await logoutMutation({
+        variables: {
+          userId: user.id,
         },
       });
     }
