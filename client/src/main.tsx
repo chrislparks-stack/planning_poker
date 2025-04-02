@@ -4,10 +4,11 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { client } from "@/api";
-import { ConfirmationDialogProvider, ThemeProvider } from "@/components";
+import { ConfirmationDialogProvider } from "@/components/ConfirmationDialog";
+import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts";
-import { NotFoundPage } from "@/pages";
+import { NotFoundPage } from "@/pages/NotFoundPage";
 
 import "./index.css";
 
@@ -16,7 +17,7 @@ import { routeTree } from "./routeTree.gen";
 
 const router = createRouter({
   routeTree,
-  defaultNotFoundComponent: NotFoundPage,
+  defaultNotFoundComponent: NotFoundPage
 });
 declare module "@tanstack/react-router" {
   interface Register {
@@ -42,5 +43,5 @@ root.render(
         </TooltipProvider>
       </ApolloProvider>
     </ThemeProvider>
-  </StrictMode>,
+  </StrictMode>
 );

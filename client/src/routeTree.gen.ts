@@ -21,13 +21,13 @@ const RoomRoomIdLazyImport = createFileRoute('/room/$roomId')()
 
 // Create/Update Routes
 
-export const IndexLazyRoute = IndexLazyImport.update({
+const IndexLazyRoute = IndexLazyImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/index.lazy').then((d) => d.Route))
 
-export const RoomRoomIdLazyRoute = RoomRoomIdLazyImport.update({
+const RoomRoomIdLazyRoute = RoomRoomIdLazyImport.update({
   id: '/room/$roomId',
   path: '/room/$roomId',
   getParentRoute: () => rootRoute,

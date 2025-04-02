@@ -1,7 +1,11 @@
 import { GalleryHorizontalEnd, LogOut, Settings } from "lucide-react";
 import { FC, useEffect, useState } from "react";
 
-import { useLogoutMutation, useSetRoomOwnerMutation, useUpdateDeckMutation } from "@/api";
+import {
+  useLogoutMutation,
+  useSetRoomOwnerMutation,
+  useUpdateDeckMutation
+} from "@/api";
 import { EditCardsDialog } from "@/components/EditCardsDialog";
 import { EditUserDialog } from "@/components/EditUserDialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -13,7 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts";
 import { useToast } from "@/hooks/use-toast";
@@ -39,9 +43,9 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
       toast({
         title: "Error",
         description: `Logout: ${error.message}`,
-        variant: "destructive",
+        variant: "destructive"
       });
-    },
+    }
   });
 
   useEffect(() => {
@@ -55,21 +59,21 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
       await setRoomOwner({
         variables: {
           roomId: roomId,
-          userId: null,
-        },
+          userId: null
+        }
       });
       await updateDeck({
         variables: {
           input: {
             roomId,
-            cards: [],
-          },
-        },
+            cards: []
+          }
+        }
       });
       await logoutMutation({
         variables: {
-          userId: user.id,
-        },
+          userId: user.id
+        }
       });
     }
   }
@@ -87,9 +91,15 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
       {user && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-10 w-10 rounded-full" aria-label="Account menu">
+            <Button
+              variant="ghost"
+              className="relative h-10 w-10 rounded-full"
+              aria-label="Account menu"
+            >
               <Avatar className="h-10 w-10">
-                <AvatarFallback>{user.username[0].toUpperCase()}</AvatarFallback>
+                <AvatarFallback>
+                  {user.username[0].toUpperCase()}
+                </AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
@@ -107,7 +117,7 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            {user.id === room.roomOwnerId && (
+            {room && user.id === room.roomOwnerId && (
               <div>
                 <DropdownMenuGroup>
                   <DropdownMenuItem onClick={handleOpenCardsUserDialog}>
@@ -125,8 +135,15 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
           </DropdownMenuContent>
         </DropdownMenu>
       )}
-      <EditUserDialog open={openEditUserDialog} setOpen={setOpenEditUserDialog} />
-      <EditCardsDialog open={openEditCardsDialog} setOpen={setOpenEditCardsDialog} room={room} />
+      <EditUserDialog
+        open={openEditUserDialog}
+        setOpen={setOpenEditUserDialog}
+      />
+      <EditCardsDialog
+        open={openEditCardsDialog}
+        setOpen={setOpenEditCardsDialog}
+        room={room}
+      />
     </>
   );
 };

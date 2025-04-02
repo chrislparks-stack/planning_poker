@@ -1,8 +1,7 @@
 import { ReloadIcon } from "@radix-ui/react-icons";
-import { ReactElement } from "react";
 
 import { useResetGameMutation, useShowCardsMutation } from "@/api";
-import { useModal } from "@/components";
+import { useModal } from "@/components/ConfirmationDialog/useModal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
@@ -17,8 +16,8 @@ export function Table({
   roomId,
   isCardsPicked,
   isGameOver,
-  innerRef,
-}: TableProps): ReactElement {
+  innerRef
+}: TableProps) {
   const { toast } = useToast();
 
   // Confirm before starting a new game.
@@ -26,7 +25,7 @@ export function Table({
     title: "Are you sure you want to start a new game?",
     description: "This will reset the current game.",
     confirmationText: "Start new game",
-    cancellationText: "Cancel",
+    cancellationText: "Cancel"
   });
 
   const [showCardsMutation, { loading: showCardLoading }] =
@@ -35,9 +34,9 @@ export function Table({
         toast({
           title: "Error",
           description: `Show cards: ${error.message}`,
-          variant: "destructive",
+          variant: "destructive"
         });
-      },
+      }
     });
 
   const [resetGameMutation, { loading: resetGameLoading }] =
@@ -46,9 +45,9 @@ export function Table({
         toast({
           title: "Error",
           description: `Reset game: ${error.message}`,
-          variant: "destructive",
+          variant: "destructive"
         });
-      },
+      }
     });
 
   function handleShowCards() {
@@ -92,7 +91,7 @@ export function Table({
           </Button>
         )
       ) : (
-        <span>Just start picking cards!</span>
+        <span>Select an issue to view</span>
       )}
     </div>
   );
