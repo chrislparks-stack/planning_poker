@@ -11,7 +11,7 @@ export type UserCardFragmentFragment = { __typename?: 'UserCard', userId: string
 
 export type GameFragmentFragment = { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> };
 
-export type RoomFragmentFragment = { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } };
+export type RoomFragmentFragment = { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } };
 
 export type CreateRoomMutationVariables = Types.Exact<{
   name?: Types.InputMaybe<Types.Scalars['String']>;
@@ -125,6 +125,7 @@ export const RoomFragmentFragmentDoc = gql`
   id
   name
   isGameOver
+  roomOwnerId
   users {
     ...UserFragment
   }
@@ -278,6 +279,28 @@ export type UpdateDeckMutationOptions = Apollo.BaseMutationOptions<
     UpdateDeckMutation,
     UpdateDeckMutationVariables
     >;
+
+export const SetRoomOwnerDocument = gql`
+    mutation SetRoomOwner($roomId: UUID!, $userId: UUID!) {
+        setRoomOwner(roomId: $roomId, userId: $userId) {
+            ...RoomFragment
+        }
+    }
+    ${RoomFragmentFragmentDoc}
+`;
+
+export function useSetRoomOwnerMutation(
+    baseOptions?: Apollo.MutationHookOptions<
+        SetRoomOwnerMutation,
+        SetRoomOwnerMutationVariables
+        >
+) {
+    const options = { ...defaultOptions, ...baseOptions };
+    return Apollo.useMutation<
+        SetRoomOwnerMutation,
+        SetRoomOwnerMutationVariables
+        >(SetRoomOwnerDocument, options);
+}
 
 export type EditUserMutationFn = Apollo.MutationFunction<EditUserMutation, EditUserMutationVariables>;
 
@@ -468,3 +491,34 @@ export function useRoomSubscription(baseOptions: Apollo.SubscriptionHookOptions<
       }
 export type RoomSubscriptionHookResult = ReturnType<typeof useRoomSubscription>;
 export type RoomSubscriptionResult = Apollo.SubscriptionResult<RoomSubscription>;
+
+export const GetRoomDocument = gql`
+    query GetRoom($roomId: UUID!) {
+        roomById(roomId: $roomId) {
+            ...RoomFragment
+        }
+    }
+    ${RoomFragmentFragmentDoc}
+`;
+
+export type GetRoomQueryVariables = Types.Exact<{
+    roomId: Types.Scalars['UUID'];
+}>;
+
+export type GetRoomQuery = {
+    __typename?: 'QueryRoot',
+    roomById?: Types.RoomFragmentFragment | null;
+};
+
+export function useGetRoomQuery(
+    baseOptions: Apollo.QueryHookOptions<GetRoomQuery, GetRoomQueryVariables>
+) {
+    const options = { ...defaultOptions, ...baseOptions };
+    return Apollo.useQuery<GetRoomQuery, GetRoomQueryVariables>(
+        GetRoomDocument,
+        options
+    );
+}
+
+export type GetRoomQueryHookResult = ReturnType<typeof useGetRoomQuery>;
+export type GetRoomQueryResult = Apollo.QueryResult<GetRoomQuery, GetRoomQueryVariables>;

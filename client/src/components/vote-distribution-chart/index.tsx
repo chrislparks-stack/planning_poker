@@ -1,28 +1,15 @@
 import { FC, useMemo } from "react";
-import {
-  Bar,
-  BarChart,
-  Label,
-  Rectangle,
-  ReferenceLine,
-  XAxis,
-} from "recharts";
+import { Bar, BarChart, Label, LabelList, Rectangle, ReferenceLine, XAxis } from "recharts";
 
 import { CardFooter, CardTitle } from "@/components/ui/card";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Room } from "@/types";
 
 interface VoteDistributionChartProps {
   room: Room;
 }
 
-export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
-  room,
-}) => {
+export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({ room }) => {
   const voteCount = useMemo(() => {
     const voteCount: { [key: string]: number } = {};
     room.game.table.forEach((userCard) => {
@@ -35,14 +22,14 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
   }, [room.game.table]);
 
   const chartData = useMemo(() => {
-    return Object.entries(voteCount).map(([card, votes]) => ({
+    return Object.entries(voteCount).map(([card, Votes]) => ({
       card,
-      votes,
+      Votes,
     }));
   }, [voteCount]);
 
   const maxCardCount = useMemo(() => {
-    return Math.max(...chartData.map((card) => card.votes));
+    return Math.max(...chartData.map((card) => card.Votes));
   }, [chartData]);
 
   const averageVote = useMemo(() => {
@@ -60,10 +47,7 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
   }, [room.game.table, voteCount]);
 
   return (
-    <div
-      className="flex flex-col items-center justify-center overflow-hidden"
-      data-testid="vote-distribution-chart"
-    >
+    <div className="flex flex-col items-center justify-center overflow-hidden" data-testid="vote-distribution-chart">
       <ChartContainer
         className="min-h-[150px] max-h-[150px] w-full"
         config={{
@@ -82,24 +66,38 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
           data={chartData}
         >
           <Bar
-            dataKey="votes"
+            dataKey="Votes"
             fill="hsl(var(--chart-1))"
             radius={5}
             fillOpacity={0.6}
             activeBar={<Rectangle fillOpacity={0.8} />}
-          />
-          <XAxis
-            dataKey="card"
-            tickLine={false}
-            axisLine={false}
-            tickMargin={4}
-          />
+          >
+            <LabelList
+              dataKey="Votes"
+              content={({ x, y, value, width }) => {
+                if (x == null || y == null || width == null) return null;
+
+                const labelY = y - 10;
+                const finalY = labelY < 10 ? 10 : labelY; // prevent from going off top
+
+                return (
+                  <text
+                    x={x + width / 2}
+                    y={finalY + 5}
+                    fill="white"
+                    textAnchor="middle"
+                    fontSize={12}
+                    className="tabular-nums"
+                  >
+                    # of votes: {value}
+                  </text>
+                );
+              }}
+            />
+          </Bar>
+          <XAxis dataKey="card" tickLine={false} axisLine={false} tickMargin={4} />
           <ChartTooltip
-            content={
-              <ChartTooltipContent
-                labelFormatter={(value) => `Card: ${value}`}
-              />
-            }
+            content={<ChartTooltipContent labelFormatter={(value) => `Points: ${value}`} />}
             cursor={false}
           />
           <ReferenceLine
@@ -108,12 +106,7 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
             strokeDasharray="3 3"
             strokeWidth={1}
           >
-            <Label
-              position="insideBottomLeft"
-              value="Agreement"
-              offset={10}
-              fill="hsl(var(--foreground))"
-            />
+            <Label position="insideBottomLeft" value="Agreement" offset={10} fill="hsl(var(--foreground))" />
             <Label
               position="insideTopLeft"
               value={`${agreement.toFixed(0)}% ${agreement > 95 ? "🎉" : ""}`}
@@ -128,9 +121,7 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
       <CardFooter className="flex flex-row items-center justify-center pb-0">
         <CardTitle className="text-4xl tabular-nums mr-4">
           {averageVote.toFixed(1)}{" "}
-          <span className="font-sans text-sm font-normal tracking-normal text-muted-foreground">
-            average
-          </span>
+          <span className="font-sans text-sm font-normal tracking-normal text-muted-foreground">average</span>
         </CardTitle>
       </CardFooter>
     </div>

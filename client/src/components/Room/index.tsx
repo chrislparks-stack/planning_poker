@@ -1,4 +1,4 @@
-import { ReactElement, useRef, useEffect, useState, useMemo } from "react";
+import { useRef, useEffect, useState, useMemo } from "react";
 
 import { Player } from "@/components/Player";
 import { Table } from "@/components/Table";
@@ -14,7 +14,7 @@ interface Position {
   y: number;
 }
 
-export function Room({ room }: RoomProps): ReactElement {
+export function Room({ room }: RoomProps) {
   const tableRef = useRef<HTMLDivElement>(null);
   const [tableRect, setTableRect] = useState<DOMRect | null>(null);
 
@@ -46,17 +46,10 @@ export function Room({ room }: RoomProps): ReactElement {
     const CARD_HEIGHT = 80;
     const CARD_MARGIN = 20;
 
-    const computeSidePositions = (
-      side: "top" | "right" | "bottom" | "left",
-      count: number,
-    ): Position[] => {
+    const computeSidePositions = (side: "top" | "right" | "bottom" | "left", count: number): Position[] => {
       const positions: Position[] = [];
-      const availableLength =
-        side === "top" || side === "bottom" ? width : height;
-      const minGap =
-        side === "top" || side === "bottom"
-          ? CARD_WIDTH + CARD_MARGIN
-          : CARD_HEIGHT + CARD_MARGIN;
+      const availableLength = side === "top" || side === "bottom" ? width : height;
+      const minGap = side === "top" || side === "bottom" ? CARD_WIDTH + CARD_MARGIN : CARD_HEIGHT + CARD_MARGIN;
 
       const coordinates: number[] = [];
       if (count === 0) return [];
@@ -108,12 +101,7 @@ export function Room({ room }: RoomProps): ReactElement {
 
     // For fewer than 4 players, assign one per side.
     if (totalPlayers < 4) {
-      const availableSides: ("top" | "right" | "bottom" | "left")[] = [
-        "top",
-        "right",
-        "bottom",
-        "left",
-      ];
+      const availableSides: ("top" | "right" | "bottom" | "left")[] = ["top", "right", "bottom", "left"];
       for (let i = 0; i < totalPlayers; i++) {
         const side = availableSides[i];
         let pos: Position;
@@ -139,19 +127,16 @@ export function Room({ room }: RoomProps): ReactElement {
     // For 4 or more players, distribute them evenly across the four sides.
     const base = Math.floor(totalPlayers / 4);
     const remainder = totalPlayers % 4;
-    const sideCounts: { [key in "top" | "right" | "bottom" | "left"]: number } =
-      {
-        top: base,
-        right: base,
-        bottom: base,
-        left: base,
-      };
+    const sideCounts: { [key in "top" | "right" | "bottom" | "left"]: number } = {
+      top: base,
+      right: base,
+      bottom: base,
+      left: base,
+    };
 
     // Favor extra seats based on table orientation.
     const extraOrder: ("top" | "right" | "bottom" | "left")[] =
-      width >= height
-        ? ["top", "bottom", "right", "left"]
-        : ["right", "left", "top", "bottom"];
+      width >= height ? ["top", "bottom", "right", "left"] : ["right", "left", "top", "bottom"];
     for (let i = 0; i < remainder; i++) {
       sideCounts[extraOrder[i]] += 1;
     }
@@ -165,11 +150,7 @@ export function Room({ room }: RoomProps): ReactElement {
   }, [tableRect, room]);
 
   if (!room) {
-    return (
-      <div className="flex items-center justify-center w-full h-[calc(100vh-120px)]">
-        Loading...
-      </div>
-    );
+    return <div className="flex items-center justify-center w-full h-[calc(100vh-120px)]">Loading...</div>;
   }
 
   return (
@@ -196,10 +177,11 @@ export function Room({ room }: RoomProps): ReactElement {
               }}
             >
               <Player
-                username={user.username}
+                user={user}
                 isCardPicked={!!pickedCard}
                 isGameOver={room.isGameOver}
                 card={pickedCard?.card}
+                roomId={room.id}
               />
             </div>
           );

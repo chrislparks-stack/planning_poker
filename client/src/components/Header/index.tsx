@@ -39,7 +39,7 @@ export const Header: FC<HeaderProps> = ({ room, users }) => {
             alt="PokerPlanning.org Logo"
             className="h-8 w-8 mr-2"
           />
-          <span className="hidden md:block">Planning poker</span>
+          <span className="hidden md:block"> {room?.name ?? "Planning Poker"}</span>
         </Link>
         {room && (
           <>
@@ -88,7 +88,7 @@ export const Header: FC<HeaderProps> = ({ room, users }) => {
               <Separator orientation="vertical" className="h-6" />
             </div>
           )}
-          <AccountMenu />
+          <AccountMenu room={room} />
         </div>
       )}
     </header>

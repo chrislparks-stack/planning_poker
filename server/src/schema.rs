@@ -49,6 +49,11 @@ impl QueryRoot {
 
         Ok(rooms)
     }
+
+    async fn room_by_id(&self, ctx: &Context<'_>, room_id: Uuid) -> Result<Option<Room>> {
+        let storage = get_storage(ctx).await;
+        Ok(storage.get(&room_id).cloned())
+    }
 }
 
 #[derive(InputObject)]
@@ -111,6 +116,24 @@ impl MutationRoot {
 
                 SimpleBroker::publish(room.get_room());
 
+                Ok(room.get_room())
+            }
+            None => Err(Error::new("Room not found")),
+        }
+    }
+
+    async fn set_room_owner(
+        &self,
+        ctx: &Context<'_>,
+        room_id: Uuid,
+        user_id: Option<Uuid>
+    ) -> Result<Room> {
+        let mut storage = get_storage(ctx).await;
+
+        match storage.get_mut(&room_id) {
+            Some(room) => {
+                room.set_room_owner(user_id)?;
+                SimpleBroker::publish(room.get_room());
                 Ok(room.get_room())
             }
             None => Err(Error::new("Room not found")),

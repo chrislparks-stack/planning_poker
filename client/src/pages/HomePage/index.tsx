@@ -29,9 +29,21 @@ export const HomePage: FC = () => {
   });
 
   function onCreateRoom() {
+    let roomCards: string[] = [];
+
+    const local = localStorage.getItem("Room");
+    if (local) {
+      try {
+        const room = JSON.parse(local);
+        roomCards = room.Cards.map((card: number | string) => String(card));
+      } catch (err) {
+        console.error("Failed to parse Room from localStorage", err);
+      }
+    }
+
     createRoomMutation({
       variables: {
-        cards: [],
+        cards: roomCards,
       },
     });
   }
@@ -39,17 +51,10 @@ export const HomePage: FC = () => {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
       <header className="relative z-50">
-        <nav
-          aria-label="Global"
-          className="flex items-center justify-between p-6 lg:px-8"
-        >
+        <nav aria-label="Global" className="flex items-center justify-between p-6 lg:px-8">
           <div className="flex lg:flex-1">
             <Link to="/" className="-m-1.5 p-1.5 flex items-center">
-              <img
-                src="/logo.svg"
-                alt="PokerPlanning.org Logo"
-                className="h-8 w-8 mr-2"
-              />
+              <img src="/logo.svg" alt="PokerPlanning.org Logo" className="h-8 w-8 mr-2" />
               <span className="sr-only">Planning Poker / Scrum Poker</span>
               <span className="text-2xl font-bold">Apps Planning Poker</span>
             </Link>
@@ -79,18 +84,12 @@ export const HomePage: FC = () => {
               Collaborate and Estimate Faster with Planning Poker
             </h1>
             <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300">
-              PokerPlanning.org offers an open-source, intuitive platform for
-              Agile development teams to collaboratively estimate story points
-              online. Perfect for Agile workflows, our tool makes
-              consensus-based estimation simple, fun, and effective.
+              PokerPlanning.org offers an open-source, intuitive platform for Agile development teams to collaboratively
+              estimate story points online. Perfect for Agile workflows, our tool makes consensus-based estimation
+              simple, fun, and effective.
             </p>
             <div className="mt-10 flex items-center justify-center gap-x-10">
-              <Button
-                size="lg"
-                className="h-12"
-                onClick={onCreateRoom}
-                disabled={loading}
-              >
+              <Button size="lg" className="h-12" onClick={onCreateRoom} disabled={loading}>
                 Start New Game
               </Button>
             </div>

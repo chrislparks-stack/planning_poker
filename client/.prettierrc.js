@@ -1,7 +1,8 @@
 module.exports = {
   semi: true,
   singleQuote: false,
-  trailingComma: 'all',
+  trailingComma: "none",
   tabWidth: 2,
-  endOfLine: "auto"
+  endOfLine: "lf", // ← force LF to avoid cross-platform CRLF/LF issues
+  htmlWhitespaceSensitivity: "ignore"
 };

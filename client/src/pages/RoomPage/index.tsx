@@ -1,9 +1,11 @@
 import { useParams } from "@tanstack/react-router";
-import { JSXElementConstructor, ReactElement, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 
 import {
+  useGetRoomQuery,
   useJoinRoomMutation,
   useRoomSubscription,
+  useSetRoomOwnerMutation,
   useUpdateDeckMutation,
 } from "@/api";
 import { CreateUserDialog } from "@/components/CreateUserDialog";
@@ -15,17 +17,21 @@ import { useAuth } from "@/contexts";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "@/types";
 
-export function RoomPage(): ReactElement {
+export function RoomPage() {
   const { roomId } = useParams({ from: "/room/$roomId" });
   const { user } = useAuth();
   const { toast } = useToast();
   const isJoinRoomCalledRef = useRef(false);
   const [updateDeck] = useUpdateDeckMutation();
+  const [setRoomOwner] = useSetRoomOwnerMutation();
 
-  const { data: subscriptionData, error: roomSubscriptionError } =
-    useRoomSubscription({
-      variables: { roomId },
-    });
+  const { data: subscriptionData, error: roomSubscriptionError } = useRoomSubscription({
+    variables: { roomId },
+  });
+
+  const { data: roomData, error: roomError } = useGetRoomQuery({
+    variables: { roomId },
+  });
 
   useEffect(() => {
     if (roomSubscriptionError) {
@@ -36,6 +42,16 @@ export function RoomPage(): ReactElement {
       });
     }
   }, [roomSubscriptionError, toast]);
+
+  useEffect(() => {
+    if (roomError) {
+      toast({
+        title: "Error",
+        description: `Room: ${roomError.message}`,
+        variant: "destructive",
+      });
+    }
+  }, [roomError, toast]);
 
   const [joinRoomMutation, { data: joinRoomData }] = useJoinRoomMutation({
     onError: (error) => {
@@ -59,29 +75,56 @@ export function RoomPage(): ReactElement {
         },
       });
 
+      const roomStorage = JSON.parse(localStorage.getItem("Room"));
+
+      if (roomStorage) {
+        setRoomOwner({
+          variables: {
+            roomId: roomId,
+            userId: roomStorage.RoomOwner,
+          },
+        });
+      }
+
       isJoinRoomCalledRef.current = true;
     }
   }, [joinRoomMutation, roomId, user]);
 
-  async function handleJoinRoomMutation(
-    user: User,
-    selectedCards: (string | number)[],
-  ) {
+  async function handleJoinRoomMutation(user: User, selectedCards: (string | number)[], roomOwnerId?: string) {
     try {
+      if (!localStorage.getItem("Room")) {
+        const roomData = {
+          RoomID: roomId,
+          Cards: selectedCards,
+          RoomOwner: roomOwnerId ?? null,
+        };
+
+        localStorage.setItem("Room", JSON.stringify(roomData));
+
+        await updateDeck({
+          variables: {
+            input: {
+              roomId,
+              cards: selectedCards.map(String),
+            },
+          },
+        });
+      }
+
       await joinRoomMutation({
         variables: {
           roomId: roomId,
           user: { id: user.id, username: user.username },
         },
-      });
-
-      await updateDeck({
-        variables: {
-          input: {
-            roomId,
-            cards: selectedCards.map(String),
-          },
-        },
+      }).then(() => {
+        if (roomOwnerId) {
+          setRoomOwner({
+            variables: {
+              roomId: roomId,
+              userId: roomOwnerId,
+            },
+          });
+        }
       });
     } catch (error) {
       toast({
@@ -92,13 +135,17 @@ export function RoomPage(): ReactElement {
     }
   }
 
-  const room = subscriptionData?.room || joinRoomData?.joinRoom;
+  const room = subscriptionData?.room ?? roomData?.roomById ?? joinRoomData?.joinRoom;
 
   return (
     <div>
-      <PageLayout room={room} users={room?.users}>
-        {room && (
-          <>
+      {!room ? (
+        <div className="flex h-screen items-center justify-center">
+          <span className="text-lg font-semibold">Loading room...</span>
+        </div>
+      ) : (
+        <>
+          <PageLayout room={room} users={room.users}>
             <Room room={room} />
             <div className="absolute left-0 right-0 bottom-4 mx-auto my-0 max-w-4xl overflow-auto">
               {room.isGameOver ? (
@@ -106,22 +153,20 @@ export function RoomPage(): ReactElement {
                   <VoteDistributionChart room={room} />
                 </div>
               ) : (
-                <Deck
-                  roomId={roomId}
-                  isGameOver={room.isGameOver}
-                  cards={room.deck.cards}
-                  table={room.game.table}
-                />
+                <Deck roomId={roomId} isGameOver={room.isGameOver} cards={room.deck.cards} table={room.game.table} />
               )}
             </div>
-          </>
-        )}
-      </PageLayout>
-      <CreateUserDialog
-        onJoin={(user, selectedCards) =>
-          handleJoinRoomMutation(user, selectedCards)
-        }
-      />
+          </PageLayout>
+          <CreateUserDialog
+            roomData={room}
+            onJoin={(user, selectedCards, roomOwner?) =>
+              roomOwner
+                ? handleJoinRoomMutation(user, selectedCards, roomOwner)
+                : handleJoinRoomMutation(user, selectedCards)
+            }
+          />
+        </>
+      )}
     </div>
-  ) as ReactElement<string | JSXElementConstructor<ReactElement>>;
+  );
 }

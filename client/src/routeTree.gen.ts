@@ -21,7 +21,7 @@ const RoomRoomIdLazyImport = createFileRoute('/room/$roomId')()
 
 // Create/Update Routes
 
-const IndexLazyRoute = IndexLazyImport.update({
+export const IndexLazyRoute = IndexLazyImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRoute,

@@ -1,16 +1,9 @@
-import {
-  createContext,
-  ReactElement,
-  ReactNode,
-  useCallback,
-  useEffect,
-  useState,
-  useContext,
-} from "react";
+import { createContext, ReactNode, useCallback, useEffect, useState, useContext } from "react";
 
 import { User } from "@/types";
 import {
   getUserFromLocalStorage,
+  removeRoomFromLocalStorage,
   removeUserFromLocalStorage,
   setUserToLocalStorage,
 } from "@/utils";
@@ -31,7 +24,7 @@ interface Props {
   children: ReactNode;
 }
 
-export function AuthProvider({ children }: Props): ReactElement {
+export function AuthProvider({ children }: Props) {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -45,6 +38,7 @@ export function AuthProvider({ children }: Props): ReactElement {
 
   const handleLogout = useCallback(() => {
     removeUserFromLocalStorage();
+    removeRoomFromLocalStorage();
     setUser(null);
   }, []);
 

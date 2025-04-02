@@ -20,3 +20,7 @@ export function setUserToLocalStorage(user: User): void {
 export function removeUserFromLocalStorage(): void {
   localStorage.removeItem(USER_KEY);
 }
+
+export function removeRoomFromLocalStorage(): void {
+  localStorage.removeItem("Room");
+}
