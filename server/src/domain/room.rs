@@ -1,7 +1,7 @@
 use async_graphql::SimpleObject;
 use uuid::Uuid;
 
-use crate::types::EntityId;
+use crate::types::{Card, EntityId};
 
 use super::{
     deck::Deck,
@@ -17,17 +17,19 @@ pub struct Room {
     pub deck: Deck,
     pub game: Game,
     pub is_game_over: bool,
+    pub room_owner_id: Option<EntityId>,
 }
 
 impl Room {
-    pub fn new(name: Option<String>) -> Self {
+    pub fn new(name: Option<String>, cards: Vec<Card>) -> Self {
         Room {
             id: Uuid::new_v4(),
             name,
             users: vec![],
-            deck: Deck::new(),
+            deck: Deck::new_with_cards(cards),
             game: Game::new(),
             is_game_over: false,
+            room_owner_id: None,
         }
     }
 
@@ -97,5 +99,21 @@ impl Room {
 
         self.users = users;
         self.game.table = table;
+    }
+
+    pub fn set_room_owner(&mut self, user_id: Option<EntityId>) -> Result<(), String> {
+        match user_id {
+            Some(uid) => {
+                if !self.is_user_exist(uid) {
+                    return Err(format!("User with ID {} does not exist in the room", uid));
+                }
+                self.room_owner_id = Some(uid);
+            }
+            None => {
+                self.room_owner_id = None;
+            }
+        }
+
+        Ok(())
     }
 }
