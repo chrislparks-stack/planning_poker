@@ -91,17 +91,18 @@ impl MutationRoot {
 
         match storage.get_mut(&room_id) {
             Some(room) => {
-                if !room.users.iter().any(|u| u.id == user.id) {
-                    room.users.push(user.into());
+                let is_new_user = !room.users.iter().any(|u| u.id == user.id);
 
-                    SimpleBroker::publish(room.get_room());
-
-                    Ok(room.get_room())
-                } else {
-                    SimpleBroker::publish(room.get_room());
-
-                    Ok(room.get_room())
+                if is_new_user {
+                    if let Some(name) = &user.room_name {
+                        room.name = Some(name.clone());
                 }
+
+                    room.users.push(user.into());
+                    SimpleBroker::publish(room.get_room());
+                }
+
+                Ok(room.get_room())
             }
             None => Err(Error::new("Room not found")),
         }

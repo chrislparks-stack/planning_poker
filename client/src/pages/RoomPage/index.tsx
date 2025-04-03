@@ -6,7 +6,7 @@ import {
   useJoinRoomMutation,
   useRoomSubscription,
   useSetRoomOwnerMutation,
-  useUpdateDeckMutation,
+  useUpdateDeckMutation
 } from "@/api";
 import { CreateUserDialog } from "@/components/CreateUserDialog";
 import { Deck } from "@/components/Deck";
@@ -25,12 +25,13 @@ export function RoomPage() {
   const [updateDeck] = useUpdateDeckMutation();
   const [setRoomOwner] = useSetRoomOwnerMutation();
 
-  const { data: subscriptionData, error: roomSubscriptionError } = useRoomSubscription({
-    variables: { roomId },
-  });
+  const { data: subscriptionData, error: roomSubscriptionError } =
+    useRoomSubscription({
+      variables: { roomId }
+    });
 
   const { data: roomData, error: roomError } = useGetRoomQuery({
-    variables: { roomId },
+    variables: { roomId }
   });
 
   useEffect(() => {
@@ -38,7 +39,7 @@ export function RoomPage() {
       toast({
         title: "Error",
         description: `Room subscription: ${roomSubscriptionError.message}`,
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   }, [roomSubscriptionError, toast]);
@@ -48,7 +49,7 @@ export function RoomPage() {
       toast({
         title: "Error",
         description: `Room: ${roomError.message}`,
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   }, [roomError, toast]);
@@ -58,31 +59,37 @@ export function RoomPage() {
       toast({
         title: "Error",
         description: `Join room: ${error.message}`,
-        variant: "destructive",
+        variant: "destructive"
       });
-    },
+    }
   });
 
   useEffect(() => {
     if (user && !isJoinRoomCalledRef.current) {
+      const roomStorage = JSON.parse(localStorage.getItem("Room"));
+      let roomName = null;
+
+      if (roomStorage) {
+        roomName = roomStorage.roomName;
+      }
+
       joinRoomMutation({
         variables: {
           roomId,
           user: {
             id: user.id,
             username: user.username,
-          },
-        },
+            roomName: roomName
+          }
+        }
       });
-
-      const roomStorage = JSON.parse(localStorage.getItem("Room"));
 
       if (roomStorage) {
         setRoomOwner({
           variables: {
             roomId: roomId,
-            userId: roomStorage.RoomOwner,
-          },
+            userId: roomStorage.RoomOwner
+          }
         });
       }
 
@@ -90,39 +97,51 @@ export function RoomPage() {
     }
   }, [joinRoomMutation, roomId, user]);
 
-  async function handleJoinRoomMutation(user: User, selectedCards: (string | number)[], roomOwnerId?: string) {
+  async function handleJoinRoomMutation(
+    user: User,
+    selectedCards?: (string | number)[],
+    roomOwnerId?: string,
+    roomName?: string | null
+  ) {
     try {
       if (!localStorage.getItem("Room")) {
         const roomData = {
           RoomID: roomId,
           Cards: selectedCards,
           RoomOwner: roomOwnerId ?? null,
+          RoomName: roomName ?? null
         };
 
         localStorage.setItem("Room", JSON.stringify(roomData));
 
-        await updateDeck({
-          variables: {
-            input: {
-              roomId,
-              cards: selectedCards.map(String),
-            },
-          },
-        });
+        if (selectedCards) {
+          await updateDeck({
+            variables: {
+              input: {
+                roomId,
+                cards: selectedCards.map(String)
+              }
+            }
+          });
+        }
       }
 
       await joinRoomMutation({
         variables: {
           roomId: roomId,
-          user: { id: user.id, username: user.username },
-        },
+          user: {
+            id: user.id,
+            username: user.username,
+            roomName: roomName ?? null
+          }
+        }
       }).then(() => {
         if (roomOwnerId) {
           setRoomOwner({
             variables: {
               roomId: roomId,
-              userId: roomOwnerId,
-            },
+              userId: roomOwnerId
+            }
           });
         }
       });
@@ -130,13 +149,15 @@ export function RoomPage() {
       toast({
         title: "Error",
         description: `Something went wrong while joining: ${error}`,
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   }
 
-  const room = subscriptionData?.room ?? roomData?.roomById ?? joinRoomData?.joinRoom;
+  const room =
+    subscriptionData?.room ?? roomData?.roomById ?? joinRoomData?.joinRoom;
 
+  console.log(room);
   return (
     <div>
       {!room ? (
@@ -153,16 +174,26 @@ export function RoomPage() {
                   <VoteDistributionChart room={room} />
                 </div>
               ) : (
-                <Deck roomId={roomId} isGameOver={room.isGameOver} cards={room.deck.cards} table={room.game.table} />
+                <Deck
+                  roomId={roomId}
+                  isGameOver={room.isGameOver}
+                  cards={room.deck.cards}
+                  table={room.game.table}
+                />
               )}
             </div>
           </PageLayout>
           <CreateUserDialog
             roomData={room}
-            onJoin={(user, selectedCards, roomOwner?) =>
+            onJoin={(user, selectedCards, roomOwner?, roomName?) =>
               roomOwner
-                ? handleJoinRoomMutation(user, selectedCards, roomOwner)
-                : handleJoinRoomMutation(user, selectedCards)
+                ? handleJoinRoomMutation(
+                    user,
+                    selectedCards,
+                    roomOwner,
+                    roomName
+                  )
+                : handleJoinRoomMutation(user)
             }
           />
         </>
