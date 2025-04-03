@@ -157,7 +157,6 @@ export function RoomPage() {
   const room =
     subscriptionData?.room ?? roomData?.roomById ?? joinRoomData?.joinRoom;
 
-  console.log(room);
   return (
     <div>
       {!room ? (
@@ -167,20 +166,38 @@ export function RoomPage() {
       ) : (
         <>
           <PageLayout room={room} users={room.users}>
-            <Room room={room} />
-            <div className="absolute left-0 right-0 bottom-4 mx-auto my-0 max-w-4xl overflow-auto">
-              {room.isGameOver ? (
-                <div className="flex justify-center">
-                  <VoteDistributionChart room={room} />
+            <div className="flex flex-col items-center justify-between h-[calc(100vh-80px)] overflow-hidden">
+              <Room room={room} />
+              <div className="absolute bottom-10 left-0 right-0 mx-auto w-full max-w-4xl">
+                <div
+                  className={`flex gap-4 ${
+                    room.isGameOver
+                      ? "flex-col sm:flex-row sm:justify-center"
+                      : "justify-center"
+                  }`}
+                >
+                  <div
+                    className={`flex ${
+                      room.isGameOver
+                        ? "justify-center sm:justify-start"
+                        : "justify-center"
+                    }`}
+                  >
+                    <Deck
+                      roomId={roomId}
+                      isGameOver={room.isGameOver}
+                      cards={room.deck.cards}
+                      table={room.game.table}
+                    />
+                  </div>
+
+                  {room.isGameOver && room.game.table.length > 0 && (
+                    <div className="flex justify-center sm:justify-end w-full sm:w-1/2">
+                      <VoteDistributionChart room={room} />
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <Deck
-                  roomId={roomId}
-                  isGameOver={room.isGameOver}
-                  cards={room.deck.cards}
-                  table={room.game.table}
-                />
-              )}
+              </div>
             </div>
           </PageLayout>
           <CreateUserDialog

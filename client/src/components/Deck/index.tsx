@@ -1,4 +1,4 @@
-import { ReactElement, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { usePickCardMutation } from "@/api";
 import { Card } from "@/components/Card";
@@ -16,12 +16,7 @@ interface DeckProps {
   table: UserCard[] | undefined;
 }
 
-export function Deck({
-  roomId,
-  isGameOver,
-  cards,
-  table,
-}: DeckProps): ReactElement {
+export function Deck({ roomId, isGameOver, cards, table }: DeckProps) {
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -29,51 +24,50 @@ export function Deck({
 
   const [pickCardMutation] = usePickCardMutation({
     onError(error) {
-      setSelectedCard(null);
       toast({
         title: "Error",
         description: `Pick card: ${error.message}`,
-        variant: "destructive",
+        variant: "destructive"
       });
-    },
+    }
   });
 
   useEffect(() => {
-    const pickedCart = getPickedUserCard(user?.id, table);
-    if (!pickedCart) {
-      setSelectedCard(null);
-    }
+    const picked = getPickedUserCard(user?.id, table);
+    setSelectedCard(picked?.card ?? null);
   }, [table, user?.id]);
 
-  const handleCardClick = (card: string) => () => {
-    if (user) {
-      pickCardMutation({
-        variables: {
-          userId: user.id,
-          roomId,
-          card,
-        },
-      });
+  const handleCardClick = (card: string) => async () => {
+    if (!user) return;
 
-      setSelectedCard(card);
-    }
+    const isSelected = selectedCard === card;
+    const cardToSend = isSelected ? "" : card;
+
+    await pickCardMutation({
+      variables: {
+        userId: user.id,
+        roomId,
+        card: cardToSend
+      }
+    });
+
+    setSelectedCard(isSelected ? null : card);
   };
 
   return (
-    <div className="flex justify-between items-end" ref={cardsContainerRef}>
+    <div className="flex justify-between items-end ml" ref={cardsContainerRef}>
       {cards.map((card) => {
         const isCardPicked = selectedCard === card;
         return (
           <div
             key={card}
             className={cn(
-              "transition-margin-bottom duration-100",
-              isCardPicked ? "mb-8" : "mb-0",
+              "transition-margin-bottom duration-100 min-w-[5vw]",
+              isCardPicked ? "mb-8" : "mb-0"
             )}
           >
             <Card
               onClick={handleCardClick(card)}
-              disabled={isGameOver}
               variant={isCardPicked ? "default" : "outline"}
             >
               {card}

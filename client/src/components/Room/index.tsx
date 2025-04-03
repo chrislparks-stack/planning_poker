@@ -180,9 +180,16 @@ export function Room({ room }: RoomProps) {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center w-full h-[calc(100vh-120px)]">
+    <div
+      className="relative flex flex-col items-center justify-center w-full min-h-[500px]"
+      style={{
+        height: "calc(100vh)",
+        overflow: "hidden",
+        position: "relative"
+      }}
+    >
       <Button
-        className="absolute left-10 top-20 min-h-[20px] min-w-[100px] py-6 px-3 border-2 leading-normal"
+        className="absolute left-10 top-5 min-h-[20px] min-w-[100px] py-6 px-3 border-2 leading-normal"
         onClick={handleIssues}
       >
         {" "}

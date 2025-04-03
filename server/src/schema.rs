@@ -200,24 +200,17 @@ impl MutationRoot {
 
         match storage.get_mut(&room_id) {
             Some(room) => {
-                let mut table: Vec<UserCard> = room
-                    .game
-                    .table
-                    .clone()
-                    .into_iter()
-                    .filter(|u| u.user_id != user_id)
-                    .collect();
 
-                if room.is_game_over {
-                    return Err(Error::new("Game over"));
+
+                // Remove any existing card for this user
+                room.game.table.retain(|u| u.user_id != user_id);
+
+                // If the card is not empty, add the new card
+                if !card.trim().is_empty() {
+                    room.game.table.push(UserCard::new(user_id, card));
                 }
 
-                table.push(UserCard::new(user_id, card));
-
-                room.game.table = table.clone();
-
                 SimpleBroker::publish(room.get_room());
-
                 Ok(room.get_room())
             }
             None => Err(Error::new("Room not found")),

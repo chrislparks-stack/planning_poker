@@ -91,7 +91,7 @@ export function Table({
           </Button>
         )
       ) : (
-        <span>Select an issue to view</span>
+        <span>Select an issue to put on the table</span>
       )}
     </div>
   );
