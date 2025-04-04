@@ -200,8 +200,6 @@ impl MutationRoot {
 
         match storage.get_mut(&room_id) {
             Some(room) => {
-
-
                 // Remove any existing card for this user
                 room.game.table.retain(|u| u.user_id != user_id);
 

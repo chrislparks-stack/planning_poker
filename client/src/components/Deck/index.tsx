@@ -7,7 +7,6 @@ import { useKeyboardControls } from "@/hooks";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { UserCard } from "@/types";
-import { getPickedUserCard } from "@/utils";
 
 interface DeckProps {
   roomId: string;
@@ -17,10 +16,11 @@ interface DeckProps {
 }
 
 export function Deck({ roomId, isGameOver, cards, table }: DeckProps) {
-  const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
   const { cardsContainerRef } = useKeyboardControls();
+
+  const [selectedCard, setSelectedCard] = useState<string | null>(null);
 
   const [pickCardMutation] = usePickCardMutation({
     onError(error) {
@@ -33,9 +33,11 @@ export function Deck({ roomId, isGameOver, cards, table }: DeckProps) {
   });
 
   useEffect(() => {
-    const picked = getPickedUserCard(user?.id, table);
-    setSelectedCard(picked?.card ?? null);
-  }, [table, user?.id]);
+    // Reset selection when game is reset
+    if (!isGameOver) {
+      setSelectedCard(null);
+    }
+  }, [isGameOver]);
 
   const handleCardClick = (card: string) => async () => {
     if (!user) return;
@@ -51,6 +53,7 @@ export function Deck({ roomId, isGameOver, cards, table }: DeckProps) {
       }
     });
 
+    // Locally track the selected card for *this* user only
     setSelectedCard(isSelected ? null : card);
   };
 
@@ -62,7 +65,7 @@ export function Deck({ roomId, isGameOver, cards, table }: DeckProps) {
           <div
             key={card}
             className={cn(
-              "transition-margin-bottom duration-100 min-w-[5vw]",
+              "transition-margin-bottom duration-100 min-w-[5vw] max-w-[80px]",
               isCardPicked ? "mb-8" : "mb-0"
             )}
           >

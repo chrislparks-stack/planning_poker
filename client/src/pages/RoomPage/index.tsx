@@ -70,7 +70,7 @@ export function RoomPage() {
       let roomName = null;
 
       if (roomStorage) {
-        roomName = roomStorage.roomName;
+        roomName = roomStorage.RoomName;
       }
 
       joinRoomMutation({
@@ -172,7 +172,7 @@ export function RoomPage() {
                 <div
                   className={`flex gap-4 ${
                     room.isGameOver
-                      ? "flex-col sm:flex-row sm:justify-center"
+                      ? "sm:flex-row sm:justify-center"
                       : "justify-center"
                   }`}
                 >

@@ -138,17 +138,19 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
           <AlertDialogTitle>Setup Room</AlertDialogTitle>
           <AlertDialogDescription>* Required</AlertDialogDescription>
         </AlertDialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid w-full items-center gap-1.5">
-            <Label htmlFor="roomName">Room Name (Optional)</Label>
-            <Input
-              id="roomName"
-              value={roomName}
-              onChange={(e) => setRoomName(e.target.value)}
-              className="col-span-3"
-            />
+        {users.length < 1 && (
+          <div className="grid gap-4 py-4">
+            <div className="grid w-full items-center gap-1.5">
+              <Label htmlFor="roomName">Room Name (Optional)</Label>
+              <Input
+                id="roomName"
+                value={roomName}
+                onChange={(e) => setRoomName(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
           </div>
-        </div>
+        )}
         <div className="grid gap-4 py-4">
           <div className="grid w-full items-center gap-1.5">
             <Label htmlFor="username">Username*</Label>
@@ -209,7 +211,10 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
           </div>
         )}
         <AlertDialogFooter>
-          <AlertDialogAction onClick={handleSubmit} disabled={loading || !canSubmit}>
+          <AlertDialogAction
+            onClick={handleSubmit}
+            disabled={loading || !canSubmit}
+          >
             {loading ? "Creating..." : "Join room"}
           </AlertDialogAction>
         </AlertDialogFooter>
