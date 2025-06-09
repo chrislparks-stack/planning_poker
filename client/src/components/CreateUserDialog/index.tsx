@@ -26,7 +26,7 @@ interface CreateUserDialogProps {
   ) => void;
 }
 
-const DEFAULT_CARDS = [0, 1, 2, 3, 5, 8, 13, 21, "?", "∞", "☕"];
+const DEFAULT_CARDS = [0, 0.5, 1, 2, 3, 5, 8, 13, 21, "?", "☕"];
 
 export const CreateUserDialog: FC<CreateUserDialogProps> = ({
   roomData,
