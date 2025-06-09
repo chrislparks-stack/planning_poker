@@ -24,6 +24,7 @@ fragment RoomFragment on Room {
   id
   name
   isGameOver
+  roomOwnerId
   users {
     ...UserFragment
   }
@@ -35,8 +36,8 @@ fragment RoomFragment on Room {
   }
 }
 
-mutation CreateRoom($name: String) {
-  createRoom(name: $name) {
+mutation CreateRoom($name: String, $cards: [String]) {
+  createRoom(name: $name, cards: $cards) {
     ...RoomFragment
   }
 }
@@ -49,6 +50,18 @@ mutation CreateUser($username: String!) {
 
 mutation JoinRoom($roomId: UUID!, $user: UserInput!) {
   joinRoom(roomId: $roomId, user: $user) {
+    ...RoomFragment
+  }
+}
+
+mutation UpdateDeck($room_id: UUID!, $cards: [String!]!) {
+  updateDeck(input: { room_id: $room_id, cards: $cards }) {
+    ...RoomFragment
+  }
+}
+
+mutation SetRoomOwner($roomId: UUID!, $userId: UUID!) {
+  setRoomOwner(roomId: $roomId, userId: $userId) {
     ...RoomFragment
   }
 }
@@ -83,6 +96,12 @@ mutation ResetGame($roomId: UUID!) {
 
 subscription Room($roomId: UUID!) {
   room(roomId: $roomId) {
+    ...RoomFragment
+  }
+}
+
+query GetRoom($roomId: UUID!) {
+  roomById(roomId: $roomId) {
     ...RoomFragment
   }
 }

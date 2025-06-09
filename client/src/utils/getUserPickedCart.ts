@@ -2,13 +2,17 @@ import { UserCard } from "@/types";
 
 export function getPickedUserCard(
   userId?: string,
-  table?: UserCard[],
+  table?: UserCard[]
 ): UserCard | undefined {
-  const userCard = table?.find((userCard) => userCard.userId === userId);
-
-  if (userCard) {
-    return userCard;
+  if (!userId) {
+    return undefined;
   }
 
-  return undefined;
+  if (!table || !Array.isArray(table)) {
+    return undefined;
+  }
+
+  const userCard = table.find((userCard) => userCard.userId === userId);
+
+  return userCard;
 }

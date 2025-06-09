@@ -1,7 +1,9 @@
-import { ReactElement, useRef, useEffect, useState, useMemo } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { useRef, useEffect, useState, useMemo } from "react";
 
 import { Player } from "@/components/Player";
 import { Table } from "@/components/Table";
+import { Button } from "@/components/ui/button";
 import { Room as RoomType } from "@/types";
 import { getPickedUserCard } from "@/utils";
 
@@ -14,9 +16,10 @@ interface Position {
   y: number;
 }
 
-export function Room({ room }: RoomProps): ReactElement {
+export function Room({ room }: RoomProps) {
   const tableRef = useRef<HTMLDivElement>(null);
   const [tableRect, setTableRect] = useState<DOMRect | null>(null);
+  const [issuesOpen, setIssuesOpen] = useState(false);
 
   // Update the table's bounding rectangle on mount and when the window is resized.
   useEffect(() => {
@@ -30,6 +33,10 @@ export function Room({ room }: RoomProps): ReactElement {
     window.addEventListener("resize", updateTableRect);
     return () => window.removeEventListener("resize", updateTableRect);
   }, []);
+
+  function handleIssues() {
+    setIssuesOpen(!issuesOpen);
+  }
 
   /**
    * Compute player positions along the table edges while avoiding overlaps.
@@ -48,7 +55,7 @@ export function Room({ room }: RoomProps): ReactElement {
 
     const computeSidePositions = (
       side: "top" | "right" | "bottom" | "left",
-      count: number,
+      count: number
     ): Position[] => {
       const positions: Position[] = [];
       const availableLength =
@@ -112,7 +119,7 @@ export function Room({ room }: RoomProps): ReactElement {
         "top",
         "right",
         "bottom",
-        "left",
+        "left"
       ];
       for (let i = 0; i < totalPlayers; i++) {
         const side = availableSides[i];
@@ -144,7 +151,7 @@ export function Room({ room }: RoomProps): ReactElement {
         top: base,
         right: base,
         bottom: base,
-        left: base,
+        left: base
       };
 
     // Favor extra seats based on table orientation.
@@ -173,7 +180,21 @@ export function Room({ room }: RoomProps): ReactElement {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center w-full h-[calc(100vh-120px)]">
+    <div
+      className="relative flex flex-col items-center justify-center w-full min-h-[500px]"
+      style={{
+        height: "calc(100vh)",
+        overflow: "hidden",
+        position: "relative"
+      }}
+    >
+      <Button
+        className="absolute left-10 top-5 min-h-[20px] min-w-[100px] py-6 px-3 border-2 leading-normal"
+        onClick={handleIssues}
+      >
+        {" "}
+        Issues {issuesOpen ? <ChevronUp /> : <ChevronDown />}{" "}
+      </Button>
       <div className="relative">
         <Table
           innerRef={tableRef}
@@ -192,14 +213,15 @@ export function Room({ room }: RoomProps): ReactElement {
               style={{
                 left: `${position.x}px`,
                 top: `${position.y}px`,
-                zIndex: 10,
+                zIndex: 10
               }}
             >
               <Player
-                username={user.username}
+                user={user}
                 isCardPicked={!!pickedCard}
                 isGameOver={room.isGameOver}
                 card={pickedCard?.card}
+                roomId={room.id}
               />
             </div>
           );

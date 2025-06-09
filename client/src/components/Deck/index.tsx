@@ -1,4 +1,4 @@
-import { ReactElement, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { usePickCardMutation } from "@/api";
 import { Card } from "@/components/Card";
@@ -7,7 +7,6 @@ import { useKeyboardControls } from "@/hooks";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { UserCard } from "@/types";
-import { getPickedUserCard } from "@/utils";
 
 interface DeckProps {
   roomId: string;
@@ -16,64 +15,62 @@ interface DeckProps {
   table: UserCard[] | undefined;
 }
 
-export function Deck({
-  roomId,
-  isGameOver,
-  cards,
-  table,
-}: DeckProps): ReactElement {
-  const [selectedCard, setSelectedCard] = useState<string | null>(null);
+export function Deck({ roomId, isGameOver, cards, table }: DeckProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const { cardsContainerRef } = useKeyboardControls();
 
+  const [selectedCard, setSelectedCard] = useState<string | null>(null);
+
   const [pickCardMutation] = usePickCardMutation({
     onError(error) {
-      setSelectedCard(null);
       toast({
         title: "Error",
         description: `Pick card: ${error.message}`,
-        variant: "destructive",
+        variant: "destructive"
       });
-    },
+    }
   });
 
   useEffect(() => {
-    const pickedCart = getPickedUserCard(user?.id, table);
-    if (!pickedCart) {
+    // Reset selection when game is reset
+    if (!isGameOver) {
       setSelectedCard(null);
     }
-  }, [table, user?.id]);
+  }, [isGameOver]);
 
-  const handleCardClick = (card: string) => () => {
-    if (user) {
-      pickCardMutation({
-        variables: {
-          userId: user.id,
-          roomId,
-          card,
-        },
-      });
+  const handleCardClick = (card: string) => async () => {
+    if (!user) return;
 
-      setSelectedCard(card);
-    }
+    const isSelected = selectedCard === card;
+    const cardToSend = isSelected ? "" : card;
+
+    await pickCardMutation({
+      variables: {
+        userId: user.id,
+        roomId,
+        card: cardToSend
+      }
+    });
+
+    // Locally track the selected card for *this* user only
+    setSelectedCard(isSelected ? null : card);
   };
 
   return (
-    <div className="flex justify-between items-end" ref={cardsContainerRef}>
+    <div className="flex justify-between items-end ml" ref={cardsContainerRef}>
       {cards.map((card) => {
         const isCardPicked = selectedCard === card;
         return (
           <div
             key={card}
             className={cn(
-              "transition-margin-bottom duration-100",
-              isCardPicked ? "mb-8" : "mb-0",
+              "transition-margin-bottom duration-100 min-w-[5vw] max-w-[80px]",
+              isCardPicked ? "mb-8" : "mb-0"
             )}
           >
             <Card
               onClick={handleCardClick(card)}
-              disabled={isGameOver}
               variant={isCardPicked ? "default" : "outline"}
             >
               {card}
