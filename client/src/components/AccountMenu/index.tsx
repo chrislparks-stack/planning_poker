@@ -1,4 +1,4 @@
-import { GalleryHorizontalEnd, LogOut, Settings } from "lucide-react";
+import {GalleryHorizontalEnd, LogOut, Settings, User} from "lucide-react";
 import { FC, useEffect, useState } from "react";
 
 import {
@@ -98,7 +98,7 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
             >
               <Avatar className="h-10 w-10">
                 <AvatarFallback>
-                  {user.username[0].toUpperCase()}
+                  <Settings />
                 </AvatarFallback>
               </Avatar>
             </Button>
@@ -112,7 +112,7 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem onClick={handleOpenEditUserDialog}>
-                <Settings className="mr-2 h-4 w-4" />
+                <User className="mr-2 h-4 w-4" />
                 <span>Change Username</span>
               </DropdownMenuItem>
             </DropdownMenuGroup>

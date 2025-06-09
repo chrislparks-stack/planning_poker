@@ -82,7 +82,12 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
           roomName != "" ? roomName : null
         );
       } else {
-        onJoin(data.createUser);
+        onJoin(
+          data.createUser,
+          roomData.deck.cards,
+          roomData.roomOwnerId,
+          roomData.name
+        );
       }
 
       toast({

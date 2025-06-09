@@ -62,7 +62,7 @@ export const HomePage: FC = () => {
                 className="h-8 w-8 mr-2"
               />
               <span className="sr-only">Planning Poker / Scrum Poker</span>
-              <span className="text-2xl font-bold">Apps Planning Poker</span>
+              <span className="text-2xl font-bold">Planning Poker</span>
             </Link>
           </div>
           <div className="flex lg:flex-1 justify-end">

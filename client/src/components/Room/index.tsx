@@ -17,7 +17,7 @@ interface Position {
 }
 
 export function Room({ room }: RoomProps) {
-  const tableRef = useRef<HTMLDivElement>(null);
+  const tableRef = useRef<HTMLDivElement | null>(null);
   const [tableRect, setTableRect] = useState<DOMRect | null>(null);
   const [issuesOpen, setIssuesOpen] = useState(false);
 
