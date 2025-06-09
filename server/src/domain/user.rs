@@ -8,6 +8,7 @@ use crate::types::EntityId;
 pub struct UserInput {
     pub id: EntityId,
     pub username: String,
+    pub room_name: Option<String>,
 }
 
 #[derive(Clone, Debug, SimpleObject)]

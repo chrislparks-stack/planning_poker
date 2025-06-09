@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
-  TooltipTrigger,
+  TooltipTrigger
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts";
 import { useCopyRoomUrlToClipboard } from "@/hooks";
@@ -39,7 +39,10 @@ export const Header: FC<HeaderProps> = ({ room, users }) => {
             alt="PokerPlanning.org Logo"
             className="h-8 w-8 mr-2"
           />
-          <span className="hidden md:block"> {room?.name ?? "Planning Poker"}</span>
+          <span className="hidden md:block">
+            {" "}
+            {room?.name ?? "Apps Planning Poker"}
+          </span>
         </Link>
         {room && (
           <>

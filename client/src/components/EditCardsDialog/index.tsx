@@ -8,7 +8,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
+  DialogTitle
 } from "@/components/ui/dialog";
 import { Room } from "@/types";
 
@@ -18,12 +18,18 @@ interface EditCardsDialogProps {
   room?: Room;
 }
 
-const DEFAULT_CARDS = [0, 1, 2, 3, 5, 8, 13, 21, "?", "∞", "☕"];
+const DEFAULT_CARDS = [0, 0.5, 1, 2, 3, 5, 8, 13, 21, "?", "☕"];
 
-export const EditCardsDialog: FC<EditCardsDialogProps> = ({ open, setOpen, room }) => {
+export const EditCardsDialog: FC<EditCardsDialogProps> = ({
+  open,
+  setOpen,
+  room
+}) => {
   const [updateDeck, { loading }] = useUpdateDeckMutation();
   const [roomId, setRoomId] = useState("");
-  const [selectedCards, setSelectedCards] = useState<(string | number)[]>([1, 2, 3, 5, 8]);
+  const [selectedCards, setSelectedCards] = useState<(string | number)[]>([
+    1, 2, 3, 5, 8
+  ]);
 
   useEffect(() => {
     if (room && open) {
@@ -34,7 +40,11 @@ export const EditCardsDialog: FC<EditCardsDialogProps> = ({ open, setOpen, room 
 
   const toggleCardSelection = (card: string | number) => {
     const cardStr = String(card);
-    setSelectedCards((prev) => (prev.includes(cardStr) ? prev.filter((c) => c !== cardStr) : [...prev, cardStr]));
+    setSelectedCards((prev) =>
+      prev.includes(cardStr)
+        ? prev.filter((c) => c !== cardStr)
+        : [...prev, cardStr]
+    );
   };
 
   const handleSubmit = async () => {
@@ -42,16 +52,16 @@ export const EditCardsDialog: FC<EditCardsDialogProps> = ({ open, setOpen, room 
       const sortedSelectedCards = [...selectedCards].sort(
         (a, b) =>
           DEFAULT_CARDS.findIndex((card) => String(card) === String(a)) -
-          DEFAULT_CARDS.findIndex((card) => String(card) === String(b)),
+          DEFAULT_CARDS.findIndex((card) => String(card) === String(b))
       );
 
       await updateDeck({
         variables: {
           input: {
             roomId,
-            cards: sortedSelectedCards.map(String),
-          },
-        },
+            cards: sortedSelectedCards.map(String)
+          }
+        }
       });
     }
 
@@ -63,7 +73,10 @@ export const EditCardsDialog: FC<EditCardsDialogProps> = ({ open, setOpen, room 
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
           <DialogTitle>Select New Cards</DialogTitle>
-          <DialogDescription>Choose new card set you want to use. Click save when you&apos;re done.</DialogDescription>
+          <DialogDescription>
+            Choose new card set you want to use. Click save when you&apos;re
+            done.
+          </DialogDescription>
         </DialogHeader>
         <div className="relative h-48 w-full overflow-visible">
           <p className="mb-2">Pick poker cards to use:</p>
@@ -94,7 +107,7 @@ export const EditCardsDialog: FC<EditCardsDialogProps> = ({ open, setOpen, room 
                   style={{
                     transform: `translateX(${translateX}px) translateY(${arc}px) rotate(${rotate}deg)`,
                     zIndex: 1000 + index,
-                    boxShadow: "0 4px 10px rgba(0, 0, 0, 0.5)", // 💫 subtle depth
+                    boxShadow: "0 4px 10px rgba(0, 0, 0, 0.5)" // 💫 subtle depth
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = `translateX(${translateX}px) translateY(${

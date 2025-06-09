@@ -91,17 +91,18 @@ impl MutationRoot {
 
         match storage.get_mut(&room_id) {
             Some(room) => {
-                if !room.users.iter().any(|u| u.id == user.id) {
-                    room.users.push(user.into());
+                let is_new_user = !room.users.iter().any(|u| u.id == user.id);
 
-                    SimpleBroker::publish(room.get_room());
-
-                    Ok(room.get_room())
-                } else {
-                    SimpleBroker::publish(room.get_room());
-
-                    Ok(room.get_room())
+                if is_new_user {
+                    if let Some(name) = &user.room_name {
+                        room.name = Some(name.clone());
                 }
+
+                    room.users.push(user.into());
+                    SimpleBroker::publish(room.get_room());
+                }
+
+                Ok(room.get_room())
             }
             None => Err(Error::new("Room not found")),
         }
@@ -199,24 +200,15 @@ impl MutationRoot {
 
         match storage.get_mut(&room_id) {
             Some(room) => {
-                let mut table: Vec<UserCard> = room
-                    .game
-                    .table
-                    .clone()
-                    .into_iter()
-                    .filter(|u| u.user_id != user_id)
-                    .collect();
+                // Remove any existing card for this user
+                room.game.table.retain(|u| u.user_id != user_id);
 
-                if room.is_game_over {
-                    return Err(Error::new("Game over"));
+                // If the card is not empty, add the new card
+                if !card.trim().is_empty() {
+                    room.game.table.push(UserCard::new(user_id, card));
                 }
 
-                table.push(UserCard::new(user_id, card));
-
-                room.game.table = table.clone();
-
                 SimpleBroker::publish(room.get_room());
-
                 Ok(room.get_room())
             }
             None => Err(Error::new("Room not found")),

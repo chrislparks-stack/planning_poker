@@ -8,7 +8,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,18 +18,29 @@ import { Room, User } from "@/types";
 
 interface CreateUserDialogProps {
   roomData: Room;
-  onJoin: (user: User, selectedCards: (string | number)[], roomOwner?: string) => void;
+  onJoin: (
+    user: User,
+    selectedCards?: (string | number)[],
+    roomOwner?: string,
+    roomName?: string | null
+  ) => void;
 }
 
-const DEFAULT_CARDS = [0, 1, 2, 3, 5, 8, 13, 21, "?", "∞", "☕"];
+const DEFAULT_CARDS = [0, 0.5, 1, 2, 3, 5, 8, 13, 21, "?", "☕"];
 
-export const CreateUserDialog: FC<CreateUserDialogProps> = ({ roomData, onJoin }) => {
+export const CreateUserDialog: FC<CreateUserDialogProps> = ({
+  roomData,
+  onJoin
+}) => {
   const { user, login } = useAuth();
   const { toast } = useToast();
+  const [roomName, setRoomName] = useState("");
   const [username, setUsername] = useState("");
   const [users, setUser] = useState([]);
   const [open, setOpen] = useState<boolean>(user ? !Boolean(user) : true);
-  const [selectedCards, setSelectedCards] = useState<(string | number)[]>([1, 2, 3, 5, 8, 13]);
+  const [selectedCards, setSelectedCards] = useState<(string | number)[]>([
+    1, 2, 3, 5, 8, 13
+  ]);
 
   useEffect(() => {
     if (roomData) {
@@ -45,40 +56,53 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({ roomData, onJoin }
     }
   }, [setOpen, user]);
 
+  const canSubmit =
+    username.trim().length > 0 &&
+    (users.length > 0 || selectedCards.length > 0);
+
   const [createUserMutation, { loading }] = useCreateUserMutation({
     onCompleted: (data) => {
       const sortedSelectedCards = [...selectedCards].sort(
-        (a, b) => DEFAULT_CARDS.findIndex((card) => card === a) - DEFAULT_CARDS.findIndex((card) => card === b),
+        (a, b) =>
+          DEFAULT_CARDS.findIndex((card) => card === a) -
+          DEFAULT_CARDS.findIndex((card) => card === b)
       );
 
       login?.({
         id: data.createUser.id,
-        username: data.createUser.username,
+        username: data.createUser.username
       });
 
       setOpen(false);
       if (users.length < 1) {
-        onJoin(data.createUser, sortedSelectedCards, data.createUser.id);
+        onJoin(
+          data.createUser,
+          sortedSelectedCards,
+          data.createUser.id,
+          roomName != "" ? roomName : null
+        );
       } else {
-        onJoin(data.createUser, sortedSelectedCards);
+        onJoin(data.createUser);
       }
 
       toast({
         title: "User created successfully",
-        variant: "default",
+        variant: "default"
       });
     },
     onError: (error) => {
       toast({
         title: "Error",
         description: `Failed to create user: ${error.message}`,
-        variant: "destructive",
+        variant: "destructive"
       });
-    },
+    }
   });
 
   const toggleCardSelection = (card: string | number) => {
-    setSelectedCards((prev) => (prev.includes(card) ? prev.filter((c) => c !== card) : [...prev, card]));
+    setSelectedCards((prev) =>
+      prev.includes(card) ? prev.filter((c) => c !== card) : [...prev, card]
+    );
   };
 
   const handleSubmit = async () => {
@@ -86,7 +110,7 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({ roomData, onJoin }
       toast({
         title: "Error",
         description: "Username cannot be empty",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
@@ -95,15 +119,15 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({ roomData, onJoin }
       toast({
         title: "Error",
         description: "You must have at least one card selected",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
 
     await createUserMutation({
       variables: {
-        username: username.trim(),
-      },
+        username: username.trim()
+      }
     });
   };
 
@@ -111,12 +135,25 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({ roomData, onJoin }
     <AlertDialog open={open}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Enter your username</AlertDialogTitle>
-          <AlertDialogDescription>Enter your username to join the room.</AlertDialogDescription>
+          <AlertDialogTitle>Setup Room</AlertDialogTitle>
+          <AlertDialogDescription>* Required</AlertDialogDescription>
         </AlertDialogHeader>
+        {users.length < 1 && (
+          <div className="grid gap-4 py-4">
+            <div className="grid w-full items-center gap-1.5">
+              <Label htmlFor="roomName">Room Name (Optional)</Label>
+              <Input
+                id="roomName"
+                value={roomName}
+                onChange={(e) => setRoomName(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+        )}
         <div className="grid gap-4 py-4">
           <div className="grid w-full items-center gap-1.5">
-            <Label htmlFor="username">Username</Label>
+            <Label htmlFor="username">Username*</Label>
             <Input
               id="username"
               value={username}
@@ -127,8 +164,8 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({ roomData, onJoin }
         </div>
         {users.length < 1 && (
           <div className="relative h-48 w-full overflow-visible">
-            <p className="mb-2">Pick poker cards to use:</p>
-            <div className="flex justify-center items-baseline">
+            <Label>Pick poker cards to use*:</Label>
+            <div className="flex justify-center items-baseline mt-5">
               {DEFAULT_CARDS.map((card, index) => {
                 const total = DEFAULT_CARDS.length;
                 const middle = (total - 1) / 2;
@@ -155,7 +192,7 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({ roomData, onJoin }
                     style={{
                       transform: `translateX(${translateX}px) translateY(${arc}px) rotate(${rotate}deg)`,
                       zIndex: 1000 + index,
-                      boxShadow: "0 4px 10px rgba(0, 0, 0, 0.5)", // 💫 subtle depth
+                      boxShadow: "0 4px 10px rgba(0, 0, 0, 0.5)" // 💫 subtle depth
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = `translateX(${translateX}px) translateY(${
@@ -174,7 +211,10 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({ roomData, onJoin }
           </div>
         )}
         <AlertDialogFooter>
-          <AlertDialogAction onClick={handleSubmit} disabled={loading}>
+          <AlertDialogAction
+            onClick={handleSubmit}
+            disabled={loading || !canSubmit}
+          >
             {loading ? "Creating..." : "Join room"}
           </AlertDialogAction>
         </AlertDialogFooter>

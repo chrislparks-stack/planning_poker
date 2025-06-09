@@ -1,15 +1,21 @@
 import { FC, useMemo } from "react";
-import { Bar, BarChart, Label, LabelList, Rectangle, ReferenceLine, XAxis } from "recharts";
+import { Bar, BarChart, LabelList, Rectangle, XAxis } from "recharts";
 
 import { CardFooter, CardTitle } from "@/components/ui/card";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent
+} from "@/components/ui/chart";
 import { Room } from "@/types";
 
 interface VoteDistributionChartProps {
   room: Room;
 }
 
-export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({ room }) => {
+export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
+  room
+}) => {
   const voteCount = useMemo(() => {
     const voteCount: { [key: string]: number } = {};
     room.game.table.forEach((userCard) => {
@@ -24,7 +30,7 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({ room }) 
   const chartData = useMemo(() => {
     return Object.entries(voteCount).map(([card, Votes]) => ({
       card,
-      Votes,
+      Votes
     }));
   }, [voteCount]);
 
@@ -47,21 +53,24 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({ room }) 
   }, [room.game.table, voteCount]);
 
   return (
-    <div className="flex flex-col items-center justify-center overflow-hidden" data-testid="vote-distribution-chart">
+    <div
+      className="flex flex-col items-center justify-center overflow-hidden w-[20vw]"
+      data-testid="vote-distribution-chart"
+    >
       <ChartContainer
-        className="min-h-[150px] max-h-[150px] w-full"
+        className="w-[14vw]"
         config={{
           card: {
             label: "Votes",
-            color: "hsl(var(--chart-1))",
-          },
+            color: "hsl(var(--chart-1))"
+          }
         }}
       >
         <BarChart
           accessibilityLayer
           margin={{
             left: -4,
-            right: -4,
+            right: -4
           }}
           data={chartData}
         >
@@ -78,12 +87,12 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({ room }) 
                 if (x == null || y == null || width == null) return null;
 
                 const labelY = y - 10;
-                const finalY = labelY < 10 ? 10 : labelY; // prevent from going off top
+                const finalY = labelY < 10 ? 10 : labelY;
 
                 return (
                   <text
                     x={x + width / 2}
-                    y={finalY + 5}
+                    y={finalY + 50}
                     fill="white"
                     textAnchor="middle"
                     fontSize={12}
@@ -95,33 +104,64 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({ room }) 
               }}
             />
           </Bar>
-          <XAxis dataKey="card" tickLine={false} axisLine={false} tickMargin={4} />
+          <XAxis
+            dataKey="card"
+            tickLine={false}
+            axisLine={false}
+            tickMargin={4}
+          />
           <ChartTooltip
-            content={<ChartTooltipContent labelFormatter={(value) => `Points: ${value}`} />}
+            content={
+              <ChartTooltipContent
+                labelFormatter={(value) => `Points: ${value}`}
+              />
+            }
             cursor={false}
           />
-          <ReferenceLine
-            y={((maxCardCount * agreement) / 100) * 0.8}
-            stroke="hsl(var(--muted-foreground))"
-            strokeDasharray="3 3"
-            strokeWidth={1}
-          >
-            <Label position="insideBottomLeft" value="Agreement" offset={10} fill="hsl(var(--foreground))" />
-            <Label
-              position="insideTopLeft"
-              value={`${agreement.toFixed(0)}% ${agreement > 95 ? "🎉" : ""}`}
-              className="text-lg"
-              fill="hsl(var(--foreground))"
-              offset={10}
-              startOffset={100}
-            />
-          </ReferenceLine>
         </BarChart>
       </ChartContainer>
+
+      {/* Heat bar for agreement */}
+      <div className="w-full px-4 mt-3">
+        <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+          <span>Agreement</span>
+          <span className="tabular-nums">
+            {agreement.toFixed(0)}%
+            {agreement === 100
+              ? " 🎉"
+              : agreement >= 80
+              ? " 👍"
+              : agreement >= 50
+              ? " 😐"
+              : " 👎"}
+          </span>
+        </div>
+
+        {/* Static gradient always spans full width */}
+        <div className="relative w-full h-5 rounded-full overflow-hidden">
+          <div
+            className="absolute inset-0"
+            style={{
+              background: "linear-gradient(to right, #EF4444, #FACC15, #22C55E)"
+            }}
+          />
+
+          {/* This overlay masks the right side beyond agreement */}
+          <div
+            className="absolute right-0 top-0 h-full bg-zinc-700 transition-all duration-500"
+            style={{
+              width: `${100 - agreement}%`
+            }}
+          />
+        </div>
+      </div>
+
       <CardFooter className="flex flex-row items-center justify-center pb-0">
-        <CardTitle className="text-4xl tabular-nums mr-4">
+        <CardTitle className="text-2xl tabular-nums mr-4">
           {averageVote.toFixed(1)}{" "}
-          <span className="font-sans text-sm font-normal tracking-normal text-muted-foreground">average</span>
+          <span className="font-sans text-sm font-normal tracking-normal text-muted-foreground">
+            average
+          </span>
         </CardTitle>
       </CardFooter>
     </div>

@@ -129,4 +129,5 @@ export type UserCard = {
 export type UserInput = {
   id: Scalars['UUID'];
   username: Scalars['String'];
+  roomName?: string;
 };

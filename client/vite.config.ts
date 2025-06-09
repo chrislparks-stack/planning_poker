@@ -7,7 +7,7 @@ import { defineConfig, loadEnv, Plugin } from "vite";
 // Custom plugin to inject Google Analytics script in production
 const injectGoogleAnalytics = ({
   mode,
-  GOOGLE_ANALYTICS_ID,
+  GOOGLE_ANALYTICS_ID
 }: {
   mode: string;
   GOOGLE_ANALYTICS_ID: string;
@@ -32,8 +32,8 @@ const injectGoogleAnalytics = ({
         }
       }
       return html;
-    },
-  },
+    }
+  }
 });
 
 const ReactCompilerConfig = {};
@@ -51,30 +51,30 @@ export default defineConfig(({ mode }) => {
       TanStackRouterVite(),
       react({
         babel: {
-          plugins: [["babel-plugin-react-compiler", ReactCompilerConfig]],
-        },
+          plugins: [["babel-plugin-react-compiler", ReactCompilerConfig]]
+        }
       }),
-      injectGoogleAnalytics({ mode, GOOGLE_ANALYTICS_ID }),
+      injectGoogleAnalytics({ mode, GOOGLE_ANALYTICS_ID })
     ],
     resolve: {
       alias: {
-        "@": path.resolve(__dirname, "./src"),
-      },
+        "@": path.resolve(__dirname, "./src")
+      }
     },
     server: {
       proxy: {
         "/api": {
           target: GRAPHQL_ENDPOINT,
           changeOrigin: true,
-          ws: true,
-        },
-      },
+          ws: true
+        }
+      }
     },
     test: {
       globals: true,
       environment: "jsdom",
       setupFiles: "./src/test/setup.ts",
-      include: ["**/*.test.tsx", "**/*.test.ts"],
-    },
+      include: ["**/*.test.tsx", "**/*.test.ts"]
+    }
   };
 });
