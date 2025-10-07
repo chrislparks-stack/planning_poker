@@ -74,6 +74,7 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
       });
 
       setOpen(false);
+
       if (users.length < 1) {
         onJoin(
           data.createUser,

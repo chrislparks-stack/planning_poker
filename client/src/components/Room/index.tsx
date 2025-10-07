@@ -188,13 +188,13 @@ export function Room({ room }: RoomProps) {
         position: "relative"
       }}
     >
-      <Button
-        className="absolute left-10 top-5 min-h-[20px] min-w-[100px] py-6 px-3 border-2 leading-normal"
-        onClick={handleIssues}
-      >
-        {" "}
-        Issues {issuesOpen ? <ChevronUp /> : <ChevronDown />}{" "}
-      </Button>
+      {/*<Button*/}
+      {/*  className="absolute left-10 top-5 min-h-[20px] min-w-[100px] py-6 px-3 border-2 leading-normal"*/}
+      {/*  onClick={handleIssues}*/}
+      {/*>*/}
+      {/*  {" "}*/}
+      {/*  Issues {issuesOpen ? <ChevronUp /> : <ChevronDown />}{" "}*/}
+      {/*</Button>*/}
       <div className="relative">
         <Table
           innerRef={tableRef}

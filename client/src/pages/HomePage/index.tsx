@@ -35,16 +35,20 @@ export const HomePage: FC = () => {
       try {
         const room = JSON.parse(local);
         roomCards = room.Cards.map((card: number | string) => String(card));
+        navigate({
+          to: "/room/$roomId",
+          params: { roomId: room.RoomID }
+        }).catch((e) => console.log(e));
       } catch (err) {
         console.error("Failed to parse Room from localStorage", err);
       }
+    } else {
+      createRoomMutation({
+        variables: {
+          cards: roomCards
+        }
+      });
     }
-
-    createRoomMutation({
-      variables: {
-        cards: roomCards
-      }
-    });
   }
 
   return (
@@ -103,6 +107,14 @@ export const HomePage: FC = () => {
                 disabled={loading}
               >
                 Start New Game
+              </Button>
+              <Button
+                size="lg"
+                className="h-12"
+                onClick={onCreateRoom}
+                disabled={loading}
+              >
+                Join Existing Game
               </Button>
             </div>
           </div>

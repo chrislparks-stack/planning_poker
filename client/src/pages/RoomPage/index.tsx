@@ -55,6 +55,9 @@ export function RoomPage() {
   }, [roomError, toast]);
 
   const [joinRoomMutation, { data: joinRoomData }] = useJoinRoomMutation({
+    onCompleted: (data) => {
+      // console.log(data);
+    },
     onError: (error) => {
       toast({
         title: "Error",
@@ -65,13 +68,26 @@ export function RoomPage() {
   });
 
   useEffect(() => {
-    if (user && !isJoinRoomCalledRef.current) {
+    if (user && roomData && !isJoinRoomCalledRef.current) {
       const roomStorage = JSON.parse(localStorage.getItem("Room"));
       let roomName = null;
+      let roomOwner = null;
 
       if (roomStorage) {
         roomName = roomStorage.RoomName;
+        roomOwner = roomStorage.RoomOwner;
       }
+
+      if (!roomData.roomOwnerId) {
+        setRoomOwner({
+          variables: {
+            roomId: roomId,
+            userId: roomOwner
+          }
+        });
+      }
+
+      console.log(roomData);
 
       joinRoomMutation({
         variables: {
@@ -80,22 +96,14 @@ export function RoomPage() {
             id: user.id,
             username: user.username,
             roomName: roomName
-          }
+          },
+          roomOwnerId: roomOwner
         }
       });
 
-      if (roomStorage) {
-        setRoomOwner({
-          variables: {
-            roomId: roomId,
-            userId: roomStorage.RoomOwner
-          }
-        });
-      }
-
       isJoinRoomCalledRef.current = true;
     }
-  }, [joinRoomMutation, roomId, user]);
+  }, [joinRoomMutation, roomId, roomData, user]);
 
   async function handleJoinRoomMutation(
     user: User,
@@ -108,8 +116,8 @@ export function RoomPage() {
         const roomData = {
           RoomID: roomId,
           Cards: selectedCards,
-          RoomOwner: roomOwnerId ?? null,
-          RoomName: roomName ?? null
+          RoomName: roomName ?? null,
+          RoomOwner: roomOwnerId
         };
 
         localStorage.setItem("Room", JSON.stringify(roomData));
@@ -135,16 +143,16 @@ export function RoomPage() {
             roomName: roomName ?? null
           }
         }
-      }).then(() => {
-        if (roomOwnerId) {
-          setRoomOwner({
-            variables: {
-              roomId: roomId,
-              userId: roomOwnerId
-            }
-          });
-        }
       });
+
+      if (roomOwnerId) {
+        await setRoomOwner({
+          variables: {
+            roomId: roomId,
+            userId: roomOwnerId
+          }
+        });
+      }
     } catch (error) {
       toast({
         title: "Error",

@@ -1,11 +1,7 @@
-import {GalleryHorizontalEnd, LogOut, Settings, User} from "lucide-react";
+import { GalleryHorizontalEnd, LogOut, Settings, User } from "lucide-react";
 import { FC, useEffect, useState } from "react";
 
-import {
-  useLogoutMutation,
-  useSetRoomOwnerMutation,
-  useUpdateDeckMutation
-} from "@/api";
+import { useLogoutMutation, useSetRoomOwnerMutation } from "@/api";
 import { EditCardsDialog } from "@/components/EditCardsDialog";
 import { EditUserDialog } from "@/components/EditUserDialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -34,9 +30,8 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
   const [openEditUserDialog, setOpenEditUserDialog] = useState(false);
   const [openEditCardsDialog, setOpenEditCardsDialog] = useState(false);
   const [setRoomOwner] = useSetRoomOwnerMutation();
-  const [updateDeck] = useUpdateDeckMutation();
   const [logoutMutation] = useLogoutMutation({
-    onCompleted() {
+    onCompleted: async () => {
       logout?.();
     },
     onError: (error) => {
@@ -56,24 +51,32 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
 
   async function handleLogout() {
     if (user) {
-      await setRoomOwner({
-        variables: {
-          roomId: roomId,
-          userId: null
-        }
-      });
-      await updateDeck({
-        variables: {
-          input: {
-            roomId,
-            cards: []
-          }
-        }
-      });
       await logoutMutation({
         variables: {
           userId: user.id
         }
+      }).then(async () => {
+        if (room && room.users.length > 1) {
+          for (const remainingUsers of room.users) {
+            if (remainingUsers.id != user.id) {
+              await setRoomOwner({
+                variables: {
+                  roomId: roomId,
+                  userId: remainingUsers.id
+                }
+              });
+              break;
+            }
+          }
+        } else {
+          await setRoomOwner({
+            variables: {
+              roomId: roomId,
+              userId: null
+            }
+          });
+        }
+        localStorage.removeItem("Room");
       });
     }
   }

@@ -1,6 +1,10 @@
-import { useGetRoomQuery } from "@/api";
+import {useGetRoomQuery, useRoomSubscription} from "@/api";
 import { Card } from "@/components/Card";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from "@/components/ui/tooltip";
 import { User } from "@/types";
 
 interface PlayerProps {
@@ -11,14 +15,30 @@ interface PlayerProps {
   roomId: string;
 }
 
-export function Player({ user, isCardPicked, isGameOver, card, roomId }: PlayerProps) {
+export function Player({
+  user,
+  isCardPicked,
+  isGameOver,
+  card,
+  roomId
+}: PlayerProps) {
   const { data: roomData } = useGetRoomQuery({
-    variables: { roomId },
+    variables: { roomId }
   });
+  const { data: subscriptionData, error: roomSubscriptionError } =
+    useRoomSubscription({
+      variables: { roomId }
+    });
 
-  const room = roomData?.roomById;
+  const room = subscriptionData?.room ?? roomData?.roomById;
   // Determine the symbol to display based on the player's state.
-  const cardSymbol = isCardPicked ? (card ? card : "✅") : isGameOver ? "😴" : "🤔";
+  const cardSymbol = isCardPicked
+    ? card
+      ? card
+      : "✅"
+    : isGameOver
+    ? "😴"
+    : "🤔";
 
   return (
     <div className="flex flex-col items-center" data-testid="player">
@@ -27,7 +47,10 @@ export function Player({ user, isCardPicked, isGameOver, card, roomId }: PlayerP
           👑
           <Tooltip>
             <TooltipTrigger asChild>
-              <Card className="hover:bg-transparent hover:shadow-none" style={{ cursor: "default" }}>
+              <Card
+                className="hover:bg-transparent hover:shadow-none"
+                style={{ cursor: "default" }}
+              >
                 {cardSymbol}
               </Card>
             </TooltipTrigger>
@@ -35,7 +58,9 @@ export function Player({ user, isCardPicked, isGameOver, card, roomId }: PlayerP
           </Tooltip>
         </div>
       ) : (
-        <Card style={{ cursor: "default", pointerEvents: "none" }}>{cardSymbol}</Card>
+        <Card style={{ cursor: "default", pointerEvents: "none" }}>
+          {cardSymbol}
+        </Card>
       )}
       <span className="text-sm mb-1">{user.username}</span>
     </div>
