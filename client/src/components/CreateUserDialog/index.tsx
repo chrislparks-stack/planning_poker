@@ -1,4 +1,4 @@
-import { FC, useEffect, useState } from "react";
+import { FC, useEffect, useRef, useState } from "react";
 
 import { useCreateUserMutation } from "@/api";
 import {
@@ -24,37 +24,30 @@ interface CreateUserDialogProps {
     roomOwner?: string,
     roomName?: string | null
   ) => void;
+  open: boolean;
+  setOpen: (open: boolean) => void;
 }
 
 const DEFAULT_CARDS = [0, 0.5, 1, 2, 3, 5, 8, 13, 21, "?", "☕"];
 
 export const CreateUserDialog: FC<CreateUserDialogProps> = ({
   roomData,
-  onJoin
+  onJoin,
+  open,
+  setOpen
 }) => {
   const { user, login } = useAuth();
   const { toast } = useToast();
   const [roomName, setRoomName] = useState("");
   const [username, setUsername] = useState("");
-  const [users, setUser] = useState([]);
-  const [open, setOpen] = useState<boolean>(user ? !Boolean(user) : true);
+  const [users, setUsers] = useState([]);
   const [selectedCards, setSelectedCards] = useState<(string | number)[]>([
     1, 2, 3, 5, 8, 13
   ]);
 
   useEffect(() => {
-    if (roomData) {
-      setUser(roomData.users);
-    }
+    if (roomData?.users) setUsers(roomData.users);
   }, [roomData]);
-
-  useEffect(() => {
-    if (user) {
-      setOpen(!Boolean(user));
-    } else {
-      setOpen(true);
-    }
-  }, [setOpen, user]);
 
   const canSubmit =
     username.trim().length > 0 &&
@@ -80,7 +73,7 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
           data.createUser,
           sortedSelectedCards,
           data.createUser.id,
-          roomName != "" ? roomName : null
+          roomName !== "" ? roomName : null
         );
       } else {
         onJoin(
@@ -138,7 +131,7 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
   };
 
   return (
-    <AlertDialog open={open}>
+    <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Setup Room</AlertDialogTitle>
@@ -176,11 +169,9 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
                 const total = DEFAULT_CARDS.length;
                 const middle = (total - 1) / 2;
                 const offset = index - middle;
-
                 const rotate = offset * 5.5;
                 const spacing = 42;
                 const translateX = offset * spacing;
-
                 const arcStrength = 2.2;
                 const arc = Math.pow(offset, 2) * arcStrength;
 
@@ -198,7 +189,7 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
                     style={{
                       transform: `translateX(${translateX}px) translateY(${arc}px) rotate(${rotate}deg)`,
                       zIndex: 1000 + index,
-                      boxShadow: "0 4px 10px rgba(0, 0, 0, 0.5)" // 💫 subtle depth
+                      boxShadow: "0 4px 10px rgba(0, 0, 0, 0.5)"
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = `translateX(${translateX}px) translateY(${

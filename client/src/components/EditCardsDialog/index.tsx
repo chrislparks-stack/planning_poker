@@ -65,6 +65,23 @@ export const EditCardsDialog: FC<EditCardsDialogProps> = ({
           }
         }
       });
+
+      if (localStorage.getItem("Room")) {
+        const stored = localStorage.getItem("Room");
+        let roomData;
+
+        try {
+          roomData = stored ? JSON.parse(stored) : null;
+        } catch {
+          console.error("Failed to parse Room from localStorage");
+          roomData = null;
+        }
+
+        if (roomData) {
+          roomData.Cards = sortedSelectedCards;
+          localStorage.setItem("Room", JSON.stringify(roomData));
+        }
+      }
     }
 
     setOpen(false);
