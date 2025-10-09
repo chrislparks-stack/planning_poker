@@ -1,5 +1,5 @@
 import { useParams } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
+import {useEffect, useRef, useState} from "react";
 
 import {
   useGetRoomQuery,
@@ -10,6 +10,7 @@ import {
 } from "@/api";
 import { CreateUserDialog } from "@/components/CreateUserDialog";
 import { Deck } from "@/components/Deck";
+import { EditCardsDialog } from "@/components/EditCardsDialog";
 import { PageLayout } from "@/components/PageLayout";
 import { Room } from "@/components/Room";
 import { VoteDistributionChart } from "@/components/vote-distribution-chart";
@@ -24,6 +25,7 @@ export function RoomPage() {
   const isJoinRoomCalledRef = useRef(false);
   const [updateDeck] = useUpdateDeckMutation();
   const [setRoomOwner] = useSetRoomOwnerMutation();
+  const [openEditCardsDialog, setOpenEditCardsDialog] = useState(false);
 
   const { data: subscriptionData, error: roomSubscriptionError } =
     useRoomSubscription({
@@ -70,24 +72,24 @@ export function RoomPage() {
   useEffect(() => {
     if (user && roomData && !isJoinRoomCalledRef.current) {
       const roomStorage = JSON.parse(localStorage.getItem("Room"));
-      let roomName = null;
-      let roomOwner = null;
+      let roomName = "";
+      let roomOwner = "";
 
       if (roomStorage) {
         roomName = roomStorage.RoomName;
         roomOwner = roomStorage.RoomOwner;
       }
 
-      if (!roomData.roomOwnerId) {
-        setRoomOwner({
-          variables: {
-            roomId: roomId,
-            userId: roomOwner
-          }
-        });
-      }
+      if (!roomStorage) {
+        const storageData = {
+          RoomID: roomData.roomById.id,
+          Cards: roomData.roomById.deck.cards,
+          RoomName: roomData.roomById.name,
+          RoomOwner: roomData.roomById.roomOwnerId ?? user.id
+        };
 
-      console.log(roomData);
+        localStorage.setItem("Room", JSON.stringify(storageData));
+      }
 
       joinRoomMutation({
         variables: {
@@ -98,6 +100,23 @@ export function RoomPage() {
             roomName: roomName
           },
           roomOwnerId: roomOwner
+        }
+      }).then(() => {
+        if (!roomData.roomById.roomOwnerId) {
+          if (!roomOwner) {
+            roomOwner = user.id;
+          }
+
+          setRoomOwner({
+            variables: {
+              roomId: roomId,
+              userId: roomOwner
+            }
+          });
+        }
+
+        if ((roomData.roomById.deck.cards as unknown as never[]).length < 1) {
+          setOpenEditCardsDialog(true);
         }
       });
 
@@ -220,6 +239,11 @@ export function RoomPage() {
                   )
                 : handleJoinRoomMutation(user)
             }
+          />
+          <EditCardsDialog
+              open={openEditCardsDialog}
+              setOpen={setOpenEditCardsDialog}
+              room={room}
           />
         </>
       )}

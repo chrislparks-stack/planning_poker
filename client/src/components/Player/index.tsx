@@ -1,4 +1,4 @@
-import {useGetRoomQuery, useRoomSubscription} from "@/api";
+import { useGetRoomQuery, useRoomSubscription } from "@/api";
 import { Card } from "@/components/Card";
 import {
   Tooltip,
@@ -25,10 +25,9 @@ export function Player({
   const { data: roomData } = useGetRoomQuery({
     variables: { roomId }
   });
-  const { data: subscriptionData, error: roomSubscriptionError } =
-    useRoomSubscription({
-      variables: { roomId }
-    });
+  const { data: subscriptionData } = useRoomSubscription({
+    variables: { roomId }
+  });
 
   const room = subscriptionData?.room ?? roomData?.roomById;
   // Determine the symbol to display based on the player's state.

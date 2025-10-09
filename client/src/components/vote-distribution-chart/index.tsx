@@ -89,6 +89,8 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
                 const labelY = y - 10;
                 const finalY = labelY < 10 ? 10 : labelY;
 
+                const isMajority = value === maxCardCount;
+
                 return (
                   <text
                     x={x + width / 2}
@@ -98,7 +100,22 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
                     fontSize={12}
                     className="tabular-nums"
                   >
-                    # of votes: {value}
+                    <tspan
+                      x={x + width / 2}
+                      fontWeight={isMajority ? "bold" : "normal"}
+                    >
+                      Votes: {value}
+                    </tspan>
+                    {isMajority && (
+                      <tspan
+                        x={x + width / 2}
+                        dy="1.2em"
+                        fontSize={10}
+                        fill="#a78bfa" // optional accent color (lavender hue)
+                      >
+                        MAJORITY
+                      </tspan>
+                    )}
                   </text>
                 );
               }}

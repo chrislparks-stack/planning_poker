@@ -60,11 +60,6 @@ export const HomePage: FC = () => {
         >
           <div className="flex lg:flex-1">
             <Link to="/" className="-m-1.5 p-1.5 flex items-center">
-              <img
-                src="/logo.svg"
-                alt="PokerPlanning.org Logo"
-                className="h-8 w-8 mr-2"
-              />
               <span className="sr-only">Planning Poker / Scrum Poker</span>
               <span className="text-2xl font-bold">Planning Poker</span>
             </Link>
@@ -94,7 +89,7 @@ export const HomePage: FC = () => {
               Collaborate and Estimate Faster with Planning Poker
             </h1>
             <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300">
-              PokerPlanning.org offers an open-source, intuitive platform for
+              Apps Poker Planning offers an open-source, intuitive platform for
               Agile development teams to collaboratively estimate story points
               online. Perfect for Agile workflows, our tool makes
               consensus-based estimation simple, fun, and effective.

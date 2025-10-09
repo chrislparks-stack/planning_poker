@@ -508,6 +508,7 @@ export type GetRoomQueryVariables = Types.Exact<{
 export type GetRoomQuery = {
     __typename?: 'QueryRoot',
     roomById?: Types.RoomFragmentFragment | null;
+    roomOwnerId?: string;
 };
 
 export function useGetRoomQuery(

@@ -1,9 +1,7 @@
-import { ChevronDown, ChevronUp } from "lucide-react";
 import { useRef, useEffect, useState, useMemo } from "react";
 
 import { Player } from "@/components/Player";
 import { Table } from "@/components/Table";
-import { Button } from "@/components/ui/button";
 import { Room as RoomType } from "@/types";
 import { getPickedUserCard } from "@/utils";
 
@@ -19,7 +17,6 @@ interface Position {
 export function Room({ room }: RoomProps) {
   const tableRef = useRef<HTMLDivElement | null>(null);
   const [tableRect, setTableRect] = useState<DOMRect | null>(null);
-  const [issuesOpen, setIssuesOpen] = useState(false);
 
   // Update the table's bounding rectangle on mount and when the window is resized.
   useEffect(() => {
@@ -33,10 +30,6 @@ export function Room({ room }: RoomProps) {
     window.addEventListener("resize", updateTableRect);
     return () => window.removeEventListener("resize", updateTableRect);
   }, []);
-
-  function handleIssues() {
-    setIssuesOpen(!issuesOpen);
-  }
 
   /**
    * Compute player positions along the table edges while avoiding overlaps.

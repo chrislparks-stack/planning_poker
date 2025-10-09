@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
+import {useToast} from "@/hooks/use-toast.ts";
 import { Room } from "@/types";
 
 interface EditCardsDialogProps {
@@ -25,6 +26,7 @@ export const EditCardsDialog: FC<EditCardsDialogProps> = ({
   setOpen,
   room
 }) => {
+  const { toast } = useToast();
   const [updateDeck, { loading }] = useUpdateDeckMutation();
   const [roomId, setRoomId] = useState("");
   const [selectedCards, setSelectedCards] = useState<(string | number)[]>([
@@ -69,8 +71,26 @@ export const EditCardsDialog: FC<EditCardsDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-[525px]">
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        // Prevent closing if user clicks outside or presses ESC
+        if (!nextOpen && selectedCards.length < 1) {
+          toast({
+            title: "Cannot Exit",
+            description: "Please select at least one card",
+            variant: "destructive"
+          });
+          return;
+        }
+        setOpen(nextOpen);
+      }}
+    >
+      <DialogContent
+        className="sm:max-w-[525px]"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>Select New Cards</DialogTitle>
           <DialogDescription>
@@ -125,7 +145,10 @@ export const EditCardsDialog: FC<EditCardsDialogProps> = ({
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={handleSubmit} disabled={loading}>
+          <Button
+            onClick={handleSubmit}
+            disabled={loading || selectedCards.length < 1}
+          >
             {loading ? "Saving..." : "Save"}
           </Button>
         </DialogFooter>
