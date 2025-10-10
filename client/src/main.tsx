@@ -20,7 +20,7 @@ import { routeTree } from "./routeTree.gen";
 
 try {
   if (typeof document !== "undefined") {
-    const stored = localStorage.getItem("accent") || "purple";
+    const stored = localStorage.getItem("accent") || "lilac";
     // persist: false so we only write runtime tokens now (we'll persist on Save in the dialog)
     applyAccent(stored, { persist: false });
   }

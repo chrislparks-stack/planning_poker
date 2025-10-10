@@ -12,13 +12,13 @@ type AccentEntry = {
 // You can keep this in-sync with the ACCENT_MAP in your dialog, or remove it
 // if you prefer CSS tokens to be the single-source of truth.
 export const FALLBACK_ACCENTS: Record<string, AccentEntry> = {
-  purple: {
+  lilac: {
     base: "263.4 70% 50.4%",
     foreground: "210 20% 98%",
     hover: "256 72% 46%",
     active: "250 74% 42%"
   },
-  indigo: {
+  aqua: {
     base: "225 65% 50%",
     foreground: "210 20% 98%",
     hover: "220 65% 45%",
@@ -119,7 +119,7 @@ export function adjustTokenLightnessValue(
 
 /**
  * applyAccent
- * - accentId: "purple" etc.
+ * - accentId: "lilac" etc.
  * - options.persist: whether to write to localStorage (default true)
  *
  * This will:

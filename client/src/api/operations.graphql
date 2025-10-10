@@ -76,6 +76,17 @@ mutation Logout($userId: UUID!) {
   logout(userId: $userId)
 }
 
+mutation RemoveUserFromRoom($roomId: UUID!, $userId: UUID!) {
+  removeUserFromRoom(roomId: $roomId, userId: $userId) {
+    success
+    message
+  }
+}
+
+mutation ForceLogoutUser($userId: UUID!) {
+  forceLogoutUser(userId: $userId) { success }
+}
+
 mutation PickCard($userId: UUID!, $roomId: UUID!, $card: String!) {
   pickCard(userId: $userId, roomId: $roomId, card: $card) {
     ...RoomFragment

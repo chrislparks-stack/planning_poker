@@ -1,11 +1,18 @@
-import { createContext, ReactNode, useCallback, useEffect, useState, useContext } from "react";
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useEffect,
+  useState,
+  useContext
+} from "react";
 
 import { User } from "@/types";
 import {
   getUserFromLocalStorage,
   removeRoomFromLocalStorage,
   removeUserFromLocalStorage,
-  setUserToLocalStorage,
+  setUserToLocalStorage
 } from "@/utils";
 
 export interface AuthContextValues {
@@ -15,7 +22,7 @@ export interface AuthContextValues {
 }
 
 const initialAuthContext = {
-  user: null,
+  user: null
 };
 
 export const AuthContext = createContext<AuthContextValues>(initialAuthContext);
@@ -47,7 +54,7 @@ export function AuthProvider({ children }: Props) {
       value={{
         user,
         login: handleLogin,
-        logout: handleLogout,
+        logout: handleLogout
       }}
     >
       {children}

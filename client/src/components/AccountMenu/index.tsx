@@ -57,7 +57,6 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
 
   useEffect(() => {
     if (room) {
-      console.log(room);
       setRoomId(room.id);
     }
   }, [room]);

@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useMemo } from "react";
 
+import { useSetRoomOwnerMutation } from "@/api";
 import { Player } from "@/components/Player";
 import { Table } from "@/components/Table";
 import { Room as RoomType } from "@/types";
@@ -17,6 +18,7 @@ interface Position {
 export function Room({ room }: RoomProps) {
   const tableRef = useRef<HTMLDivElement | null>(null);
   const [tableRect, setTableRect] = useState<DOMRect | null>(null);
+  const [setRoomOwner] = useSetRoomOwnerMutation();
 
   // Update the table's bounding rectangle on mount and when the window is resized.
   useEffect(() => {
@@ -172,6 +174,19 @@ export function Room({ room }: RoomProps) {
     );
   }
 
+  function handlePromote(userId: string) {
+    console.log(userId);
+    console.log(room);
+    if (room) {
+      setRoomOwner({
+        variables: {
+          roomId: room.id,
+          userId: userId
+        }
+      });
+    }
+  }
+
   return (
     <div
       className="relative flex flex-col items-center justify-center w-full min-h-[500px]"
@@ -190,8 +205,8 @@ export function Room({ room }: RoomProps) {
       {/*</Button>*/}
       <div className="relative">
         <Table
+          room={room}
           innerRef={tableRef}
-          roomId={room.id}
           isCardsPicked={room.game.table.length > 0}
           isGameOver={room.isGameOver}
         />
@@ -215,6 +230,7 @@ export function Room({ room }: RoomProps) {
                 isGameOver={room.isGameOver}
                 card={pickedCard?.card}
                 roomId={room.id}
+                onMakeOwner={(userId) => handlePromote(userId)}
               />
             </div>
           );
