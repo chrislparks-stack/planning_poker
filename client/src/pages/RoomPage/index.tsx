@@ -10,9 +10,9 @@ import {
 } from "@/api";
 import { CreateUserDialog } from "@/components/CreateUserDialog";
 import { Deck } from "@/components/Deck";
-import { EditCardsDialog } from "@/components/EditCardsDialog";
 import { PageLayout } from "@/components/PageLayout";
 import { Room } from "@/components/Room";
+import { RoomOptionsDialog } from "@/components/RoomOptionsDialog";
 import { VoteDistributionChart } from "@/components/vote-distribution-chart";
 import { useAuth } from "@/contexts";
 import { useToast } from "@/hooks/use-toast";
@@ -26,7 +26,7 @@ export function RoomPage() {
   const [updateDeck] = useUpdateDeckMutation();
   const [setRoomOwner] = useSetRoomOwnerMutation();
   const [openCreateUserDialog, setOpenCreateUserDialog] = useState(false);
-  const [openEditCardsDialog, setOpenEditCardsDialog] = useState(false);
+  const [openRoomOptionsDialog, setOpenRoomOptionsDialog] = useState(false);
 
   const { data: subscriptionData, error: roomSubscriptionError } =
     useRoomSubscription({
@@ -148,7 +148,7 @@ export function RoomPage() {
         }
 
         if ((room.deck.cards as unknown as never[]).length < 1) {
-          setOpenEditCardsDialog(true);
+          setOpenRoomOptionsDialog(true);
         }
       });
 
@@ -289,9 +289,9 @@ export function RoomPage() {
                 : handleJoinRoomMutation(user)
             }
           />
-          <EditCardsDialog
-            open={openEditCardsDialog}
-            setOpen={setOpenEditCardsDialog}
+          <RoomOptionsDialog
+            open={openRoomOptionsDialog}
+            setOpen={setOpenRoomOptionsDialog}
             room={room}
           />
         </>

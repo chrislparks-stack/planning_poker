@@ -4,6 +4,7 @@ import {
   Moon,
   Palette,
   Settings,
+  Settings2,
   Sun,
   User
 } from "lucide-react";
@@ -11,8 +12,8 @@ import { FC, useEffect, useState } from "react";
 
 import { useLogoutMutation, useSetRoomOwnerMutation } from "@/api";
 import { ConfirmLogoutDialog } from "@/components/ConfirmLogoutDialog";
-import { EditCardsDialog } from "@/components/EditCardsDialog";
 import { EditUserDialog } from "@/components/EditUserDialog";
+import { RoomOptionsDialog } from "@/components/RoomOptionsDialog";
 import { ToggleModeDialog } from "@/components/ToggleModeDialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,7 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
   const { toast } = useToast();
   const [roomId, setRoomId] = useState("");
   const [openEditUserDialog, setOpenEditUserDialog] = useState(false);
-  const [openEditCardsDialog, setOpenEditCardsDialog] = useState(false);
+  const [openRoomOptionsDialog, setOpenRoomOptionsDialog] = useState(false);
   const [openToggleModeDialog, setOpenToggleModeDialog] = useState(false);
   const [openConfirmLogoutDialog, setOpenConfirmLogoutDialog] = useState(false);
   const [setRoomOwner] = useSetRoomOwnerMutation();
@@ -98,7 +99,7 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
   }
 
   function handleOpenCardsUserDialog() {
-    setOpenEditCardsDialog(true);
+    setOpenRoomOptionsDialog(true);
   }
 
   function handleOpenToggleModeDialog() {
@@ -157,8 +158,8 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
               <div>
                 <DropdownMenuGroup>
                   <DropdownMenuItem onClick={handleOpenCardsUserDialog}>
-                    <GalleryHorizontalEnd className="mr-2 h-4 w-4" />
-                    <span>Change Cards</span>
+                    <Settings2 className="mr-2 h-4 w-4" />
+                    <span>Change Room Options</span>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
@@ -175,9 +176,9 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
         open={openEditUserDialog}
         setOpen={setOpenEditUserDialog}
       />
-      <EditCardsDialog
-        open={openEditCardsDialog}
-        setOpen={setOpenEditCardsDialog}
+      <RoomOptionsDialog
+        open={openRoomOptionsDialog}
+        setOpen={setOpenRoomOptionsDialog}
         room={room}
       />
       <ToggleModeDialog
