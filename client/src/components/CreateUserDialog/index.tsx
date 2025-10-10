@@ -184,7 +184,7 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
                                 ${
                                   selectedCards.includes(card)
                                     ? "bg-[#6D28D9] text-white hover:bg-[#5B21B6]"
-                                    : "bg-zinc-800 text-zinc-300 border border-zinc-700 hover:bg-zinc-700"
+                                    : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-700"
                                 }`}
                     style={{
                       transform: `translateX(${translateX}px) translateY(${arc}px) rotate(${rotate}deg)`,

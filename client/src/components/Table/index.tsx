@@ -63,7 +63,7 @@ export function Table({
   return (
     <div
       ref={innerRef}
-      className="flex justify-center items-center w-[25vw] max-w-72 min-w-48 h-36 border border-primary-500 rounded-full"
+      className="flex justify-center items-center w-[25vw] max-w-72 min-w-48 h-36 border-2 border-s-4 border-e-4 border-gray-500 rounded-full"
     >
       {isCardsPicked ? (
         isGameOver ? (
@@ -91,7 +91,7 @@ export function Table({
           </Button>
         )
       ) : (
-        <span>Select an issue to put on the table</span>
+        <span> Select card to vote </span>
       )}
     </div>
   );
