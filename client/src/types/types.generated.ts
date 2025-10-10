@@ -102,6 +102,7 @@ export type Room = {
   isGameOver: Scalars['Boolean'];
   name?: Maybe<Scalars['String']>;
   users: Array<User>;
+  roomOwnerId?: string | null;
 };
 
 export type SubscriptionRoot = {

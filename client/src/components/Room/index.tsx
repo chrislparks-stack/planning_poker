@@ -4,7 +4,6 @@ import { Player } from "@/components/Player";
 import { Table } from "@/components/Table";
 import { Room as RoomType } from "@/types";
 import { getPickedUserCard } from "@/utils";
-import {ModeToggle} from "@/components";
 
 interface RoomProps {
   room?: RoomType;

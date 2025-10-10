@@ -1,4 +1,4 @@
-import { FC, useEffect, useRef, useState } from "react";
+import { FC, useEffect, useState } from "react";
 
 import { useCreateUserMutation } from "@/api";
 import {
@@ -21,7 +21,7 @@ interface CreateUserDialogProps {
   onJoin: (
     user: User,
     selectedCards?: (string | number)[],
-    roomOwner?: string,
+    roomOwner?: string | null,
     roomName?: string | null
   ) => void;
   open: boolean;
@@ -36,11 +36,11 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
   open,
   setOpen
 }) => {
-  const { user, login } = useAuth();
+  const { login } = useAuth();
   const { toast } = useToast();
   const [roomName, setRoomName] = useState("");
   const [username, setUsername] = useState("");
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [selectedCards, setSelectedCards] = useState<(string | number)[]>([
     1, 2, 3, 5, 8, 13
   ]);
@@ -183,7 +183,7 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
                                 flex items-center justify-center shadow-md
                                 ${
                                   selectedCards.includes(card)
-                                    ? "bg-[#6D28D9] text-white hover:bg-[#5B21B6]"
+                                    ? "bg-accent text-white hover:bg-accent-hover"
                                     : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-700"
                                 }`}
                     style={{
@@ -212,7 +212,11 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
             onClick={handleSubmit}
             disabled={loading || !canSubmit}
           >
-            {loading ? "Creating..." : "Join room"}
+            {loading
+              ? "Creating..."
+              : users.length > 0
+              ? "Join Room"
+              : "Create Room"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

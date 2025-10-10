@@ -17,13 +17,13 @@
     --muted: 263.4 70% 50.4%;
     --muted-foreground: 220 8.9% 46.1%;
     --accent-start: #fafafa;
-    --accent-purple: 263.4 70% 50.4%;
-    --accent-purple-foreground: 210 20% 98%;
-    --accent-purple-hover: 256 72% 46%;
+    --accent-lilac: 263.4 70% 50.4%;
+    --accent-lilac-foreground: 210 20% 98%;
+    --accent-lilac-hover: 256 72% 46%;
 
-    --accent-indigo: 225 65% 50%;
-    --accent-indigo-foreground: 210 20% 98%;
-    --accent-indigo-hover: 220 65% 45%;
+    --accent-aqua: 225 65% 50%;
+    --accent-aqua-foreground: 210 20% 98%;
+    --accent-aqua-hover: 220 65% 45%;
 
     --accent-emerald: 150 50% 40%;
     --accent-emerald-foreground: 210 20% 98%;
@@ -37,9 +37,9 @@
     --accent-amber-foreground: 220.9 39.3% 11%;
     --accent-amber-hover: 45 90% 45%;
 
-    --accent: var(--accent-purple);
-    --accent-foreground: var(--accent-purple-foreground);
-    --accent-hover: var(--accent-purple-hover);
+    --accent: var(--accent-lilac);
+    --accent-foreground: var(--accent-lilac-foreground);
+    --accent-hover: var(--accent-lilac-hover);
 
     --accent-active: var(--accent-active, var(--accent-hover));
 

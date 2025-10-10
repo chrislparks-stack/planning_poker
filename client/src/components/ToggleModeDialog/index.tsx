@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast.ts";
+import { useToast } from "@/hooks/use-toast";
 import { applyAccent } from "@/lib/theme-accent";
 
 interface ToggleModeDialogProps {
@@ -24,13 +24,13 @@ const ACCENT_MAP: Record<
   string,
   { base: string; foreground: string; hover?: string; active?: string }
 > = {
-  purple: {
+  lilac: {
     base: "263.4 70% 50.4%",
     foreground: "210 20% 98%",
     hover: "256 72% 46%",
     active: "250 74% 42%"
   },
-  indigo: {
+  aqua: {
     base: "225 65% 50%",
     foreground: "210 20% 98%",
     hover: "220 65% 45%",
@@ -57,8 +57,8 @@ const ACCENT_MAP: Record<
 };
 
 const ACCENTS = [
-  { id: "purple", label: "Purple" },
-  { id: "indigo", label: "Indigo" },
+  { id: "lilac", label: "Lilac" },
+  { id: "aqua", label: "Aqua" },
   { id: "emerald", label: "Emerald" },
   { id: "rose", label: "Rose" },
   { id: "amber", label: "Amber" }
@@ -172,13 +172,13 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
     "system"
   );
   const [previewAccent, setPreviewAccent] = useState<string>(
-    () => localStorage.getItem("accent") || "purple"
+    () => localStorage.getItem("accent") || "lilac"
   );
 
   // keep original applied values for cancel
   const originalThemeRef = useRef<"light" | "dark" | "system">("system");
   const originalAccentRef = useRef<string>(
-    localStorage.getItem("accent") || "purple"
+    localStorage.getItem("accent") || "lilac"
   );
 
   // system pref tracking for accurate System preview
@@ -190,8 +190,7 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
 
   // ensure the stored accent is set on mount so page reflects persistent choice
   useEffect(() => {
-    const stored = localStorage.getItem("accent") || "purple";
-    // set previewAccent and write preview vars for stored palette so page reflects saved accent
+    const stored = localStorage.getItem("accent") || "lilac";
     setPreviewAccent(stored);
     setAccentVarsPreview(stored);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -205,11 +204,10 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
         currentTheme === "system"
           ? currentTheme
           : "system";
-      originalAccentRef.current = localStorage.getItem("accent") || "purple";
+      originalAccentRef.current = localStorage.getItem("accent") || "lilac";
 
       setPreviewTheme(originalThemeRef.current);
       setPreviewAccent(originalAccentRef.current);
-      // ensure runtime vars match original while dialog opens
       setAccentVarsPreview(originalAccentRef.current);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -238,7 +236,7 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
     effectivePreviewTheme === "dark"
       ? THEME_PREVIEW_TOKENS.dark
       : THEME_PREVIEW_TOKENS.light;
-  const accentPreview = ACCENT_MAP[previewAccent] || ACCENT_MAP.purple;
+  const accentPreview = ACCENT_MAP[previewAccent] || ACCENT_MAP.lilac;
 
   // visible skeleton stroke color tweak:
   const skeletonStrokeColor =
@@ -327,9 +325,36 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
 
       applyAccent(previewAccent);
 
+      const titleCase = (s: string) =>
+        s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+
       toast({
         title: "Theme updated",
-        description: `Applied ${previewTheme} / ${previewAccent}`
+        duration: 3000,
+        description: (
+          <>
+            <div style={{ fontWeight: 700 }}>Your settings have been saved</div>
+            <div className="flex items-baseline gap-1">
+              <div style={{ fontWeight: 700 }}>Theme Mode:</div>
+              <div style={{ fontWeight: 600 }}>
+                {previewTheme == "dark" ? (
+                  <Moon size="12px" />
+                ) : previewTheme == "light" ? (
+                  <Sun size="12px" />
+                ) : (
+                  <Laptop size="12px" />
+                )}
+              </div>
+              <div style={{ fontWeight: 600 }}>{titleCase(previewTheme)}</div>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <div style={{ fontWeight: 700 }}>Accent Color:</div>
+              <div style={{ fontWeight: 600 }} className="text-accent">
+                {titleCase(previewAccent)}
+              </div>
+            </div>
+          </>
+        )
       });
     } catch (err) {
       console.error("Failed to apply theme/accent:", err);
@@ -345,7 +370,7 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
 
   // Cancel — revert preview to the original stored accent & theme
   const handleCancel = () => {
-    const originalAccent = originalAccentRef.current || "purple";
+    const originalAccent = originalAccentRef.current || "lilac";
     setPreviewAccent(originalAccent);
     setAccentVarsPreview(originalAccent); // revert runtime vars
     setPreviewTheme(originalThemeRef.current || "system");
@@ -376,7 +401,7 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
         <div className="mt-4 space-y-6">
           {/* Mode picker */}
           <div>
-            <p className="mb-2 text-sm font-medium">Mode (preview)</p>
+            <p className="mb-2 text-sm font-medium">Mode</p>
             <div className="flex gap-2">
               <button
                 onClick={() => setPreviewTheme("light")}
@@ -418,7 +443,7 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
 
           {/* Accent swatches */}
           <div>
-            <p className="mb-2 text-sm font-medium">Accent color (preview)</p>
+            <p className="mb-2 text-sm font-medium">Accent color</p>
             <div className="flex items-center gap-3">
               {ACCENTS.map((a) => {
                 const selected = a.id === previewAccent;
@@ -454,8 +479,13 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
           </div>
 
           {/* Integrated, cohesive skeleton preview */}
-          <div className="rounded-md border border-zinc-200 dark:border-zinc-800 p-3">
-            <p className="mb-2 text-sm font-medium">Preview</p>
+          <div className="rounded-md border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-200 dark:bg-zinc-900">
+            <p className="mb-2">
+              <span className="text-sm font-medium">Preview</span>{" "}
+              <span className="text-xs font-light">
+                - your window will look like this
+              </span>
+            </p>
 
             <div
               className="p-4 rounded-md"
@@ -646,9 +676,7 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
             <Button variant="ghost" onClick={() => handleCancel()}>
               Cancel
             </Button>
-            <Button variant="default" onClick={() => handleSave()}>
-              Save
-            </Button>
+            <Button onClick={() => handleSave()}>Save</Button>
           </div>
         </DialogFooter>
       </DialogContent>

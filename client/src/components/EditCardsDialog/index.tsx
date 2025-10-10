@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
-import {useToast} from "@/hooks/use-toast.ts";
+import { useToast } from "@/hooks/use-toast";
 import { Room } from "@/types";
 
 interface EditCardsDialogProps {
@@ -138,7 +138,7 @@ export const EditCardsDialog: FC<EditCardsDialogProps> = ({
                                 flex items-center justify-center shadow-md
                                 ${
                                   selectedCards.includes(String(card))
-                                    ? "bg-[#6D28D9] text-white hover:bg-[#5B21B6]"
+                                    ? "bg-accent text-white hover:bg-accent-hover"
                                     : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-700"
                                 }`}
                   style={{

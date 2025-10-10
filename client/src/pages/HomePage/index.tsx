@@ -2,7 +2,6 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { FC, useMemo } from "react";
 
 import { useCreateRoomMutation } from "@/api";
-import { Footer } from "@/components/footer";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
 import {

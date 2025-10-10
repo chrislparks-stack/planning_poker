@@ -17,7 +17,6 @@ import { VoteDistributionChart } from "@/components/vote-distribution-chart";
 import { useAuth } from "@/contexts";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "@/types";
-import {ModeToggle} from "@/components";
 
 export function RoomPage() {
   const { roomId } = useParams({ from: "/room/$roomId" });

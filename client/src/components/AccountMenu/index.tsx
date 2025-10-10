@@ -1,7 +1,8 @@
 import {
   GalleryHorizontalEnd,
   LogOut,
-  Moon, Palette,
+  Moon,
+  Palette,
   Settings,
   Sun,
   User
@@ -9,6 +10,7 @@ import {
 import { FC, useEffect, useState } from "react";
 
 import { useLogoutMutation, useSetRoomOwnerMutation } from "@/api";
+import { ConfirmLogoutDialog } from "@/components/ConfirmLogoutDialog";
 import { EditCardsDialog } from "@/components/EditCardsDialog";
 import { EditUserDialog } from "@/components/EditUserDialog";
 import { ToggleModeDialog } from "@/components/ToggleModeDialog";
@@ -38,6 +40,7 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
   const [openEditUserDialog, setOpenEditUserDialog] = useState(false);
   const [openEditCardsDialog, setOpenEditCardsDialog] = useState(false);
   const [openToggleModeDialog, setOpenToggleModeDialog] = useState(false);
+  const [openConfirmLogoutDialog, setOpenConfirmLogoutDialog] = useState(false);
   const [setRoomOwner] = useSetRoomOwnerMutation();
   const [logoutMutation] = useLogoutMutation({
     onCompleted: async () => {
@@ -54,6 +57,7 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
 
   useEffect(() => {
     if (room) {
+      console.log(room);
       setRoomId(room.id);
     }
   }, [room]);
@@ -100,6 +104,10 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
 
   function handleOpenToggleModeDialog() {
     setOpenToggleModeDialog(true);
+  }
+
+  function handleOpenConfirmLogoutDialog() {
+    setOpenConfirmLogoutDialog(true);
   }
 
   return (
@@ -157,7 +165,7 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
                 <DropdownMenuSeparator />
               </div>
             )}
-            <DropdownMenuItem onClick={handleLogout}>
+            <DropdownMenuItem onClick={handleOpenConfirmLogoutDialog}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Logout</span>
             </DropdownMenuItem>
@@ -176,6 +184,12 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
       <ToggleModeDialog
         open={openToggleModeDialog}
         setOpen={setOpenToggleModeDialog}
+      />
+      <ConfirmLogoutDialog
+        open={openConfirmLogoutDialog}
+        setOpen={setOpenConfirmLogoutDialog}
+        room={room}
+        onConfirm={handleLogout}
       />
     </>
   );

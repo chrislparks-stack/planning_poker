@@ -133,7 +133,7 @@ export function applyAccent(accentId: string, opts?: { persist?: boolean }) {
   const root = document.documentElement;
 
   // 1) try to read the explicit palette token from CSS (preferred)
-  // e.g. --accent-purple should contain "263.4 70% 50.4%"
+  // e.g. --accent-lilac should contain "263.4 70% 50.4%"
   const cs = getComputedStyle(root);
   const paletteBase = cs.getPropertyValue(`--accent-${accentId}`).trim();
   const paletteHover = cs.getPropertyValue(`--accent-${accentId}-hover`).trim();

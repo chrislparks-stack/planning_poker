@@ -58,15 +58,15 @@ module.exports = {
         "accent-foreground": hslVar("--accent-foreground"),
 
         // Named palettes — static variable names we also define in CSS
-        "accent-purple": {
-          DEFAULT: hslVar("--accent-purple"),
-          foreground: hslVar("--accent-purple-foreground"),
-          hover: hslVar("--accent-purple-hover")
+        "accent-lilac": {
+          DEFAULT: hslVar("--accent-lilac"),
+          foreground: hslVar("--accent-lilac-foreground"),
+          hover: hslVar("--accent-lilac-hover")
         },
-        "accent-indigo": {
-          DEFAULT: hslVar("--accent-indigo"),
-          foreground: hslVar("--accent-indigo-foreground"),
-          hover: hslVar("--accent-indigo-hover")
+        "accent-aqua": {
+          DEFAULT: hslVar("--accent-aqua"),
+          foreground: hslVar("--accent-aqua-foreground"),
+          hover: hslVar("--accent-aqua-hover")
         },
         "accent-emerald": {
           DEFAULT: hslVar("--accent-emerald"),
