@@ -3,106 +3,148 @@ export type InputMaybe<T> = Maybe<T>;
 export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
 export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
+export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> = { [_ in K]?: never };
+export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
-  ID: string;
-  String: string;
-  Boolean: boolean;
-  Int: number;
-  Float: number;
-  UUID: string;
+  ID: { input: string; output: string; }
+  String: { input: string; output: string; }
+  Boolean: { input: boolean; output: boolean; }
+  Int: { input: number; output: number; }
+  Float: { input: number; output: number; }
+  UUID: { input: string; output: string; }
 };
 
 export type Deck = {
   __typename?: 'Deck';
-  cards: Array<Scalars['String']>;
-  id: Scalars['UUID'];
+  cards: Array<Scalars['String']['output']>;
+  id: Scalars['UUID']['output'];
 };
 
 export type Game = {
   __typename?: 'Game';
-  id: Scalars['UUID'];
+  id: Scalars['UUID']['output'];
   table: Array<UserCard>;
 };
 
 export type MutationRoot = {
   __typename?: 'MutationRoot';
+  banUser: Room;
   createRoom: Room;
   createUser: User;
   editUser: User;
   joinRoom: Room;
-  logout: Scalars['Boolean'];
+  kickUser: Room;
+  logout: Scalars['Boolean']['output'];
   pickCard: Room;
   resetGame: Room;
+  setRoomOwner: Room;
   showCards: Room;
-  cards: Deck;
+  unbanUser: Room;
+  updateDeck: Room;
+};
+
+
+export type MutationRootBanUserArgs = {
+  roomId: Scalars['UUID']['input'];
+  targetUserId: Scalars['UUID']['input'];
 };
 
 
 export type MutationRootCreateRoomArgs = {
-  name?: InputMaybe<Scalars['String']>;
+  cards: Array<Scalars['String']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
 };
 
 
 export type MutationRootCreateUserArgs = {
-  username: Scalars['String'];
+  username: Scalars['String']['input'];
 };
 
 
 export type MutationRootEditUserArgs = {
-  userId: Scalars['UUID'];
-  username: Scalars['String'];
+  userId: Scalars['UUID']['input'];
+  username: Scalars['String']['input'];
 };
 
 
 export type MutationRootJoinRoomArgs = {
-  roomId: Scalars['UUID'];
+  roomId: Scalars['UUID']['input'];
   user: UserInput;
-  cards: Scalars["String"]
+};
+
+
+export type MutationRootKickUserArgs = {
+  roomId: Scalars['UUID']['input'];
+  targetUserId: Scalars['UUID']['input'];
 };
 
 
 export type MutationRootLogoutArgs = {
-  userId: Scalars['UUID'];
+  userId: Scalars['UUID']['input'];
 };
 
 
 export type MutationRootPickCardArgs = {
-  card: Scalars['String'];
-  roomId: Scalars['UUID'];
-  userId: Scalars['UUID'];
+  card: Scalars['String']['input'];
+  roomId: Scalars['UUID']['input'];
+  userId: Scalars['UUID']['input'];
 };
 
 
 export type MutationRootResetGameArgs = {
-  roomId: Scalars['UUID'];
+  roomId: Scalars['UUID']['input'];
+};
+
+
+export type MutationRootSetRoomOwnerArgs = {
+  roomId: Scalars['UUID']['input'];
+  userId?: InputMaybe<Scalars['UUID']['input']>;
 };
 
 
 export type MutationRootShowCardsArgs = {
-  roomId: Scalars['UUID'];
+  roomId: Scalars['UUID']['input'];
+};
+
+
+export type MutationRootUnbanUserArgs = {
+  roomId: Scalars['UUID']['input'];
+  targetUserId: Scalars['UUID']['input'];
+};
+
+
+export type MutationRootUpdateDeckArgs = {
+  input: UpdateDeckInput;
 };
 
 export type QueryRoot = {
   __typename?: 'QueryRoot';
+  roomById?: Maybe<Room>;
   rooms: Array<Room>;
   userRooms: Array<Room>;
 };
 
 
+export type QueryRootRoomByIdArgs = {
+  roomId: Scalars['UUID']['input'];
+};
+
+
 export type QueryRootUserRoomsArgs = {
-  userId: Scalars['UUID'];
+  userId: Scalars['UUID']['input'];
 };
 
 export type Room = {
   __typename?: 'Room';
+  bannedUsers: Array<Scalars['UUID']['output']>;
   deck: Deck;
   game: Game;
-  id: Scalars['UUID'];
-  isGameOver: Scalars['Boolean'];
-  name?: Maybe<Scalars['String']>;
+  id: Scalars['UUID']['output'];
+  isGameOver: Scalars['Boolean']['output'];
+  name?: Maybe<Scalars['String']['output']>;
+  roomOwnerId?: Maybe<Scalars['UUID']['output']>;
   users: Array<User>;
-  roomOwnerId?: string | null;
 };
 
 export type SubscriptionRoot = {
@@ -112,23 +154,28 @@ export type SubscriptionRoot = {
 
 
 export type SubscriptionRootRoomArgs = {
-  roomId: Scalars['UUID'];
+  roomId: Scalars['UUID']['input'];
+};
+
+export type UpdateDeckInput = {
+  cards: Array<Scalars['String']['input']>;
+  roomId: Scalars['UUID']['input'];
 };
 
 export type User = {
   __typename?: 'User';
-  id: Scalars['UUID'];
-  username: Scalars['String'];
+  id: Scalars['UUID']['output'];
+  username: Scalars['String']['output'];
 };
 
 export type UserCard = {
   __typename?: 'UserCard';
-  card?: Maybe<Scalars['String']>;
-  userId: Scalars['UUID'];
+  card?: Maybe<Scalars['String']['output']>;
+  userId: Scalars['UUID']['output'];
 };
 
 export type UserInput = {
-  id: Scalars['UUID'];
-  username: Scalars['String'];
-  roomName?: string;
+  id: Scalars['UUID']['input'];
+  roomName?: InputMaybe<Scalars['String']['input']>;
+  username: Scalars['String']['input'];
 };

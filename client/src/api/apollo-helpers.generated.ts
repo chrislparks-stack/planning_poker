@@ -9,29 +9,37 @@ export type GameFieldPolicy = {
 	id?: FieldPolicy<any> | FieldReadFunction<any>,
 	table?: FieldPolicy<any> | FieldReadFunction<any>
 };
-export type MutationRootKeySpecifier = ('createRoom' | 'createUser' | 'editUser' | 'joinRoom' | 'logout' | 'pickCard' | 'resetGame' | 'showCards' | MutationRootKeySpecifier)[];
+export type MutationRootKeySpecifier = ('banUser' | 'createRoom' | 'createUser' | 'editUser' | 'joinRoom' | 'kickUser' | 'logout' | 'pickCard' | 'resetGame' | 'setRoomOwner' | 'showCards' | 'unbanUser' | 'updateDeck' | MutationRootKeySpecifier)[];
 export type MutationRootFieldPolicy = {
+	banUser?: FieldPolicy<any> | FieldReadFunction<any>,
 	createRoom?: FieldPolicy<any> | FieldReadFunction<any>,
 	createUser?: FieldPolicy<any> | FieldReadFunction<any>,
 	editUser?: FieldPolicy<any> | FieldReadFunction<any>,
 	joinRoom?: FieldPolicy<any> | FieldReadFunction<any>,
+	kickUser?: FieldPolicy<any> | FieldReadFunction<any>,
 	logout?: FieldPolicy<any> | FieldReadFunction<any>,
 	pickCard?: FieldPolicy<any> | FieldReadFunction<any>,
 	resetGame?: FieldPolicy<any> | FieldReadFunction<any>,
-	showCards?: FieldPolicy<any> | FieldReadFunction<any>
+	setRoomOwner?: FieldPolicy<any> | FieldReadFunction<any>,
+	showCards?: FieldPolicy<any> | FieldReadFunction<any>,
+	unbanUser?: FieldPolicy<any> | FieldReadFunction<any>,
+	updateDeck?: FieldPolicy<any> | FieldReadFunction<any>
 };
-export type QueryRootKeySpecifier = ('rooms' | 'userRooms' | QueryRootKeySpecifier)[];
+export type QueryRootKeySpecifier = ('roomById' | 'rooms' | 'userRooms' | QueryRootKeySpecifier)[];
 export type QueryRootFieldPolicy = {
+	roomById?: FieldPolicy<any> | FieldReadFunction<any>,
 	rooms?: FieldPolicy<any> | FieldReadFunction<any>,
 	userRooms?: FieldPolicy<any> | FieldReadFunction<any>
 };
-export type RoomKeySpecifier = ('deck' | 'game' | 'id' | 'isGameOver' | 'name' | 'users' | RoomKeySpecifier)[];
+export type RoomKeySpecifier = ('bannedUsers' | 'deck' | 'game' | 'id' | 'isGameOver' | 'name' | 'roomOwnerId' | 'users' | RoomKeySpecifier)[];
 export type RoomFieldPolicy = {
+	bannedUsers?: FieldPolicy<any> | FieldReadFunction<any>,
 	deck?: FieldPolicy<any> | FieldReadFunction<any>,
 	game?: FieldPolicy<any> | FieldReadFunction<any>,
 	id?: FieldPolicy<any> | FieldReadFunction<any>,
 	isGameOver?: FieldPolicy<any> | FieldReadFunction<any>,
 	name?: FieldPolicy<any> | FieldReadFunction<any>,
+	roomOwnerId?: FieldPolicy<any> | FieldReadFunction<any>,
 	users?: FieldPolicy<any> | FieldReadFunction<any>
 };
 export type SubscriptionRootKeySpecifier = ('room' | SubscriptionRootKeySpecifier)[];

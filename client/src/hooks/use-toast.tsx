@@ -68,7 +68,7 @@ const clearAutoDismiss = (toastId: string) => {
   }
 };
 
-const scheduleAutoDismiss = (toastId: string, duration?: number | null) => {
+const scheduleAutoDismiss = (toastId: string, duration?: number) => {
   // duration undefined => default; 0 or null => disabled
   const resolved =
     duration === undefined

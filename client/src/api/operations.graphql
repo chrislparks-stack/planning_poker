@@ -28,6 +28,7 @@ fragment RoomFragment on Room {
   users {
     ...UserFragment
   }
+  bannedUsers
   deck {
     ...DeckFragment
   }
@@ -36,7 +37,7 @@ fragment RoomFragment on Room {
   }
 }
 
-mutation CreateRoom($name: String, $cards: [String]) {
+mutation CreateRoom($name: String, $cards: [String!]!) {
   createRoom(name: $name, cards: $cards) {
     ...RoomFragment
   }
@@ -54,8 +55,8 @@ mutation JoinRoom($roomId: UUID!, $user: UserInput!) {
   }
 }
 
-mutation UpdateDeck($room_id: UUID!, $cards: [String!]!) {
-  updateDeck(input: { room_id: $room_id, cards: $cards }) {
+mutation UpdateDeck($roomId: UUID!, $cards: [String!]!) {
+  updateDeck(input: { roomId: $roomId, cards: $cards }) {
     ...RoomFragment
   }
 }
@@ -76,17 +77,6 @@ mutation Logout($userId: UUID!) {
   logout(userId: $userId)
 }
 
-mutation RemoveUserFromRoom($roomId: UUID!, $userId: UUID!) {
-  removeUserFromRoom(roomId: $roomId, userId: $userId) {
-    success
-    message
-  }
-}
-
-mutation ForceLogoutUser($userId: UUID!) {
-  forceLogoutUser(userId: $userId) { success }
-}
-
 mutation PickCard($userId: UUID!, $roomId: UUID!, $card: String!) {
   pickCard(userId: $userId, roomId: $roomId, card: $card) {
     ...RoomFragment
@@ -101,6 +91,24 @@ mutation ShowCards($roomId: UUID!) {
 
 mutation ResetGame($roomId: UUID!) {
   resetGame(roomId: $roomId) {
+    ...RoomFragment
+  }
+}
+
+mutation KickUser($roomId: UUID!, $targetUserId: UUID!) {
+  kickUser(roomId: $roomId, targetUserId: $targetUserId) {
+    ...RoomFragment
+  }
+}
+
+mutation BanUser($roomId: UUID!, $targetUserId: UUID!) {
+  banUser(roomId: $roomId, targetUserId: $targetUserId) {
+    ...RoomFragment
+  }
+}
+
+mutation UnbanUser($roomId: UUID!, $targetUserId: UUID!) {
+  unbanUser(roomId: $roomId, targetUserId: $targetUserId) {
     ...RoomFragment
   }
 }

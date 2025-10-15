@@ -14,6 +14,7 @@ pub struct Room {
     pub id: EntityId,
     pub name: Option<String>,
     pub users: Vec<User>,
+    pub banned_users: Vec<EntityId>,
     pub deck: Deck,
     pub game: Game,
     pub is_game_over: bool,
@@ -26,6 +27,7 @@ impl Room {
             id: Uuid::new_v4(),
             name,
             users: vec![],
+            banned_users: vec![],
             deck: Deck::new_with_cards(cards),
             game: Game::new(),
             is_game_over: false,
@@ -115,5 +117,25 @@ impl Room {
         }
 
         Ok(())
+    }
+
+    pub fn is_banned(&self, user_id: EntityId) -> bool {
+        self.banned_users.contains(&user_id)
+    }
+
+    pub fn kick_user(&mut self, user_id: EntityId) {
+        self.remove_user(user_id);
+    }
+
+    pub fn ban_user(&mut self, user_id: EntityId) {
+        self.remove_user(user_id);
+
+        if !self.is_banned(user_id) {
+            self.banned_users.push(user_id);
+        }
+    }
+
+    pub fn unban_user(&mut self, user_id: EntityId) {
+        self.banned_users.retain(|id| *id != user_id);
     }
 }

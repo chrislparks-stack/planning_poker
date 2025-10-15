@@ -91,6 +91,10 @@ impl MutationRoot {
 
         match storage.get_mut(&room_id) {
             Some(room) => {
+                if room.is_banned(user.id) {
+                    return Err(Error::new("User is banned from this room"));
+                }
+
                 let is_new_user = !room.users.iter().any(|u| u.id == user.id);
 
                 if is_new_user {
@@ -240,6 +244,60 @@ impl MutationRoot {
 
                 SimpleBroker::publish(room.get_room());
 
+                Ok(room.get_room())
+            }
+            None => Err(Error::new("Room not found")),
+        }
+    }
+
+    async fn kick_user(
+        &self,
+        ctx: &Context<'_>,
+        room_id: EntityId,
+        target_user_id: EntityId,
+    ) -> Result<Room> {
+        let mut storage = get_storage(ctx).await;
+
+        match storage.get_mut(&room_id) {
+            Some(room) => {
+                room.kick_user(target_user_id);
+                SimpleBroker::publish(room.get_room());
+                Ok(room.get_room())
+            }
+            None => Err(Error::new("Room not found")),
+        }
+    }
+
+    async fn ban_user(
+        &self,
+        ctx: &Context<'_>,
+        room_id: EntityId,
+        target_user_id: EntityId,
+    ) -> Result<Room> {
+        let mut storage = get_storage(ctx).await;
+
+        match storage.get_mut(&room_id) {
+            Some(room) => {
+                room.ban_user(target_user_id);
+                SimpleBroker::publish(room.get_room());
+                Ok(room.get_room())
+            }
+            None => Err(Error::new("Room not found")),
+        }
+    }
+
+    async fn unban_user(
+        &self,
+        ctx: &Context<'_>,
+        room_id: EntityId,
+        target_user_id: EntityId,
+    ) -> Result<Room> {
+        let mut storage = get_storage(ctx).await;
+
+        match storage.get_mut(&room_id) {
+            Some(room) => {
+                room.unban_user(target_user_id);
+                SimpleBroker::publish(room.get_room());
                 Ok(room.get_room())
             }
             None => Err(Error::new("Room not found")),

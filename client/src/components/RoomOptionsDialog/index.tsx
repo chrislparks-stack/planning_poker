@@ -67,10 +67,8 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
     try {
       await updateDeck({
         variables: {
-          input: {
-            roomId,
-            cards: sortedSelectedCards.map(String)
-          }
+          roomId,
+          cards: sortedSelectedCards.map(String)
         }
       });
 
@@ -266,11 +264,7 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
             </div>
           </div>
         </section>
-
-        {/* keep a small DialogFooter for other global actions if you like, otherwise remove */}
-        <DialogFooter>
-          {/* Intentionally left empty — primary action sits inside the cards section */}
-        </DialogFooter>
+        <DialogFooter />
       </DialogContent>
     </Dialog>
   );

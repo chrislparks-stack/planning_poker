@@ -1,5 +1,4 @@
 import {
-  GalleryHorizontalEnd,
   LogOut,
   Moon,
   Palette,
