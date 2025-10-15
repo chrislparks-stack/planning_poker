@@ -127,6 +127,24 @@ impl MutationRoot {
         }
     }
 
+    async fn rename_room(
+        &self,
+        ctx: &Context<'_>,
+        room_id: EntityId,
+        name: Option<String>,
+    ) -> Result<Room> {
+        let mut storage = get_storage(ctx).await;
+
+        match storage.get_mut(&room_id) {
+            Some(room) => {
+                room.rename(name);
+                SimpleBroker::publish(room.get_room());
+                Ok(room.get_room())
+            }
+            None => Err(Error::new("Room not found")),
+        }
+    }
+
     async fn set_room_owner(
         &self,
         ctx: &Context<'_>,

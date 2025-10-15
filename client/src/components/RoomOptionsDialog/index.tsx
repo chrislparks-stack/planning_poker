@@ -1,6 +1,6 @@
 import { FC, useEffect, useState } from "react";
 
-import { useUpdateDeckMutation } from "@/api";
+import { useRenameRoomMutation, useUpdateDeckMutation } from "@/api";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Room } from "@/types";
 
@@ -26,16 +27,24 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
   room
 }) => {
   const { toast } = useToast();
-  const [updateDeck, { loading }] = useUpdateDeckMutation();
+  const [updateDeck, { loading: deckLoading }] = useUpdateDeckMutation();
+  const [renameRoom, { loading: renameLoading }] = useRenameRoomMutation();
+
   const [roomId, setRoomId] = useState("");
+  const [roomName, setRoomName] = useState("");
+  const [originalName, setOriginalName] = useState("");
   const [selectedCards, setSelectedCards] = useState<(string | number)[]>([
     1, 2, 3, 5, 8
   ]);
+  const [originalCards, setOriginalCards] = useState<(string | number)[]>([]);
 
   useEffect(() => {
     if (room && open) {
-      setSelectedCards(room.deck.cards);
       setRoomId(room.id);
+      setRoomName(room.name ?? "");
+      setOriginalName(room.name ?? "");
+      setSelectedCards(room.deck.cards);
+      setOriginalCards(room.deck.cards);
     }
   }, [room, open]);
 
@@ -48,61 +57,91 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
     );
   };
 
-  const handleUpdateCards = async () => {
-    if (selectedCards.length < 1) {
-      toast({
-        title: "No cards selected",
-        description: "Please select at least one card before updating.",
-        variant: "destructive"
-      });
-      return;
+  const handleRenameRoom = async (newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === originalName) return;
+
+    await renameRoom({ variables: { roomId, name: trimmed } });
+
+    // Update local storage
+    try {
+      const stored = localStorage.getItem("Room");
+      if (stored) {
+        const roomData = JSON.parse(stored);
+        roomData.RoomName = trimmed;
+        localStorage.setItem("Room", JSON.stringify(roomData));
+      }
+    } catch {
+      console.warn("Failed updating room name in localStorage");
     }
 
-    const sortedSelectedCards = [...selectedCards].sort(
+    setOriginalName(trimmed);
+
+    toast({
+      title: "Room renamed",
+      description: `Room name updated to "${trimmed}".`,
+      duration: 3000
+    });
+  };
+
+  const handleUpdateCards = async (cards: (string | number)[]) => {
+    const sortedSelectedCards = [...cards].sort(
       (a, b) =>
         DEFAULT_CARDS.findIndex((card) => String(card) === String(a)) -
         DEFAULT_CARDS.findIndex((card) => String(card) === String(b))
     );
 
-    try {
-      await updateDeck({
-        variables: {
-          roomId,
-          cards: sortedSelectedCards.map(String)
-        }
-      });
+    if (JSON.stringify(sortedSelectedCards) === JSON.stringify(originalCards))
+      return;
 
-      try {
-        const stored = localStorage.getItem("Room");
-        let roomData;
-        if (stored) {
-          try {
-            roomData = JSON.parse(stored);
-          } catch {
-            roomData = null;
-          }
-        }
-        if (roomData) {
-          roomData.Cards = sortedSelectedCards;
-          localStorage.setItem("Room", JSON.stringify(roomData));
-        }
-      } catch (err) {
-        console.warn("Failed updating Room in localStorage:", err);
+    await updateDeck({
+      variables: {
+        roomId,
+        cards: sortedSelectedCards.map(String)
+      }
+    });
+
+    try {
+      const stored = localStorage.getItem("Room");
+      if (stored) {
+        const roomData = JSON.parse(stored);
+        roomData.Cards = sortedSelectedCards;
+        localStorage.setItem("Room", JSON.stringify(roomData));
+      }
+    } catch {
+      console.warn("Failed updating Room in localStorage");
+    }
+
+    setOriginalCards(sortedSelectedCards);
+
+    toast({
+      title: "Cards updated",
+      duration: 3000,
+      description: `Deck updated — ${sortedSelectedCards.length} cards.`
+    });
+  };
+
+  const handleDone = async () => {
+    try {
+      if (roomName.trim() !== originalName) {
+        await handleRenameRoom(roomName);
       }
 
+      const sorted = [...selectedCards].sort(
+        (a, b) =>
+          DEFAULT_CARDS.findIndex((card) => String(card) === String(a)) -
+          DEFAULT_CARDS.findIndex((card) => String(card) === String(b))
+      );
+      if (JSON.stringify(sorted) !== JSON.stringify(originalCards)) {
+        await handleUpdateCards(sorted);
+      }
+
+      setOpen(false);
+    } catch (err) {
       toast({
-        title: "Cards updated",
-        duration: 3000,
-        description: `Deck updated — ${sortedSelectedCards.length} cards.`
-      });
-    } catch (err: unknown) {
-      console.error("Failed to update deck:", err);
-      toast({
-        title: "Failed to update cards",
+        title: "Error saving changes",
         description:
-          err && (err as Error).message
-            ? `Error: ${(err as Error).message}`
-            : "An unknown error occurred.",
+          err instanceof Error ? err.message : "An unknown error occurred.",
         variant: "destructive"
       });
     }
@@ -127,7 +166,7 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
       }}
     >
       <DialogContent
-        className="sm:max-w-[640px]" // a little wider so the fan has room
+        className="sm:max-w-[640px]"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
@@ -135,7 +174,39 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
           <DialogTitle>Room Options</DialogTitle>
         </DialogHeader>
 
-        {/* ===== Card picker section (Update button integrated here) ===== */}
+        {/* ===== Room Rename Section ===== */}
+        <section
+          aria-labelledby="room-name-heading"
+          className="mt-2 rounded-lg border bg-card p-4"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 id="room-name-heading" className="text-sm font-semibold">
+                Room name
+              </h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Set a custom name for your room.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-3 flex items-center gap-2">
+            <Input
+              value={roomName}
+              onChange={(e) => setRoomName(e.target.value)}
+              placeholder="Enter room name"
+              className="flex-1"
+            />
+            <Button
+              onClick={() => handleRenameRoom(roomName)}
+              disabled={renameLoading || roomName.trim() === originalName}
+            >
+              {renameLoading ? "Saving..." : "Rename"}
+            </Button>
+          </div>
+        </section>
+
+        {/* ===== Card selection Section ===== */}
         <section
           aria-labelledby="room-cards-heading"
           className="mt-4 rounded-lg border bg-card p-4 overflow-visible"
@@ -149,7 +220,6 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
                 Pick which poker cards players can choose from in this room.
               </p>
             </div>
-
             <div className="flex items-center gap-3">
               <div className="text-xs text-muted-foreground">
                 Selected:{" "}
@@ -160,38 +230,31 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
             </div>
           </div>
 
-          {/* picker area — increased height to accommodate the fan */}
           <div className="relative mt-4 h-56 w-full">
             <div className="mb-2 text-sm">Pick poker cards to use:</div>
-
-            {/* fan wrapper is centered and absolutely-positioned buttons use transforms */}
             <div className="flex justify-center items-baseline h-full overflow-visible">
               {DEFAULT_CARDS.map((card, index) => {
                 const total = DEFAULT_CARDS.length;
                 const middle = (total - 1) / 2;
                 const offset = index - middle;
-
                 const rotate = offset * 5.5;
                 const spacing = 42;
                 const translateX = offset * spacing;
-
                 const arcStrength = 2.2;
                 const arc = Math.pow(offset, 2) * arcStrength;
-
                 const selected = selectedCards.includes(String(card));
-
                 return (
                   <button
                     key={String(card)}
                     onClick={() => toggleCardSelection(card)}
                     aria-pressed={selected}
                     className={`absolute w-12 h-20 rounded-md text-sm font-semibold transition-transform duration-300 ease-out
-                                flex items-center justify-center shadow-md
-                                ${
-                                  selected
-                                    ? "bg-accent text-white hover:bg-accent-hover"
-                                    : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-700"
-                                }`}
+                      flex items-center justify-center shadow-md
+                      ${
+                        selected
+                          ? "bg-accent text-white hover:bg-accent-hover"
+                          : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-700"
+                      }`}
                     style={{
                       left: "50%",
                       transform: `translateX(${
@@ -219,52 +282,18 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
               })}
             </div>
           </div>
-
-          {/* live pill preview and Update button row (inside the same section) */}
-          <div className="mt-4 flex items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-2">
-              {selectedCards.length === 0 ? (
-                <div className="text-xs text-muted-foreground">
-                  No cards selected
-                </div>
-              ) : (
-                selectedCards
-                  .slice()
-                  .sort(
-                    (a, b) =>
-                      DEFAULT_CARDS.findIndex(
-                        (card) => String(card) === String(a)
-                      ) -
-                      DEFAULT_CARDS.findIndex(
-                        (card) => String(card) === String(b)
-                      )
-                  )
-                  .map((c) => (
-                    <div
-                      key={String(c)}
-                      className="inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-medium"
-                      style={{
-                        background: `hsl(var(--accent))`,
-                        color: `hsl(var(--accent-foreground))`
-                      }}
-                    >
-                      {c}
-                    </div>
-                  ))
-              )}
-            </div>
-
-            <div>
-              <Button
-                onClick={handleUpdateCards}
-                disabled={loading || selectedCards.length < 1}
-              >
-                {loading ? "Updating..." : "Update Cards"}
-              </Button>
-            </div>
-          </div>
         </section>
-        <DialogFooter />
+
+        {/* ===== Footer with unified "Done" button ===== */}
+        <DialogFooter className="mt-6 flex justify-end">
+          <Button
+            onClick={handleDone}
+            disabled={deckLoading || renameLoading}
+            variant="default"
+          >
+            {deckLoading || renameLoading ? "Saving..." : "Done"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

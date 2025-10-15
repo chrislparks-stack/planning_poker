@@ -44,6 +44,14 @@ export type UpdateDeckMutationVariables = Types.Exact<{
 
 export type UpdateDeckMutation = { __typename?: 'MutationRoot', updateDeck: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
 
+export type RenameRoomMutationVariables = Types.Exact<{
+  roomId: Types.Scalars['UUID']['input'];
+  name?: Types.InputMaybe<Types.Scalars['String']['input']>;
+}>;
+
+
+export type RenameRoomMutation = { __typename?: 'MutationRoot', renameRoom: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
+
 export type SetRoomOwnerMutationVariables = Types.Exact<{
   roomId: Types.Scalars['UUID']['input'];
   userId: Types.Scalars['UUID']['input'];
@@ -309,6 +317,40 @@ export function useUpdateDeckMutation(baseOptions?: Apollo.MutationHookOptions<U
 export type UpdateDeckMutationHookResult = ReturnType<typeof useUpdateDeckMutation>;
 export type UpdateDeckMutationResult = Apollo.MutationResult<UpdateDeckMutation>;
 export type UpdateDeckMutationOptions = Apollo.BaseMutationOptions<UpdateDeckMutation, UpdateDeckMutationVariables>;
+export const RenameRoomDocument = gql`
+    mutation RenameRoom($roomId: UUID!, $name: String) {
+  renameRoom(roomId: $roomId, name: $name) {
+    ...RoomFragment
+  }
+}
+    ${RoomFragmentFragmentDoc}`;
+export type RenameRoomMutationFn = Apollo.MutationFunction<RenameRoomMutation, RenameRoomMutationVariables>;
+
+/**
+ * __useRenameRoomMutation__
+ *
+ * To run a mutation, you first call `useRenameRoomMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRenameRoomMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [renameRoomMutation, { data, loading, error }] = useRenameRoomMutation({
+ *   variables: {
+ *      roomId: // value for 'roomId'
+ *      name: // value for 'name'
+ *   },
+ * });
+ */
+export function useRenameRoomMutation(baseOptions?: Apollo.MutationHookOptions<RenameRoomMutation, RenameRoomMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<RenameRoomMutation, RenameRoomMutationVariables>(RenameRoomDocument, options);
+      }
+export type RenameRoomMutationHookResult = ReturnType<typeof useRenameRoomMutation>;
+export type RenameRoomMutationResult = Apollo.MutationResult<RenameRoomMutation>;
+export type RenameRoomMutationOptions = Apollo.BaseMutationOptions<RenameRoomMutation, RenameRoomMutationVariables>;
 export const SetRoomOwnerDocument = gql`
     mutation SetRoomOwner($roomId: UUID!, $userId: UUID!) {
   setRoomOwner(roomId: $roomId, userId: $userId) {

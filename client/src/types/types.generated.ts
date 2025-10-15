@@ -37,6 +37,7 @@ export type MutationRoot = {
   kickUser: Room;
   logout: Scalars['Boolean']['output'];
   pickCard: Room;
+  renameRoom: Room;
   resetGame: Room;
   setRoomOwner: Room;
   showCards: Room;
@@ -89,6 +90,12 @@ export type MutationRootPickCardArgs = {
   card: Scalars['String']['input'];
   roomId: Scalars['UUID']['input'];
   userId: Scalars['UUID']['input'];
+};
+
+
+export type MutationRootRenameRoomArgs = {
+  name?: InputMaybe<Scalars['String']['input']>;
+  roomId: Scalars['UUID']['input'];
 };
 
 

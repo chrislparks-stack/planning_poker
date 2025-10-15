@@ -9,7 +9,7 @@ export type GameFieldPolicy = {
 	id?: FieldPolicy<any> | FieldReadFunction<any>,
 	table?: FieldPolicy<any> | FieldReadFunction<any>
 };
-export type MutationRootKeySpecifier = ('banUser' | 'createRoom' | 'createUser' | 'editUser' | 'joinRoom' | 'kickUser' | 'logout' | 'pickCard' | 'resetGame' | 'setRoomOwner' | 'showCards' | 'unbanUser' | 'updateDeck' | MutationRootKeySpecifier)[];
+export type MutationRootKeySpecifier = ('banUser' | 'createRoom' | 'createUser' | 'editUser' | 'joinRoom' | 'kickUser' | 'logout' | 'pickCard' | 'renameRoom' | 'resetGame' | 'setRoomOwner' | 'showCards' | 'unbanUser' | 'updateDeck' | MutationRootKeySpecifier)[];
 export type MutationRootFieldPolicy = {
 	banUser?: FieldPolicy<any> | FieldReadFunction<any>,
 	createRoom?: FieldPolicy<any> | FieldReadFunction<any>,
@@ -19,6 +19,7 @@ export type MutationRootFieldPolicy = {
 	kickUser?: FieldPolicy<any> | FieldReadFunction<any>,
 	logout?: FieldPolicy<any> | FieldReadFunction<any>,
 	pickCard?: FieldPolicy<any> | FieldReadFunction<any>,
+	renameRoom?: FieldPolicy<any> | FieldReadFunction<any>,
 	resetGame?: FieldPolicy<any> | FieldReadFunction<any>,
 	setRoomOwner?: FieldPolicy<any> | FieldReadFunction<any>,
 	showCards?: FieldPolicy<any> | FieldReadFunction<any>,

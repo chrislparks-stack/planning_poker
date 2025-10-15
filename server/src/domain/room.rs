@@ -119,6 +119,10 @@ impl Room {
         Ok(())
     }
 
+    pub fn rename(&mut self, new_name: Option<String>) {
+        self.name = new_name;
+    }
+
     pub fn is_banned(&self, user_id: EntityId) -> bool {
         self.banned_users.contains(&user_id)
     }
