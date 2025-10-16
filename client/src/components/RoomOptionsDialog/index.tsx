@@ -324,23 +324,17 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
                       }`}
                     style={{
                       left: "50%",
-                      transform: `translateX(${
-                        translateX - 50
-                      }px) translateY(${arc}px) rotate(${rotate}deg)`,
+                      transform: `translateX(calc(${translateX}px - 24px)) translateY(${arc}px) rotate(${rotate}deg)`,
                       zIndex: 1000 + index,
                       boxShadow: "0 4px 10px rgba(0, 0, 0, 0.5)"
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = `translateX(${
-                        translateX - 50
-                      }px) translateY(${
+                      e.currentTarget.style.transform = `translateX(calc(${translateX}px - 24px)) translateY(${
                         arc - 20
                       }px) rotate(${rotate}deg) scale(1.05)`;
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = `translateX(${
-                        translateX - 50
-                      }px) translateY(${arc}px) rotate(${rotate}deg)`;
+                      e.currentTarget.style.transform = `translateX(calc(${translateX}px - 24px)) translateY(${arc}px) rotate(${rotate}deg)`;
                     }}
                   >
                     {card}
