@@ -1,6 +1,10 @@
 import { FC, useEffect, useState } from "react";
 
-import { useRenameRoomMutation, useUpdateDeckMutation } from "@/api";
+import {
+  useRenameRoomMutation,
+  useUpdateDeckMutation,
+  useToggleCountdownOptionMutation
+} from "@/api";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,6 +14,7 @@ import {
   DialogTitle
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Room } from "@/types";
 
@@ -29,6 +34,7 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
   const { toast } = useToast();
   const [updateDeck, { loading: deckLoading }] = useUpdateDeckMutation();
   const [renameRoom, { loading: renameLoading }] = useRenameRoomMutation();
+  const [toggleCountdownOption] = useToggleCountdownOptionMutation();
 
   const [roomId, setRoomId] = useState("");
   const [roomName, setRoomName] = useState("");
@@ -37,6 +43,9 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
     1, 2, 3, 5, 8
   ]);
   const [originalCards, setOriginalCards] = useState<(string | number)[]>([]);
+  const [countdownEnabled, setCountdownEnabled] = useState<boolean>(
+    room?.countdownEnabled ?? false
+  );
 
   useEffect(() => {
     if (room && open) {
@@ -45,6 +54,7 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
       setOriginalName(room.name ?? "");
       setSelectedCards(room.deck.cards);
       setOriginalCards(room.deck.cards);
+      setCountdownEnabled(room.countdownEnabled ?? false);
     }
   }, [room, open]);
 
@@ -63,7 +73,6 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
 
     await renameRoom({ variables: { roomId, name: trimmed } });
 
-    // Update local storage
     try {
       const stored = localStorage.getItem("Room");
       if (stored) {
@@ -203,6 +212,64 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
             >
               {renameLoading ? "Saving..." : "Rename"}
             </Button>
+          </div>
+        </section>
+
+        {/* ===== Countdown Reveal Option ===== */}
+        <section
+          aria-labelledby="countdown-option-heading"
+          className="mt-4 rounded-lg border bg-card p-5 shadow-sm"
+        >
+          <div className="flex items-center justify-between">
+            <div className="max-w-[70%]">
+              <h3
+                id="countdown-option-heading"
+                className="text-[0.95rem] font-semibold tracking-tight text-foreground"
+              >
+                Countdown reveal
+              </h3>
+              <p className="mt-1.5 text-[0.83rem] leading-relaxed text-muted-foreground">
+                Adds a dramatic reveal — when enabled, everyone sees a
+                synchronized
+                <span className="font-semibold text-foreground">
+                  {" "}
+                  3-2-1 countdown{" "}
+                </span>
+                before cards are shown. The room owner can cancel it
+                mid-countdown if more discussion is needed.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-center">
+              <Switch
+                id="countdown-enabled"
+                checked={countdownEnabled}
+                onCheckedChange={async (enabled) => {
+                  try {
+                    setCountdownEnabled(enabled);
+                    await toggleCountdownOption({
+                      variables: { roomId, enabled }
+                    });
+                    toast({
+                      title: enabled
+                        ? "Countdown enabled"
+                        : "Countdown disabled",
+                      duration: 2500
+                    });
+                  } catch (err) {
+                    console.error("Failed to toggle countdown option:", err);
+                    toast({
+                      title: "Error updating countdown option",
+                      description:
+                        err instanceof Error
+                          ? err.message
+                          : "An unknown error occurred.",
+                      variant: "destructive"
+                    });
+                  }
+                }}
+              />
+            </div>
           </div>
         </section>
 

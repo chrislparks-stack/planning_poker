@@ -1,15 +1,21 @@
 import { ReloadIcon } from "@radix-ui/react-icons";
-import { FC } from "react";
+import { FC, useEffect, useRef, useState } from "react";
 
-import { useResetGameMutation, useShowCardsMutation } from "@/api";
+import {
+  useCancelRevealCountdownMutation,
+  useResetGameMutation,
+  useShowCardsMutation,
+  useStartRevealCountdownMutation
+} from "@/api";
 import { useModal } from "@/components/ConfirmationDialog/useModal";
 import { Button } from "@/components/ui/button";
+import { CountdownOverlay } from "@/components/ui/countdown-overlay.tsx";
 import { useToast } from "@/hooks/use-toast";
 import type { Room } from "@/types";
 
 interface TableProps {
   room: Room;
-  isCardsPicked: boolean; // same meaning as before
+  isCardsPicked: boolean;
   isGameOver: boolean;
   innerRef: React.RefObject<HTMLDivElement | null>;
 }
@@ -57,7 +63,28 @@ export const Table: FC<TableProps> = ({
       }
     });
 
-  // current viewer id (from localStorage user)
+  const [startRevealCountdown, { loading: countdownLoading }] =
+    useStartRevealCountdownMutation({
+      onError: (error) => {
+        toast({
+          title: "Error",
+          description: `Countdown: ${error.message}`,
+          variant: "destructive"
+        });
+      }
+    });
+
+  const [cancelRevealCountdownMutation] = useCancelRevealCountdownMutation({
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Cancel countdown: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  });
+
+  // ===== Current user tracking =====
   const currentUserId =
     typeof window !== "undefined"
       ? (() => {
@@ -72,13 +99,11 @@ export const Table: FC<TableProps> = ({
         })()
       : undefined;
 
-  // is the current viewer the room owner?
   const currentIsRoomOwner =
     room.roomOwnerId !== undefined && room.roomOwnerId !== null
       ? room.roomOwnerId === currentUserId
       : false;
 
-  // Find the current user's table entry (if any) and whether they've selected a card
   const table = (room.game?.table ?? []) as TableEntry[];
   const currentEntry = currentUserId
     ? table.find((t) => (t.userId ?? t.user?.id ?? null) === currentUserId)
@@ -86,8 +111,78 @@ export const Table: FC<TableProps> = ({
   const hasSelectedOwnCard = Boolean(currentEntry?.card);
   const selectedCardLabel = currentEntry?.card ?? "";
 
-  // handlers (use room.id for mutations)
-  function handleShowCards() {
+  // ===== Countdown Overlay state =====
+  const [showCountdownOverlay, setShowCountdownOverlay] = useState(false);
+  const [localCountdown, setLocalCountdown] = useState<number | null>(null);
+
+  // Debug watcher
+  useEffect(() => {
+    console.log(
+      "[Countdown debug]",
+      "enabled:",
+      room.countdownEnabled,
+      "stage:",
+      room.revealStage,
+      "value:",
+      room.countdownValue
+    );
+  }, [room.countdownEnabled, room.revealStage, room.countdownValue]);
+
+  // ===== Final tuned local-only countdown logic =====
+  const revealStageRef = useRef(room.revealStage);
+  useEffect(() => {
+    revealStageRef.current = room.revealStage;
+  }, [room.revealStage]);
+
+  useEffect(() => {
+    if (
+      !showCountdownOverlay &&
+      room.countdownEnabled &&
+      room.revealStage?.toUpperCase() === "COUNTDOWN" &&
+      room.countdownValue === 3
+    ) {
+      setShowCountdownOverlay(true);
+      setLocalCountdown(3);
+
+      let current = 3;
+      let cancelled = false;
+
+      const tick = () => {
+        // Always read the most recent stage
+        if (revealStageRef.current?.toUpperCase() === "CANCELLED") {
+          cancelled = true;
+          setShowCountdownOverlay(false);
+          setLocalCountdown(null);
+          return;
+        }
+
+        current -= 1;
+
+        if (current >= 1) {
+          setLocalCountdown(current);
+          setTimeout(tick, 1000);
+        } else {
+          // fade a bit sooner after 1 appears
+          setTimeout(() => {
+            if (!cancelled) {
+              setShowCountdownOverlay(false);
+              setLocalCountdown(null);
+            }
+          }, 400);
+        }
+      };
+
+      setTimeout(tick, 1000);
+    }
+  }, [
+    room.countdownEnabled,
+    room.countdownValue,
+    room.revealStage,
+    showCountdownOverlay
+  ]);
+
+  // ===== Handlers =====
+  async function handleReveal() {
     if (!currentIsRoomOwner) {
       toast({
         title: "Not allowed",
@@ -96,7 +191,24 @@ export const Table: FC<TableProps> = ({
       });
       return;
     }
-    showCardsMutation({ variables: { roomId: room.id } });
+
+    try {
+      if (room.countdownEnabled) {
+        await startRevealCountdown({
+          variables: { roomId: room.id, userId: currentUserId }
+        });
+      } else {
+        await showCardsMutation({
+          variables: { roomId: room.id }
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to reveal cards.",
+        variant: "destructive"
+      });
+    }
   }
 
   function handleResetGame() {
@@ -113,6 +225,7 @@ export const Table: FC<TableProps> = ({
     });
   }
 
+  // ===== Render =====
   return (
     <div
       ref={innerRef}
@@ -120,7 +233,6 @@ export const Table: FC<TableProps> = ({
     >
       {isCardsPicked ? (
         isGameOver ? (
-          // Game over -> owner sees Start New Game button, others see vote + waiting text
           currentIsRoomOwner ? (
             <Button
               onClick={handleResetGame}
@@ -154,19 +266,17 @@ export const Table: FC<TableProps> = ({
             </div>
           )
         ) : currentIsRoomOwner ? (
-          // Cards picked & not game over -> owner reveals
           <Button
-            onClick={handleShowCards}
-            disabled={showCardLoading}
+            onClick={handleReveal}
+            disabled={showCardLoading || countdownLoading}
             size="lg"
           >
-            {showCardLoading && (
+            {(showCardLoading || countdownLoading) && (
               <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
             )}
-            Reveal cards
+            Reveal Cards
           </Button>
         ) : hasSelectedOwnCard ? (
-          // Non-owner who has voted
           <div className="flex flex-col items-center text-center">
             <span className="text-sm font-semibold">
               You voted:{" "}
@@ -179,7 +289,6 @@ export const Table: FC<TableProps> = ({
             </span>
           </div>
         ) : (
-          // Non-owner who hasn't voted (rare when isCardsPicked true)
           <div className="flex flex-col items-center text-center">
             <span className="text-sm text-muted-foreground">
               Select card to vote
@@ -189,8 +298,7 @@ export const Table: FC<TableProps> = ({
             </span>
           </div>
         )
-      ) : // Not all cards picked yet
-      hasSelectedOwnCard && !currentIsRoomOwner ? (
+      ) : hasSelectedOwnCard && !currentIsRoomOwner ? (
         <div className="flex flex-col items-center text-center">
           <span className="text-sm font-semibold text-accent">
             Waiting to reveal cards...
@@ -203,6 +311,19 @@ export const Table: FC<TableProps> = ({
         <span className="text-sm text-muted-foreground">
           Select card to vote
         </span>
+      )}
+      {showCountdownOverlay && localCountdown !== null && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 pointer-events-auto">
+          <CountdownOverlay
+            seconds={localCountdown}
+            isRoomOwner={currentIsRoomOwner}
+            onCancel={() =>
+              cancelRevealCountdownMutation({
+                variables: { roomId: room.id, userId: currentUserId }
+              })
+            }
+          />
+        </div>
       )}
     </div>
   );

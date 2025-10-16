@@ -30,6 +30,7 @@ export type Game = {
 export type MutationRoot = {
   __typename?: 'MutationRoot';
   banUser: Room;
+  cancelRevealCountdown: Room;
   createRoom: Room;
   createUser: User;
   editUser: User;
@@ -41,6 +42,8 @@ export type MutationRoot = {
   resetGame: Room;
   setRoomOwner: Room;
   showCards: Room;
+  startRevealCountdown: Room;
+  toggleCountdownOption: Room;
   unbanUser: Room;
   updateDeck: Room;
 };
@@ -49,6 +52,12 @@ export type MutationRoot = {
 export type MutationRootBanUserArgs = {
   roomId: Scalars['UUID']['input'];
   targetUserId: Scalars['UUID']['input'];
+};
+
+
+export type MutationRootCancelRevealCountdownArgs = {
+  roomId: Scalars['UUID']['input'];
+  userId?: InputMaybe<Scalars['UUID']['input']>;
 };
 
 
@@ -115,6 +124,18 @@ export type MutationRootShowCardsArgs = {
 };
 
 
+export type MutationRootStartRevealCountdownArgs = {
+  roomId: Scalars['UUID']['input'];
+  userId?: InputMaybe<Scalars['UUID']['input']>;
+};
+
+
+export type MutationRootToggleCountdownOptionArgs = {
+  enabled: Scalars['Boolean']['input'];
+  roomId: Scalars['UUID']['input'];
+};
+
+
 export type MutationRootUnbanUserArgs = {
   roomId: Scalars['UUID']['input'];
   targetUserId: Scalars['UUID']['input'];
@@ -145,11 +166,14 @@ export type QueryRootUserRoomsArgs = {
 export type Room = {
   __typename?: 'Room';
   bannedUsers: Array<Scalars['UUID']['output']>;
+  countdownEnabled: Scalars['Boolean']['output'];
+  countdownValue?: Maybe<Scalars['Int']['output']>;
   deck: Deck;
   game: Game;
   id: Scalars['UUID']['output'];
   isGameOver: Scalars['Boolean']['output'];
   name?: Maybe<Scalars['String']['output']>;
+  revealStage?: Maybe<Scalars['String']['output']>;
   roomOwnerId?: Maybe<Scalars['UUID']['output']>;
   users: Array<User>;
 };

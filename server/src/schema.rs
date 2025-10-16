@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use tokio::time::{sleep, Duration};
 
 use crate::{
     domain::{
@@ -138,6 +139,105 @@ impl MutationRoot {
         match storage.get_mut(&room_id) {
             Some(room) => {
                 room.rename(name);
+                SimpleBroker::publish(room.get_room());
+                Ok(room.get_room())
+            }
+            None => Err(Error::new("Room not found")),
+        }
+    }
+
+    async fn toggle_countdown_option(
+        &self,
+        ctx: &Context<'_>,
+        room_id: Uuid,
+        enabled: bool
+    ) -> Result<Room> {
+        let mut storage = get_storage(ctx).await;
+
+        match storage.get_mut(&room_id) {
+            Some(room) => {
+                room.enable_countdown(enabled);
+                SimpleBroker::publish(room.get_room());
+                Ok(room.get_room())
+            }
+            None => Err(Error::new("Room not found")),
+        }
+    }
+
+    async fn start_reveal_countdown(
+        &self,
+        ctx: &Context<'_>,
+        room_id: Uuid,
+        user_id: Option<Uuid>, // optional so only owner can start
+    ) -> Result<Room> {
+        {
+            let mut storage = get_storage(ctx).await;
+
+            let room = storage.get_mut(&room_id).ok_or(Error::new("Room not found"))?;
+
+            if let Some(uid) = user_id {
+                if Some(uid) != room.room_owner_id {
+                    return Err(Error::new("Only the room owner can start the countdown"));
+                }
+            }
+
+            if !room.countdown_enabled {
+                return Err(Error::new("Countdown reveal is disabled for this room"));
+            }
+
+            room.start_countdown();
+            SimpleBroker::publish(room.get_room());
+        }
+
+        for remaining in (1..=3).rev() {
+            sleep(Duration::from_secs(1)).await;
+
+            let mut storage = get_storage(ctx).await;
+            if let Some(room) = storage.get_mut(&room_id) {
+                // If countdown cancelled, stop
+                if room.reveal_stage.as_deref() == Some("cancelled") {
+                    room.countdown_value = None;
+                    SimpleBroker::publish(room.get_room());
+                    return Ok(room.get_room());
+                }
+
+                room.update_countdown_value(remaining);
+                SimpleBroker::publish(room.get_room());
+            }
+            drop(storage);
+        }
+
+        let mut storage = get_storage(ctx).await;
+        match storage.get_mut(&room_id) {
+            Some(room) => {
+                if room.reveal_stage.as_deref() != Some("cancelled") {
+                    room.complete_countdown();
+                    SimpleBroker::publish(room.get_room());
+                }
+                Ok(room.get_room())
+            }
+            None => Err(Error::new("Room not found")),
+        }
+    }
+
+    async fn cancel_reveal_countdown(
+        &self,
+        ctx: &Context<'_>,
+        room_id: Uuid,
+        user_id: Option<Uuid>,
+    ) -> Result<Room> {
+        let mut storage = get_storage(ctx).await;
+
+        match storage.get_mut(&room_id) {
+            Some(room) => {
+                // Ownership check
+                if let Some(uid) = user_id {
+                    if Some(uid) != room.room_owner_id {
+                        return Err(Error::new("Only the room owner can cancel the countdown"));
+                    }
+                }
+
+                room.cancel_countdown();
                 SimpleBroker::publish(room.get_room());
                 Ok(room.get_room())
             }

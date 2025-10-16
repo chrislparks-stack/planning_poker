@@ -35,6 +35,9 @@ fragment RoomFragment on Room {
   game {
     ...GameFragment
   }
+  countdownEnabled
+  revealStage
+  countdownValue
 }
 
 mutation CreateRoom($name: String, $cards: [String!]!) {
@@ -63,6 +66,24 @@ mutation UpdateDeck($roomId: UUID!, $cards: [String!]!) {
 
 mutation RenameRoom($roomId: UUID!, $name: String) {
   renameRoom(roomId: $roomId, name: $name) {
+    ...RoomFragment
+  }
+}
+
+mutation ToggleCountdownOption($roomId: UUID!, $enabled: Boolean!) {
+  toggleCountdownOption(roomId: $roomId, enabled: $enabled) {
+    ...RoomFragment
+  }
+}
+
+mutation StartRevealCountdown($roomId: UUID!, $userId: UUID) {
+  startRevealCountdown(roomId: $roomId, userId: $userId) {
+    ...RoomFragment
+  }
+}
+
+mutation CancelRevealCountdown($roomId: UUID!, $userId: UUID) {
+  cancelRevealCountdown(roomId: $roomId, userId: $userId) {
     ...RoomFragment
   }
 }
