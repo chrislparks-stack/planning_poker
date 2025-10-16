@@ -46,6 +46,7 @@ export function AuthProvider({ children }: Props) {
   const handleLogout = useCallback(() => {
     removeUserFromLocalStorage();
     removeRoomFromLocalStorage();
+    sessionStorage.removeItem("HAS_JOINED_ROOM");
     setUser(null);
   }, []);
 

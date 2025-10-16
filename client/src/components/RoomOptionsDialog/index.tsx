@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Room } from "@/types";
+import {CardFan} from "@/components/ui/card-fan.tsx";
 
 interface RoomOptionsDialogProps {
   open: boolean;
@@ -175,7 +176,7 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
       }}
     >
       <DialogContent
-        className="sm:max-w-[640px]"
+        className="max-w-[80vw] sm:max-w-[440px] md:max-w-[520px] lg:max-w-[600px]"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
@@ -297,52 +298,10 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
             </div>
           </div>
 
-          <div className="relative mt-4 h-56 w-full">
-            <div className="mb-2 text-sm">Pick poker cards to use:</div>
-            <div className="flex justify-center items-baseline h-full overflow-visible">
-              {DEFAULT_CARDS.map((card, index) => {
-                const total = DEFAULT_CARDS.length;
-                const middle = (total - 1) / 2;
-                const offset = index - middle;
-                const rotate = offset * 5.5;
-                const spacing = 42;
-                const translateX = offset * spacing;
-                const arcStrength = 2.2;
-                const arc = Math.pow(offset, 2) * arcStrength;
-                const selected = selectedCards.includes(String(card));
-                return (
-                  <button
-                    key={String(card)}
-                    onClick={() => toggleCardSelection(card)}
-                    aria-pressed={selected}
-                    className={`absolute w-12 h-20 rounded-md text-sm font-semibold transition-transform duration-300 ease-out
-                      flex items-center justify-center shadow-md
-                      ${
-                        selected
-                          ? "bg-accent text-white hover:bg-accent-hover"
-                          : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-700"
-                      }`}
-                    style={{
-                      left: "50%",
-                      transform: `translateX(calc(${translateX}px - 24px)) translateY(${arc}px) rotate(${rotate}deg)`,
-                      zIndex: 1000 + index,
-                      boxShadow: "0 4px 10px rgba(0, 0, 0, 0.5)"
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = `translateX(calc(${translateX}px - 24px)) translateY(${
-                        arc - 20
-                      }px) rotate(${rotate}deg) scale(1.05)`;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = `translateX(calc(${translateX}px - 24px)) translateY(${arc}px) rotate(${rotate}deg)`;
-                    }}
-                  >
-                    {card}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <CardFan
+            selectedCards={selectedCards}
+            toggleCardSelection={toggleCardSelection}
+          />
         </section>
 
         {/* ===== Footer with unified "Done" button ===== */}

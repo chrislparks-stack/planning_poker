@@ -68,8 +68,6 @@ export function RoomPage() {
       if (!room || !user) return;
 
       const prefix = `kickban-${room.id}-`;
-
-      // Remove any leftover kick/ban keys tied to this room (any user)
       Object.keys(localStorage).forEach((key) => {
         if (key.startsWith(prefix)) {
           localStorage.removeItem(key);
@@ -77,11 +75,17 @@ export function RoomPage() {
         }
       });
 
-      toast({
-        title: "Joined room",
-        description: `You joined ${room.name ?? "the room"} successfully.`,
-        duration: 2500
-      });
+      // Only show toast on first join, not on refresh
+      const hasJoinedBefore =
+        sessionStorage.getItem("HAS_JOINED_ROOM") === "true";
+      if (!hasJoinedBefore) {
+        toast({
+          title: "Joined room",
+          description: `You joined ${room.name ?? "the room"} successfully.`,
+          duration: 2500
+        });
+        sessionStorage.setItem("HAS_JOINED_ROOM", "true");
+      }
 
       console.log("Joined room successfully:", data);
     },

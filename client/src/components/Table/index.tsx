@@ -168,7 +168,7 @@ export const Table: FC<TableProps> = ({
               setShowCountdownOverlay(false);
               setLocalCountdown(null);
             }
-          }, 400);
+          }, 0);
         }
       };
 

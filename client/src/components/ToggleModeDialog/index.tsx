@@ -320,42 +320,49 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
   // Save — commit runtime vars (& persist) and apply theme
   const handleSave = () => {
     try {
-      // commit theme through provider
-      setTheme(previewTheme);
+      const themeChanged = previewTheme !== originalThemeRef.current;
+      const accentChanged = previewAccent !== originalAccentRef.current;
 
+      // Apply theme and accent regardless (so it stays consistent)
+      setTheme(previewTheme);
       applyAccent(previewAccent);
 
-      const titleCase = (s: string) =>
-        s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+      // Only show toast if something actually changed
+      if (themeChanged || accentChanged) {
+        const titleCase = (s: string) =>
+          s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 
-      toast({
-        title: "Theme updated",
-        duration: 3000,
-        description: (
-          <>
-            <div style={{ fontWeight: 700 }}>Your settings have been saved</div>
-            <div className="flex items-baseline gap-1">
-              <div style={{ fontWeight: 700 }}>Theme Mode:</div>
-              <div style={{ fontWeight: 600 }}>
-                {previewTheme == "dark" ? (
-                  <Moon size="12px" />
-                ) : previewTheme == "light" ? (
-                  <Sun size="12px" />
-                ) : (
-                  <Laptop size="12px" />
-                )}
+        toast({
+          title: "Theme updated",
+          duration: 3000,
+          description: (
+            <>
+              <div style={{ fontWeight: 700 }}>
+                Your settings have been saved
               </div>
-              <div style={{ fontWeight: 600 }}>{titleCase(previewTheme)}</div>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <div style={{ fontWeight: 700 }}>Accent Color:</div>
-              <div style={{ fontWeight: 600 }} className="text-accent">
-                {titleCase(previewAccent)}
+              <div className="flex items-baseline gap-1">
+                <div style={{ fontWeight: 700 }}>Theme Mode:</div>
+                <div style={{ fontWeight: 600 }}>
+                  {previewTheme === "dark" ? (
+                    <Moon size="12px" />
+                  ) : previewTheme === "light" ? (
+                    <Sun size="12px" />
+                  ) : (
+                    <Laptop size="12px" />
+                  )}
+                </div>
+                <div style={{ fontWeight: 600 }}>{titleCase(previewTheme)}</div>
               </div>
-            </div>
-          </>
-        )
-      });
+              <div className="flex items-baseline gap-2">
+                <div style={{ fontWeight: 700 }}>Accent Color:</div>
+                <div style={{ fontWeight: 600 }} className="text-accent">
+                  {titleCase(previewAccent)}
+                </div>
+              </div>
+            </>
+          )
+        });
+      }
     } catch (err) {
       console.error("Failed to apply theme/accent:", err);
       toast({
