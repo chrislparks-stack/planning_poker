@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Room } from "@/types";
-import {CardFan} from "@/components/ui/card-fan.tsx";
+import { CardFan } from "@/components/ui/card-fan.tsx";
 
 interface RoomOptionsDialogProps {
   open: boolean;

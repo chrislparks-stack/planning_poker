@@ -43,6 +43,7 @@ export type MutationRoot = {
   setRoomOwner: Room;
   showCards: Room;
   startRevealCountdown: Room;
+  toggleConfirmNewGame: Room;
   toggleCountdownOption: Room;
   unbanUser: Room;
   updateDeck: Room;
@@ -130,6 +131,12 @@ export type MutationRootStartRevealCountdownArgs = {
 };
 
 
+export type MutationRootToggleConfirmNewGameArgs = {
+  enabled: Scalars['Boolean']['input'];
+  roomId: Scalars['UUID']['input'];
+};
+
+
 export type MutationRootToggleCountdownOptionArgs = {
   enabled: Scalars['Boolean']['input'];
   roomId: Scalars['UUID']['input'];
@@ -166,6 +173,7 @@ export type QueryRootUserRoomsArgs = {
 export type Room = {
   __typename?: 'Room';
   bannedUsers: Array<Scalars['UUID']['output']>;
+  confirmNewGame: Scalars['Boolean']['output'];
   countdownEnabled: Scalars['Boolean']['output'];
   countdownValue?: Maybe<Scalars['Int']['output']>;
   deck: Deck;

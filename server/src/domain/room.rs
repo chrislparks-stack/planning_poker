@@ -22,6 +22,7 @@ pub struct Room {
     pub countdown_enabled: bool,
     pub reveal_stage: Option<String>,
     pub countdown_value: Option<i32>,
+    pub confirm_new_game: bool,
 }
 
 impl Room {
@@ -38,6 +39,7 @@ impl Room {
             countdown_enabled: false,
             reveal_stage: Some("idle".to_string()),
             countdown_value: None,
+            confirm_new_game: true,
         }
     }
 
@@ -171,8 +173,7 @@ impl Room {
         self.countdown_value = None;
     }
 
-    pub fn reset_countdown(&mut self) {
-        self.reveal_stage = Some("idle".to_string());
-        self.countdown_value = None;
+    pub fn toggle_confirm_new_game(&mut self, enabled: bool) {
+        self.confirm_new_game = enabled;
     }
 }

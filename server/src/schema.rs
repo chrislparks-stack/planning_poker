@@ -421,6 +421,24 @@ impl MutationRoot {
             None => Err(Error::new("Room not found")),
         }
     }
+
+    async fn toggle_confirm_new_game(
+        &self,
+        ctx: &Context<'_>,
+        room_id: Uuid,
+        enabled: bool,
+    ) -> Result<Room> {
+        let mut storage = get_storage(ctx).await;
+
+        match storage.get_mut(&room_id) {
+            Some(room) => {
+                room.toggle_confirm_new_game(enabled);
+                SimpleBroker::publish(room.get_room());
+                Ok(room.get_room())
+            }
+            None => Err(Error::new("Room not found")),
+        }
+    }
 }
 
 pub struct SubscriptionRoot;

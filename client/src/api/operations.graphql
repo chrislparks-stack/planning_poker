@@ -38,6 +38,7 @@ fragment RoomFragment on Room {
   countdownEnabled
   revealStage
   countdownValue
+  confirmNewGame
 }
 
 mutation CreateRoom($name: String, $cards: [String!]!) {
@@ -136,6 +137,12 @@ mutation BanUser($roomId: UUID!, $targetUserId: UUID!) {
 
 mutation UnbanUser($roomId: UUID!, $targetUserId: UUID!) {
   unbanUser(roomId: $roomId, targetUserId: $targetUserId) {
+    ...RoomFragment
+  }
+}
+
+mutation ToggleConfirmNewGame($roomId: UUID!, $enabled: Boolean!) {
+  toggleConfirmNewGame(roomId: $roomId, enabled: $enabled) {
     ...RoomFragment
   }
 }
