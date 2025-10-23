@@ -15,7 +15,7 @@ interface DeckProps {
   table: UserCard[] | undefined;
 }
 
-export function Deck({ roomId, isGameOver, cards, table }: DeckProps) {
+export function Deck({ roomId, isGameOver, cards }: DeckProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const { cardsContainerRef } = useKeyboardControls();

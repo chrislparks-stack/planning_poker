@@ -81,24 +81,70 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
             fillOpacity={0.6}
             activeBar={<Rectangle fillOpacity={0.8} />}
           >
+            // Replace your LabelList block with this:
             <LabelList
               dataKey="Votes"
-              content={({ x, y, value, width }) => {
-                if (x == null || y == null || width == null) return null;
+              content={({ x, y, value, width, height }) => {
+                if (x == null || y == null || width == null || height == null)
+                  return null;
 
-                const labelY = y - 10;
-                const finalY = labelY < 10 ? 10 : labelY;
+                const isMajority = value === maxCardCount;
+                const paddingAbove = 6; // px above the bar
+                const labelFontSize = 12;
+
+                // If there's enough room above the bar, place the label above.
+                // y is the top of the bar; placing at y - paddingAbove
+                const canPlaceAbove = y - paddingAbove - labelFontSize > 0;
+                let labelY: number;
+                let fillColor = "white"; // default if inside the bar
+
+                if (canPlaceAbove) {
+                  labelY = y - paddingAbove;
+                  fillColor = "#111827"; // dark text when above the bar (on page background)
+                } else {
+                  // not enough room: put label centered inside the bar
+                  labelY = y + height / 2;
+                  fillColor = "white";
+                }
 
                 return (
                   <text
                     x={x + width / 2}
-                    y={finalY + 50}
-                    fill="white"
+                    y={labelY}
+                    fill={fillColor}
                     textAnchor="middle"
-                    fontSize={12}
+                    fontSize={labelFontSize}
                     className="tabular-nums"
+                    dominantBaseline="middle"
                   >
-                    # of votes: {value}
+                    <tspan
+                      x={x + width / 2}
+                      fontWeight={isMajority ? "bold" : "normal"}
+                    >
+                      Votes: {value}
+                    </tspan>
+                    {isMajority && canPlaceAbove && (
+                      <tspan
+                        x={x + width / 2}
+                        dy="1.2em"
+                        fontSize={10}
+                        fill="#a78bfa"
+                      >
+                        MAJORITY
+                      </tspan>
+                    )}
+                    {isMajority && !canPlaceAbove && (
+                      // If we put the label inside the bar and it's the majority, add a small badge above the text
+                      <tspan
+                        x={x + width / 2}
+                        dy="1.6em"
+                        fontSize={9}
+                        fill="#a78bfa"
+                        fontWeight="600"
+                      >
+                        MAJORITY
+                      </tspan>
+                    )}
                   </text>
                 );
               }}

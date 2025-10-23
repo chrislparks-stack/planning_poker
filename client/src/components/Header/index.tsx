@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Copy } from "lucide-react";
-import { FC } from "react";
+import {FC, SVGProps} from "react";
 
 import { AccountMenu } from "@/components/AccountMenu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -30,20 +30,76 @@ export const Header: FC<HeaderProps> = ({ room, users }) => {
     }
   };
 
+  function Logo(props: SVGProps<SVGSVGElement>) {
+    return (
+      <svg
+        viewBox="0 0 100 100"
+        xmlns="http://www.w3.org/2000/svg"
+        {...props}
+        role="img"
+        aria-label="PokerPlanning.org Logo"
+      >
+        <defs>
+          <linearGradient
+            id="logoGradient"
+            x1="0"
+            y1="0"
+            x2="100"
+            y2="0"
+            gradientUnits="userSpaceOnUse"
+          >
+            <stop offset="0%" style={{ stopColor: "var(--accent-start)" }} />
+            <stop
+              offset="25%"
+              style={{ stopColor: "hsl(var(--accent-stop-1))" }}
+            />
+            <stop
+              offset="50%"
+              style={{ stopColor: "hsl(var(--accent-stop-2))" }}
+            />
+            <stop
+              offset="100%"
+              style={{ stopColor: "hsl(var(--accent-stop-3))" }}
+            />
+          </linearGradient>
+        </defs>
+
+        <rect
+          x="10"
+          y="10"
+          width="80"
+          height="80"
+          rx="20"
+          fill="url(#logoGradient)"
+        />
+        <path
+          d="M30 50 C 30 30, 70 30, 70 50 C 70 70, 30 70, 30 50"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={6}
+          style={{ color: "hsl(var(--accent-foreground))" }}
+        />
+      </svg>
+    );
+  }
+
   return (
     <header className="flex justify-between items-center h-14 px-4 border-b">
       <div className="flex items-center space-x-4">
-        <Link to="/" className="text-lg font-semibold flex items-center">
-          <img
-            src="/logo.svg"
-            alt="PokerPlanning.org Logo"
-            className="h-8 w-8 mr-2"
-          />
-          <span className="hidden md:block">
-            {" "}
-            {room?.name ?? "Apps Planning Poker"}
-          </span>
-        </Link>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Link to="/" className="text-lg font-semibold flex items-center">
+              <Logo className="h-8 w-8 mr-2" />
+              <span className="hidden md:block">
+                {" "}
+                {room?.name ?? "Planning Poker"}
+              </span>
+            </Link>
+          </TooltipTrigger>
+          <TooltipContent sideOffset={15}>
+            <p>Home</p>
+          </TooltipContent>
+        </Tooltip>
         {room && (
           <>
             <Separator orientation="vertical" className="h-6" />
@@ -53,7 +109,7 @@ export const Header: FC<HeaderProps> = ({ room, users }) => {
                   <Copy className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
+              <TooltipContent sideOffset={15}>
                 <p>Copy room link</p>
               </TooltipContent>
             </Tooltip>
@@ -77,7 +133,7 @@ export const Header: FC<HeaderProps> = ({ room, users }) => {
                         </AvatarFallback>
                       </Avatar>
                     </TooltipTrigger>
-                    <TooltipContent>
+                    <TooltipContent sideOffset={15}>
                       <p>{user.username}</p>
                     </TooltipContent>
                   </Tooltip>
