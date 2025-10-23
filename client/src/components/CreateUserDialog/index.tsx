@@ -48,6 +48,7 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
 
   useEffect(() => {
     if (roomData?.users) setUsers(roomData.users);
+    if (roomData?.name) setRoomName(roomData.name);
   }, [roomData]);
 
   const canSubmit =

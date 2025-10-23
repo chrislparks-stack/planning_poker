@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { FC, useMemo } from "react";
+import {FC, useEffect, useMemo, useState} from "react";
 
-import { useCreateRoomMutation } from "@/api";
+import {useCreateRoomMutation, useGetRoomQuery} from "@/api";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,44 +34,59 @@ export const HomePage: FC = () => {
     }
   });
 
+  // ===== Local stored data =====
   const storedRoom = useMemo(() => {
-    const local = localStorage.getItem("Room");
-    if (!local) return null;
     try {
-      const parsed = JSON.parse(local);
+      const raw = localStorage.getItem("Room");
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
       if (parsed?.RoomID && Array.isArray(parsed?.Cards)) return parsed;
-      return null;
-    } catch {
-      return null;
-    }
+    } catch {}
+    return null;
   }, []);
 
   const storedUser = useMemo(() => {
-    const local = localStorage.getItem("user");
-    if (!local) return null;
     try {
-      const parsed = JSON.parse(local);
+      const raw = localStorage.getItem("user");
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
       if (parsed?.id && parsed?.username) return parsed;
-      return null;
-    } catch {
-      return null;
-    }
+    } catch {}
+    return null;
   }, []);
 
-  function onCreateRoom() {
-    if (localStorage.getItem("Room")) {
+  // ===== Verify room exists on server =====
+  const { data, loading: roomCheckLoading, error: roomError } = useGetRoomQuery({
+    variables: { roomId: storedRoom?.RoomID ?? "" },
+    skip: !storedRoom?.RoomID,
+    fetchPolicy: "network-only"
+  });
+
+  const [validRoom, setValidRoom] = useState(false);
+
+  useEffect(() => {
+    if (!storedRoom?.RoomID) return;
+
+    if (roomError) {
+      console.warn("Room existence check failed:", roomError.message);
+      setValidRoom(false);
+      return;
+    }
+
+    // Room exists if the query returned data
+    if (data?.roomById?.id) {
+      setValidRoom(true);
+    } else if (!roomCheckLoading && !data?.roomById?.id) {
+      setValidRoom(false);
       localStorage.removeItem("Room");
     }
+  }, [data, roomError, roomCheckLoading, storedRoom?.RoomID]);
 
-    if (localStorage.getItem("user")) {
-      localStorage.removeItem("user");
-    }
-
-    createRoomMutation({
-      variables: {
-        cards: []
-      }
-    });
+  // ===== Handlers =====
+  function onCreateRoom() {
+    localStorage.removeItem("Room");
+    localStorage.removeItem("user");
+    createRoomMutation({ variables: { cards: [] } });
   }
 
   function onJoinExisting() {
@@ -79,7 +94,7 @@ export const HomePage: FC = () => {
     navigate({
       to: "/room/$roomId",
       params: { roomId: storedRoom.RoomID }
-    }).catch((e) => console.log(e));
+    }).catch(console.error);
   }
 
   return (
@@ -225,7 +240,7 @@ export const HomePage: FC = () => {
                 Start New Game
               </Button>
 
-              {storedRoom && (
+              {validRoom && !roomCheckLoading && (
                 <TooltipProvider delayDuration={200}>
                   <Tooltip>
                     <TooltipTrigger asChild>

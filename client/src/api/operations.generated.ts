@@ -14,6 +14,7 @@ export type GameFragmentFragment = { __typename?: 'Game', id: string, table: Arr
 export type RoomFragmentFragment = { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } };
 
 export type CreateRoomMutationVariables = Types.Exact<{
+  roomId?: Types.InputMaybe<Types.Scalars['UUID']['input']>;
   name?: Types.InputMaybe<Types.Scalars['String']['input']>;
   cards: Array<Types.Scalars['String']['input']> | Types.Scalars['String']['input'];
 }>;
@@ -219,8 +220,8 @@ export const RoomFragmentFragmentDoc = gql`
 ${DeckFragmentFragmentDoc}
 ${GameFragmentFragmentDoc}`;
 export const CreateRoomDocument = gql`
-    mutation CreateRoom($name: String, $cards: [String!]!) {
-  createRoom(name: $name, cards: $cards) {
+    mutation CreateRoom($roomId: UUID, $name: String, $cards: [String!]!) {
+  createRoom(roomId: $roomId, name: $name, cards: $cards) {
     ...RoomFragment
   }
 }
@@ -240,6 +241,7 @@ export type CreateRoomMutationFn = Apollo.MutationFunction<CreateRoomMutation, C
  * @example
  * const [createRoomMutation, { data, loading, error }] = useCreateRoomMutation({
  *   variables: {
+ *      roomId: // value for 'roomId'
  *      name: // value for 'name'
  *      cards: // value for 'cards'
  *   },

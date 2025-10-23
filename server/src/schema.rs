@@ -67,12 +67,20 @@ pub struct MutationRoot;
 
 #[Object]
 impl MutationRoot {
-    async fn create_room(&self, ctx: &Context<'_>, name: Option<String>, cards: Vec<Card>) -> Result<Room> {
+    async fn create_room(
+        &self,
+        ctx: &Context<'_>,
+        room_id: Option<Uuid>, // <-- new optional argument
+        name: Option<String>,
+        cards: Vec<Card>,
+    ) -> Result<Room> {
         let mut storage = get_storage(ctx).await;
-        let room = Room::new(name, cards);
 
+        // Create room using provided UUID or generate new one
+        let room = Room::new_with_id(room_id, name, cards);
+
+        // Store and publish
         storage.insert(room.id, room.clone());
-
         SimpleBroker::publish(room.get_room());
 
         Ok(room.get_room())

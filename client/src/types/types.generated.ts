@@ -65,6 +65,7 @@ export type MutationRootCancelRevealCountdownArgs = {
 export type MutationRootCreateRoomArgs = {
   cards: Array<Scalars['String']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
+  roomId?: InputMaybe<Scalars['UUID']['input']>;
 };
 
 

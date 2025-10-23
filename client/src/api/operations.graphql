@@ -41,8 +41,8 @@ fragment RoomFragment on Room {
   confirmNewGame
 }
 
-mutation CreateRoom($name: String, $cards: [String!]!) {
-  createRoom(name: $name, cards: $cards) {
+mutation CreateRoom($roomId: UUID, $name: String, $cards: [String!]!) {
+  createRoom(roomId: $roomId, name: $name, cards: $cards) {
     ...RoomFragment
   }
 }

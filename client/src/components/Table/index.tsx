@@ -12,6 +12,7 @@ import { CountdownOverlay } from "@/components/ui/countdown-overlay.tsx";
 import { useToast } from "@/hooks/use-toast";
 import type { Room } from "@/types";
 import {NewGameDialog} from "@/components/NewGameDialog";
+import {createPortal} from "react-dom";
 
 interface TableProps {
   room: Room;
@@ -304,18 +305,23 @@ export const Table: FC<TableProps> = ({
           Select card to vote
         </span>
       )}
-      {showCountdownOverlay && localCountdown !== null && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 pointer-events-auto">
-          <CountdownOverlay
-            seconds={localCountdown}
-            isRoomOwner={currentIsRoomOwner}
-            onCancel={() =>
-              cancelRevealCountdownMutation({
-                variables: { roomId: room.id, userId: currentUserId }
-              })
-            }
-          />
-        </div>
+      {showCountdownOverlay && localCountdown !== null &&
+        typeof document !== "undefined" &&
+        document.body &&
+        // render overlay to <body> so it ignores parent overflow/position
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 pointer-events-auto">
+            <CountdownOverlay
+                seconds={localCountdown}
+                isRoomOwner={currentIsRoomOwner}
+                onCancel={() =>
+                    cancelRevealCountdownMutation({
+                      variables: { roomId: room.id, userId: currentUserId }
+                    })
+                }
+            />
+          </div>,
+          document.body
       )}
       <NewGameDialog
           open={openNewGameDialog}

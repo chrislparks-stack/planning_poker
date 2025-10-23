@@ -14,6 +14,12 @@ import { Route as rootRouteImport } from './routes/__root'
 
 const IndexLazyRouteImport = createFileRoute('/')()
 const RoomRoomIdLazyRouteImport = createFileRoute('/room/$roomId')()
+const MissingRoomRoomIdLazyRouteImport = createFileRoute(
+  '/missing-room/$roomId',
+)()
+const InvalidRoomRoomIdLazyRouteImport = createFileRoute(
+  '/invalid-room/$roomId',
+)()
 
 const IndexLazyRoute = IndexLazyRouteImport.update({
   id: '/',
@@ -25,30 +31,61 @@ const RoomRoomIdLazyRoute = RoomRoomIdLazyRouteImport.update({
   path: '/room/$roomId',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/room.$roomId.lazy').then((d) => d.Route))
+const MissingRoomRoomIdLazyRoute = MissingRoomRoomIdLazyRouteImport.update({
+  id: '/missing-room/$roomId',
+  path: '/missing-room/$roomId',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() =>
+  import('./routes/missing-room.$roomId.lazy').then((d) => d.Route),
+)
+const InvalidRoomRoomIdLazyRoute = InvalidRoomRoomIdLazyRouteImport.update({
+  id: '/invalid-room/$roomId',
+  path: '/invalid-room/$roomId',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() =>
+  import('./routes/invalid-room.$roomId.lazy').then((d) => d.Route),
+)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexLazyRoute
+  '/invalid-room/$roomId': typeof InvalidRoomRoomIdLazyRoute
+  '/missing-room/$roomId': typeof MissingRoomRoomIdLazyRoute
   '/room/$roomId': typeof RoomRoomIdLazyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
+  '/invalid-room/$roomId': typeof InvalidRoomRoomIdLazyRoute
+  '/missing-room/$roomId': typeof MissingRoomRoomIdLazyRoute
   '/room/$roomId': typeof RoomRoomIdLazyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexLazyRoute
+  '/invalid-room/$roomId': typeof InvalidRoomRoomIdLazyRoute
+  '/missing-room/$roomId': typeof MissingRoomRoomIdLazyRoute
   '/room/$roomId': typeof RoomRoomIdLazyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/room/$roomId'
+  fullPaths:
+    | '/'
+    | '/invalid-room/$roomId'
+    | '/missing-room/$roomId'
+    | '/room/$roomId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/room/$roomId'
-  id: '__root__' | '/' | '/room/$roomId'
+  to: '/' | '/invalid-room/$roomId' | '/missing-room/$roomId' | '/room/$roomId'
+  id:
+    | '__root__'
+    | '/'
+    | '/invalid-room/$roomId'
+    | '/missing-room/$roomId'
+    | '/room/$roomId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexLazyRoute: typeof IndexLazyRoute
+  InvalidRoomRoomIdLazyRoute: typeof InvalidRoomRoomIdLazyRoute
+  MissingRoomRoomIdLazyRoute: typeof MissingRoomRoomIdLazyRoute
   RoomRoomIdLazyRoute: typeof RoomRoomIdLazyRoute
 }
 
@@ -68,11 +105,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RoomRoomIdLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/missing-room/$roomId': {
+      id: '/missing-room/$roomId'
+      path: '/missing-room/$roomId'
+      fullPath: '/missing-room/$roomId'
+      preLoaderRoute: typeof MissingRoomRoomIdLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invalid-room/$roomId': {
+      id: '/invalid-room/$roomId'
+      path: '/invalid-room/$roomId'
+      fullPath: '/invalid-room/$roomId'
+      preLoaderRoute: typeof InvalidRoomRoomIdLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexLazyRoute: IndexLazyRoute,
+  InvalidRoomRoomIdLazyRoute: InvalidRoomRoomIdLazyRoute,
+  MissingRoomRoomIdLazyRoute: MissingRoomRoomIdLazyRoute,
   RoomRoomIdLazyRoute: RoomRoomIdLazyRoute,
 }
 export const routeTree = rootRouteImport

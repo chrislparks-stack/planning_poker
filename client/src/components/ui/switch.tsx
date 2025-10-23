@@ -61,7 +61,7 @@ export const Switch = React.forwardRef<HTMLInputElement, SwitchProps>(
                 onClick={handleClick}
                 className={cn(
                     "relative inline-flex select-none items-center justify-center rounded-full border font-semibold text-sm",
-                    "transition-colors duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                    "transition-colors duration-500 ease-&lsqb;cubic-bezier(0.22,1,0.36,1)&rsqb",
                     checked
                         ? "bg-accent border-accent text-accent-foreground shadow-[inset_0_0_10px_rgba(255,255,255,0.2)] dark:shadow-[inset_0_0_10px_rgba(0,0,0,0.4)]"
                         : "bg-zinc-300/80 dark:bg-zinc-800/70 border-zinc-400/50 dark:border-zinc-600/40 text-zinc-900 dark:text-zinc-200 shadow-[inset_0_2px_4px_rgba(0,0,0,0.15)] dark:shadow-[inset_0_2px_4px_rgba(255,255,255,0.05)]",

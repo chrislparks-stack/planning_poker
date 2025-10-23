@@ -18,11 +18,13 @@ import { VoteDistributionChart } from "@/components/vote-distribution-chart";
 import { useAuth } from "@/contexts";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "@/types";
+import { validate as validateUUID } from "uuid";
 
 export function RoomPage() {
   const { roomId } = useParams({ from: "/room/$roomId" });
   const { user, logout } = useAuth();
   const { toast } = useToast();
+  const redirectingRef = useRef(false);
   const navigate = useNavigate();
   const [logoutMutation] = useLogoutMutation();
 
@@ -38,29 +40,9 @@ export function RoomPage() {
     });
 
   const { data: roomData, error: roomError } = useGetRoomQuery({
-    variables: { roomId }
+    variables: { roomId },
+    fetchPolicy: "network-only"
   });
-
-  // --- Error handlers ---
-  useEffect(() => {
-    if (roomSubscriptionError) {
-      toast({
-        title: "Error",
-        description: `Room subscription: ${roomSubscriptionError.message}`,
-        variant: "destructive"
-      });
-    }
-  }, [roomSubscriptionError, toast]);
-
-  useEffect(() => {
-    if (roomError) {
-      toast({
-        title: "Error",
-        description: `Room: ${roomError.message}`,
-        variant: "destructive"
-      });
-    }
-  }, [roomError, toast]);
 
   const [joinRoomMutation, { data: joinRoomData }] = useJoinRoomMutation({
     onCompleted: (data) => {
@@ -94,6 +76,16 @@ export function RoomPage() {
       const roomName = roomData?.roomById?.name ?? "this room";
       const memoryKey = `kickban-${roomId}-${user?.id ?? "unknown"}`;
 
+      // Ignore harmless rejoin or missing-room errors
+      if (
+        msg.includes("room not found") ||
+        msg.includes("invalid room") ||
+        msg.includes("already joined")
+      ) {
+        console.warn("[JoinRoom] Suppressed harmless error:", msg);
+        return;
+      }
+
       if (msg.includes("banned")) {
         localStorage.setItem(memoryKey, "banned");
         toast({
@@ -106,6 +98,7 @@ export function RoomPage() {
         return;
       }
 
+      // Everything else shows the toast
       toast({
         title: "Error",
         description: `Join room failed: ${error.message}`,
@@ -250,9 +243,15 @@ export function RoomPage() {
           });
         }
 
-        if ((room.deck.cards as unknown as never[]).length < 1) {
+        const isNewRoom = sessionStorage.getItem("NEW_ROOM_CREATED") === "true";
+
+        if (isNewRoom) {
+          setOpenCreateUserDialog(true);
+          sessionStorage.removeItem("NEW_ROOM_CREATED");
+        } else if ((room.deck.cards as unknown as never[]).length < 1) {
           setOpenRoomOptionsDialog(true);
         }
+
       });
 
       isJoinRoomCalledRef.current = true;
@@ -329,6 +328,51 @@ export function RoomPage() {
 
   const room =
     subscriptionData?.room ?? roomData?.roomById ?? joinRoomData?.joinRoom;
+
+  const isMissingRoom =
+    roomData && roomData.roomById === null && !joinRoomData && !subscriptionData;
+
+  // --- Redirects ---
+  useEffect(() => {
+    const isValid = validateUUID(roomId);
+    if (!isValid) {
+      redirectingRef.current = true;
+      navigate({ to: "/invalid-room/$roomId", params: { roomId } });
+    }
+  }, [roomId, navigate, toast]);
+
+  useEffect(() => {
+    if (roomData && roomData.roomById === null) {
+      redirectingRef.current = true;
+      const timeout = setTimeout(() => {
+        if (!joinRoomData && !subscriptionData) {
+          navigate({ to: "/missing-room/$roomId", params: { roomId } });
+        }
+      }, 400);
+      return () => clearTimeout(timeout);
+    }
+  }, [roomData, joinRoomData, subscriptionData, roomId, navigate]);
+
+  // --- Error handlers ---
+  useEffect(() => {
+    if (!redirectingRef.current && !isMissingRoom && roomSubscriptionError) {
+      toast({
+        title: "Error",
+        description: `Room subscription: ${roomSubscriptionError.message}`,
+        variant: "destructive"
+      });
+    }
+  }, [roomSubscriptionError, toast, isMissingRoom]);
+
+  useEffect(() => {
+    if (!redirectingRef.current && !isMissingRoom && roomError) {
+      toast({
+        title: "Error",
+        description: `Room: ${roomError.message}`,
+        variant: "destructive"
+      });
+    }
+  }, [roomError, toast, isMissingRoom]);
 
   return (
     <div>

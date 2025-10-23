@@ -26,9 +26,9 @@ pub struct Room {
 }
 
 impl Room {
-    pub fn new(name: Option<String>, cards: Vec<Card>) -> Self {
+    pub fn new_with_id(id: Option<Uuid>, name: Option<String>, cards: Vec<Card>) -> Self {
         Room {
-            id: Uuid::new_v4(),
+            id: id.unwrap_or_else(Uuid::new_v4),
             name,
             users: vec![],
             banned_users: vec![],
@@ -41,6 +41,10 @@ impl Room {
             countdown_value: None,
             confirm_new_game: true,
         }
+    }
+
+    pub fn new(name: Option<String>, cards: Vec<Card>) -> Self {
+        Self::new_with_id(None, name, cards)
     }
 
     pub fn get_room(&self) -> Room {
