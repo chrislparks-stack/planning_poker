@@ -7,11 +7,11 @@ import {
   useShowCardsMutation,
   useStartRevealCountdownMutation
 } from "@/api";
-import { useModal } from "@/components/ConfirmationDialog/useModal";
 import { Button } from "@/components/ui/button";
 import { CountdownOverlay } from "@/components/ui/countdown-overlay.tsx";
 import { useToast } from "@/hooks/use-toast";
 import type { Room } from "@/types";
+import {NewGameDialog} from "@/components/NewGameDialog";
 
 interface TableProps {
   room: Room;
@@ -33,13 +33,7 @@ export const Table: FC<TableProps> = ({
   innerRef
 }) => {
   const { toast } = useToast();
-
-  const startNewGame = useModal({
-    title: "Are you sure you want to start a new game?",
-    description: "This will reset the current game.",
-    confirmationText: "Start new game",
-    cancellationText: "Cancel"
-  });
+  const [openNewGameDialog, setOpenNewGameDialog] = useState(false);
 
   const [showCardsMutation, { loading: showCardLoading }] =
     useShowCardsMutation({
@@ -115,20 +109,6 @@ export const Table: FC<TableProps> = ({
   const [showCountdownOverlay, setShowCountdownOverlay] = useState(false);
   const [localCountdown, setLocalCountdown] = useState<number | null>(null);
 
-  // Debug watcher
-  useEffect(() => {
-    console.log(
-      "[Countdown debug]",
-      "enabled:",
-      room.countdownEnabled,
-      "stage:",
-      room.revealStage,
-      "value:",
-      room.countdownValue
-    );
-  }, [room.countdownEnabled, room.revealStage, room.countdownValue]);
-
-  // ===== Final tuned local-only countdown logic =====
   const revealStageRef = useRef(room.revealStage);
   useEffect(() => {
     revealStageRef.current = room.revealStage;
@@ -216,13 +196,23 @@ export const Table: FC<TableProps> = ({
       toast({
         title: "Not allowed",
         description: "Only the room owner can start a new game.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
-    startNewGame().then(() => {
-      resetGameMutation({ variables: { roomId: room.id } });
-    });
+
+    resetGameMutation({ variables: { roomId: room.id } })
+      .catch((err) => {
+        console.error("Failed to reset game:", err);
+        toast({
+          title: "Error",
+          description: "Failed to reset game. Please try again.",
+          variant: "destructive",
+        });
+      })
+      .finally(() => {
+        setOpenNewGameDialog(false);
+      });
   }
 
   // ===== Render =====
@@ -234,17 +224,19 @@ export const Table: FC<TableProps> = ({
       {isCardsPicked ? (
         isGameOver ? (
           currentIsRoomOwner ? (
-            <Button
-              onClick={handleResetGame}
-              disabled={resetGameLoading}
-              className="w-36"
-              size="lg"
-            >
-              {resetGameLoading && (
-                <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              Start New Game
-            </Button>
+              <Button
+                  onClick={() =>
+                      room.confirmNewGame ? setOpenNewGameDialog(true) : handleResetGame()
+                  }
+                  disabled={resetGameLoading}
+                  className="w-36"
+                  size="lg"
+              >
+                {resetGameLoading && (
+                    <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Start New Game
+              </Button>
           ) : hasSelectedOwnCard ? (
             <div className="flex flex-col items-center text-center">
               <span className="text-sm font-semibold">
@@ -325,6 +317,12 @@ export const Table: FC<TableProps> = ({
           />
         </div>
       )}
+      <NewGameDialog
+          open={openNewGameDialog}
+          setOpen={setOpenNewGameDialog}
+          room={room}
+          onConfirm={handleResetGame}
+      />
     </div>
   );
 };

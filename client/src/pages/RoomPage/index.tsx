@@ -339,40 +339,53 @@ export function RoomPage() {
       ) : (
         <>
           <PageLayout room={room} users={room.users}>
-            <div className="flex flex-col items-center justify-between h-[calc(100vh-80px)] overflow-hidden">
-              <Room room={room} />
+            <div className="relative h-[calc(100vh-80px)] overflow-hidden">
+              {/* Scrollable Room container */}
+              <div
+                  className="absolute top-0 left-0 right-0 overflow-y-auto"
+                  style={{
+                    height: `calc(100% - ${room.isGameOver ? 300 : 140}px)`, // limit to visible area
+                    paddingBottom: "1rem", // small visual buffer
+                  }}
+              >
+                <Room room={room} />
+              </div>
+
+
+              {/* Deck + Chart remain absolute at bottom, untouched */}
               <div className="absolute bottom-10 left-0 right-0 mx-auto w-full max-w-4xl">
                 <div
-                  className={`flex gap-4 ${
-                    room.isGameOver
-                      ? "sm:flex-row sm:justify-center"
-                      : "justify-center"
-                  }`}
+                    className={`flex gap-4 ${
+                        room.isGameOver
+                            ? "sm:flex-row sm:justify-center"
+                            : "justify-center"
+                    }`}
                 >
                   <div
-                    className={`flex ${
-                      room.isGameOver
-                        ? "justify-center sm:justify-start"
-                        : "justify-center"
-                    }`}
+                      className={`flex ${
+                          room.isGameOver
+                              ? "justify-center sm:justify-start"
+                              : "justify-center"
+                      }`}
                   >
                     <Deck
-                      roomId={roomId}
-                      isGameOver={room.isGameOver}
-                      cards={room.deck.cards}
-                      table={room.game.table}
+                        roomId={roomId}
+                        isGameOver={room.isGameOver}
+                        cards={room.deck.cards}
+                        table={room.game.table}
                     />
                   </div>
 
                   {room.isGameOver && room.game.table.length > 0 && (
-                    <div className="flex justify-center sm:justify-end w-full sm:w-1/2">
-                      <VoteDistributionChart room={room} />
-                    </div>
+                      <div className="flex justify-center sm:justify-end w-full sm:w-1/2">
+                        <VoteDistributionChart room={room} />
+                      </div>
                   )}
                 </div>
               </div>
             </div>
           </PageLayout>
+
 
           <CreateUserDialog
             roomData={room}

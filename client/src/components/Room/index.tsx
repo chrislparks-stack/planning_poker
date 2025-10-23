@@ -189,20 +189,14 @@ export function Room({ room }: RoomProps) {
 
   return (
     <div
-      className="relative flex flex-col items-center justify-center w-full min-h-[500px]"
+      className="relative flex flex-col items-center justify-center w-full min-h-[450px]"
       style={{
-        height: "calc(100vh)",
+        height: "calc(50vh)",
         overflow: "hidden",
-        position: "relative"
+        position: "relative",
+        transform: "translateY(calc(25% - 1vh))"
       }}
     >
-      {/*<Button*/}
-      {/*  className="absolute left-10 top-5 min-h-[20px] min-w-[100px] py-6 px-3 border-2 leading-normal"*/}
-      {/*  onClick={handleIssues}*/}
-      {/*>*/}
-      {/*  {" "}*/}
-      {/*  Issues {issuesOpen ? <ChevronUp /> : <ChevronDown />}{" "}*/}
-      {/*</Button>*/}
       <div className="relative">
         <Table
           room={room}

@@ -6,10 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
-  DialogHeader,
-  DialogTitle
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { applyAccent } from "@/lib/theme-accent";
@@ -226,6 +223,14 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
     };
   }, []);
 
+  const [sizeKey, setSizeKey] = useState(window.innerWidth);
+
+  useEffect(() => {
+    const handleResize = () => setSizeKey(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const effectivePreviewTheme =
     previewTheme === "system"
       ? systemPrefersDark
@@ -311,12 +316,6 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
     }
   }
 
-  // When user clicks swatch — update preview state AND write preview vars
-  const applyAccentPreview = (id: string) => {
-    setPreviewAccent(id);
-    setAccentVarsPreview(id);
-  };
-
   // Save — commit runtime vars (& persist) and apply theme
   const handleSave = () => {
     try {
@@ -388,6 +387,7 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
 
   return (
     <Dialog
+      key={sizeKey}
       open={open}
       onOpenChange={(next) => {
         if (!next) {
@@ -397,54 +397,49 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
         setOpen(next);
       }}
     >
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
-          <DialogTitle>Theme & Color</DialogTitle>
-          <DialogDescription>
-            Choose a mode and accent. Preview only — changes apply on Save.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent
+        className="
+          flex flex-col w-[90vw] max-w-[480px] max-h-[90vh]
+          rounded-2xl backdrop-blur-md bg-background/80
+          border border-border/50 shadow-[0_8px_32px_rgb(0_0_0_/_0.4)]
+          p-0 animate-in fade-in-0 zoom-in-95
+        "
+      >
+        {/* Accent bar */}
+        <div className="h-1.5 w-full bg-gradient-to-r from-accent to-accent/60 shrink-0" />
 
-        <div className="mt-4 space-y-6">
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+          {/* Header */}
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">Theme & Color</h2>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Choose your appearance mode and accent color. Changes apply when you save.
+            </p>
+          </div>
+
           {/* Mode picker */}
           <div>
             <p className="mb-2 text-sm font-medium">Mode</p>
             <div className="flex gap-2">
-              <button
-                onClick={() => setPreviewTheme("light")}
-                className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition ${
-                  previewTheme === "light"
-                    ? "bg-zinc-900/5 ring-2 ring-offset-2 ring-zinc-900/10 dark:bg-zinc-200/5"
-                    : "bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
-                }`}
-                aria-pressed={previewTheme === "light"}
-              >
-                <Sun className="h-4 w-4" /> Light
-              </button>
-
-              <button
-                onClick={() => setPreviewTheme("dark")}
-                className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition ${
-                  previewTheme === "dark"
-                    ? "bg-zinc-900/5 ring-2 ring-offset-2 ring-zinc-900/10 dark:bg-zinc-200/5"
-                    : "bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
-                }`}
-                aria-pressed={previewTheme === "dark"}
-              >
-                <Moon className="h-4 w-4" /> Dark
-              </button>
-
-              <button
-                onClick={() => setPreviewTheme("system")}
-                className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition ${
-                  previewTheme === "system"
-                    ? "bg-zinc-900/5 ring-2 ring-offset-2 ring-zinc-900/10 dark:bg-zinc-200/5"
-                    : "bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
-                }`}
-                aria-pressed={previewTheme === "system"}
-              >
-                <Laptop className="h-4 w-4" /> System
-              </button>
+              {[
+                { id: "light", icon: <Sun className="h-4 w-4" />, label: "Light" },
+                { id: "dark", icon: <Moon className="h-4 w-4" />, label: "Dark" },
+                { id: "system", icon: <Laptop className="h-4 w-4" />, label: "System" }
+              ].map(({ id, icon, label }) => (
+                  <button
+                    key={id}
+                    onClick={() => setPreviewTheme(id as "light" | "dark" | "system")}
+                    className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all
+                    ${
+                      previewTheme === id
+                          ? "bg-accent/10 ring-2 ring-accent/40 dark:ring-accent/50"
+                          : "hover:bg-accent/5 dark:hover:bg-accent/10"
+                    }`}
+                  >
+                    {icon}
+                    {label}
+                  </button>
+              ))}
             </div>
           </div>
 
@@ -458,11 +453,11 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                 return (
                   <button
                     key={a.id}
-                    onClick={() => applyAccentPreview(a.id)}
+                    onClick={() => setPreviewAccent(a.id)}
                     className={`relative flex h-8 w-8 items-center justify-center rounded-md ring-offset-2 transition-all ${
-                      selected
-                        ? "ring-2 ring-offset-1 shadow-md"
-                        : "hover:translate-y-[-2px]"
+                        selected
+                            ? "ring-2 ring-offset-1 shadow-md"
+                            : "hover:translate-y-[-2px]"
                     }`}
                     aria-label={a.label}
                     title={a.label}
@@ -472,12 +467,12 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                       style={{ backgroundColor: hslFromToken(mapEntry.base) }}
                     />
                     {selected && (
-                      <span className="absolute -right-1 -top-1">
-                        <Check
-                          className="h-4 w-4"
-                          style={{ color: hslFromToken(mapEntry.foreground) }}
-                        />
-                      </span>
+                    <span className="absolute -right-1 -top-1">
+                      <Check
+                        className="h-4 w-4"
+                        style={{ color: hslFromToken(mapEntry.foreground) }}
+                      />
+                    </span>
                     )}
                   </button>
                 );
@@ -490,8 +485,8 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
             <p className="mb-2">
               <span className="text-sm font-medium">Preview</span>{" "}
               <span className="text-xs font-light">
-                - your window will look like this
-              </span>
+              - your window will look like this
+            </span>
             </p>
 
             <div
@@ -627,7 +622,7 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                           height: 10,
                           width: 120,
                           background: hslFromToken(
-                            previewTokens.cardForeground
+                              previewTokens.cardForeground
                           ),
                           borderRadius: 4
                         }}
@@ -676,16 +671,29 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
               </div>
             </div>
           </div>
-        </div>
 
-        <DialogFooter>
-          <div className="flex w-full justify-end gap-2">
-            <Button variant="ghost" onClick={() => handleCancel()}>
+          {/* Footer */}
+          <DialogFooter className="flex justify-end gap-2 pt-3">
+            <Button
+              variant="ghost"
+              className="text-sm font-medium px-3 py-1.5"
+              onClick={handleCancel}
+            >
               Cancel
             </Button>
-            <Button onClick={() => handleSave()}>Save</Button>
-          </div>
-        </DialogFooter>
+            <Button
+              onClick={handleSave}
+              className="
+                text-sm font-semibold px-4 py-1.5
+                transition-all duration-200
+                hover:shadow-[0_0_10px_var(--accent)]
+                hover:-translate-y-[1px]
+              "
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

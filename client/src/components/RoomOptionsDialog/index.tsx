@@ -3,7 +3,8 @@ import { FC, useEffect, useState } from "react";
 import {
   useRenameRoomMutation,
   useUpdateDeckMutation,
-  useToggleCountdownOptionMutation
+  useToggleCountdownOptionMutation,
+  useToggleConfirmNewGameMutation
 } from "@/api";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +37,7 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
   const [updateDeck, { loading: deckLoading }] = useUpdateDeckMutation();
   const [renameRoom, { loading: renameLoading }] = useRenameRoomMutation();
   const [toggleCountdownOption] = useToggleCountdownOptionMutation();
+  const [toggleConfirmNewGame] = useToggleConfirmNewGameMutation();
 
   const [roomId, setRoomId] = useState("");
   const [roomName, setRoomName] = useState("");
@@ -47,6 +49,9 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
   const [countdownEnabled, setCountdownEnabled] = useState<boolean>(
     room?.countdownEnabled ?? false
   );
+  const [confirmNewGame, setConfirmNewGame] = useState<boolean>(
+      room?.confirmNewGame ?? true
+  );
 
   useEffect(() => {
     if (room && open) {
@@ -56,8 +61,18 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
       setSelectedCards(room.deck.cards);
       setOriginalCards(room.deck.cards);
       setCountdownEnabled(room.countdownEnabled ?? false);
+      setConfirmNewGame(room.confirmNewGame ?? true);
     }
   }, [room, open]);
+
+  const [sizeKey, setSizeKey] = useState(window.innerWidth);
+
+  useEffect(() => {
+    const handleResize = () => setSizeKey(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
 
   const toggleCardSelection = (card: string | number) => {
     const cardStr = String(card);
@@ -160,161 +175,174 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
   const selectedCount = selectedCards.length;
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen && selectedCards.length < 1) {
-          toast({
-            title: "Cannot Exit",
-            duration: 3000,
-            description: "Please select at least one card",
-            variant: "destructive"
-          });
-          return;
-        }
-        setOpen(nextOpen);
-      }}
-    >
-      <DialogContent
-        className="max-w-[80vw] sm:max-w-[440px] md:max-w-[520px] lg:max-w-[600px]"
-        onInteractOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
+      <Dialog
+        key={sizeKey}
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && selectedCards.length < 1) {
+            toast({
+              title: "Cannot Exit",
+              duration: 3000,
+              description: "Please select at least one card",
+              variant: "destructive"
+            });
+            return;
+          }
+          setOpen(nextOpen);
+        }}
       >
-        <DialogHeader>
-          <DialogTitle>Room Options</DialogTitle>
-        </DialogHeader>
-
-        {/* ===== Room Rename Section ===== */}
-        <section
-          aria-labelledby="room-name-heading"
-          className="mt-2 rounded-lg border bg-card p-4"
+        <DialogContent
+          className="
+            flex flex-col w-[90vw] max-w-[700px] max-h-[90vh] sm:max-h-[92vh]
+            rounded-2xl backdrop-blur-md bg-background/80
+            border border-border/50 shadow-[0_8px_32px_rgb(0_0_0_/_0.4)]
+            p-0 overflow-hidden animate-in fade-in-0 zoom-in-95
+          "
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
         >
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 id="room-name-heading" className="text-sm font-semibold">
-                Room name
-              </h3>
+          {/* Accent bar */}
+          <div className="h-1.5 w-full bg-gradient-to-r from-accent to-accent/60" />
+
+          {/* Header */}
+          <DialogHeader className="px-6 pt-5 pb-3 border-b shrink-0">
+            <DialogTitle className="text-lg font-semibold tracking-tight">
+              Room Options
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Scrollable main content */}
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+            {/* ===== Room Rename ===== */}
+            <section className="rounded-lg border bg-card/60 backdrop-blur-sm p-4 shadow-sm transition-colors">
+              <h3 className="text-sm font-semibold">Room Name</h3>
               <p className="mt-1 text-xs text-muted-foreground">
-                Set a custom name for your room.
+                Set a custom name for your room
               </p>
-            </div>
-          </div>
-
-          <div className="mt-3 flex items-center gap-2">
-            <Input
-              value={roomName}
-              onChange={(e) => setRoomName(e.target.value)}
-              placeholder="Enter room name"
-              className="flex-1"
-            />
-            <Button
-              onClick={() => handleRenameRoom(roomName)}
-              disabled={renameLoading || roomName.trim() === originalName}
-            >
-              {renameLoading ? "Saving..." : "Rename"}
-            </Button>
-          </div>
-        </section>
-
-        {/* ===== Countdown Reveal Option ===== */}
-        <section
-          aria-labelledby="countdown-option-heading"
-          className="mt-4 rounded-lg border bg-card p-5 shadow-sm"
-        >
-          <div className="flex items-center justify-between">
-            <div className="max-w-[70%]">
-              <h3
-                id="countdown-option-heading"
-                className="text-[0.95rem] font-semibold tracking-tight text-foreground"
-              >
-                Countdown reveal
-              </h3>
-              <p className="mt-1.5 text-[0.83rem] leading-relaxed text-muted-foreground">
-                Adds a dramatic reveal — when enabled, everyone sees a
-                synchronized
-                <span className="font-semibold text-foreground">
-                  {" "}
-                  3-2-1 countdown{" "}
-                </span>
-                before cards are shown. The room owner can cancel it
-                mid-countdown if more discussion is needed.
-              </p>
-            </div>
-
-            <div className="flex items-center justify-center">
-              <Switch
-                id="countdown-enabled"
-                checked={countdownEnabled}
-                onCheckedChange={async (enabled) => {
-                  try {
-                    setCountdownEnabled(enabled);
-                    await toggleCountdownOption({
-                      variables: { roomId, enabled }
-                    });
-                    toast({
-                      title: enabled
-                        ? "Countdown enabled"
-                        : "Countdown disabled",
-                      duration: 2500
-                    });
-                  } catch (err) {
-                    console.error("Failed to toggle countdown option:", err);
-                    toast({
-                      title: "Error updating countdown option",
-                      description:
-                        err instanceof Error
-                          ? err.message
-                          : "An unknown error occurred.",
-                      variant: "destructive"
-                    });
-                  }
-                }}
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* ===== Card selection Section ===== */}
-        <section
-          aria-labelledby="room-cards-heading"
-          className="mt-4 rounded-lg border bg-card p-4 overflow-visible"
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <h3 id="room-cards-heading" className="text-sm font-semibold">
-                Card selection
-              </h3>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Pick which poker cards players can choose from in this room.
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="text-xs text-muted-foreground">
-                Selected:{" "}
-                <span className="font-medium text-foreground">
-                  {selectedCount}
-                </span>
+              <div className="mt-3 flex items-center gap-2">
+                <Input
+                  value={roomName}
+                  onChange={(e) => setRoomName(e.target.value)}
+                  placeholder="Enter room name"
+                  className="flex-1"
+                />
+                <Button
+                  onClick={() => handleRenameRoom(roomName)}
+                  disabled={renameLoading || roomName.trim() === originalName}
+                >
+                  {renameLoading ? "Saving..." : "Rename"}
+                </Button>
               </div>
+            </section>
+
+            {/* ===== Options Grid ===== */}
+            <div className="grid sm:grid-cols-2 gap-4">
+              {/* Countdown */}
+              <section className="rounded-lg border bg-card/60 backdrop-blur-sm p-4 shadow-sm transition-colors">
+                <h3 className="text-sm font-semibold mb-2">Countdown Reveal</h3>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground leading-snug pr-4 flex-1">
+                    When enabled, adds a synchronized <span className="font-semibold">3-2-1</span> reveal before showing cards, otherwise cards are shown immediately
+                  </p>
+                  <Switch
+                    id="countdown-enabled"
+                    checked={countdownEnabled}
+                    onCheckedChange={async (enabled) => {
+                      try {
+                        setCountdownEnabled(enabled);
+                        await toggleCountdownOption({ variables: { roomId, enabled } });
+                        toast({
+                          title: enabled ? "Countdown enabled" : "Countdown disabled",
+                          duration: 2500,
+                        });
+                      } catch (err) {
+                        toast({
+                          title: "Error updating countdown option",
+                          description:
+                              err instanceof Error
+                                  ? err.message
+                                  : "An unknown error occurred.",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    className="flex-shrink-0"
+                  />
+                </div>
+              </section>
+
+              {/* Confirm new game */}
+              <section className="rounded-lg border bg-card/60 backdrop-blur-sm p-4 shadow-sm transition-colors">
+                <h3 className="text-sm font-semibold mb-2">Confirm Before New Game</h3>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground leading-snug pr-4 flex-1">
+                    When disabled, starting a new game skips the confirmation dialog and will reset all votes immediately
+                  </p>
+                  <Switch
+                    id="confirm-new-game"
+                    checked={confirmNewGame}
+                    onCheckedChange={async (enabled) => {
+                      try {
+                        setConfirmNewGame(enabled);
+                        await toggleConfirmNewGame({ variables: { roomId, enabled } });
+                        toast({
+                          title: enabled
+                              ? "Confirmation enabled"
+                              : "Confirmation disabled",
+                          duration: 2500,
+                        });
+                      } catch (err) {
+                        toast({
+                          title: "Error updating setting",
+                          description:
+                              err instanceof Error
+                                  ? err.message
+                                  : "An unknown error occurred.",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    className="flex-shrink-0"
+                  />
+                </div>
+              </section>
             </div>
+
+            {/* ===== Card Selection ===== */}
+            <section className="rounded-lg border bg-card/60 backdrop-blur-sm p-4 overflow-visible shadow-sm transition-colors">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold">Card Selection</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Pick which poker cards players can choose to vote
+                  </p>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Selected:{" "}
+                  <span className="font-medium text-foreground">{selectedCount}</span>
+                </div>
+              </div>
+              <div className="mt-3">
+                <CardFan
+                  selectedCards={selectedCards}
+                  toggleCardSelection={toggleCardSelection}
+                />
+              </div>
+            </section>
           </div>
 
-          <CardFan
-            selectedCards={selectedCards}
-            toggleCardSelection={toggleCardSelection}
-          />
-        </section>
-
-        {/* ===== Footer with unified "Done" button ===== */}
-        <DialogFooter className="mt-6 flex justify-end">
-          <Button
-            onClick={handleDone}
-            disabled={deckLoading || renameLoading}
-            variant="default"
-          >
-            {deckLoading || renameLoading ? "Saving..." : "Done"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          {/* Fixed footer */}
+          <DialogFooter className="px-6 py-3 border-t bg-card/60 backdrop-blur-sm shrink-0">
+            <Button
+              onClick={handleDone}
+              disabled={deckLoading || renameLoading}
+              variant="default"
+              className="ml-auto"
+            >
+              {deckLoading || renameLoading ? "Saving..." : "Done"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
   );
 };

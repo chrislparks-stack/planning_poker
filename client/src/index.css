@@ -97,6 +97,27 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Custom scrollbars (light/dark theme aware) */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--accent));
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--accent) / 0.8);
+  }
+
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--accent)) transparent;
+  }
 }
 
 /* ---------- Small set of semantic utilities powered by CSS vars ---------- */
