@@ -4,6 +4,7 @@ interface CardFanProps {
   selectedCards: (string | number)[];
   toggleCardSelection: (card: string | number) => void;
   className?: string;
+  options?: boolean
 }
 
 const DEFAULT_CARDS = [0, 0.5, 1, 2, 3, 5, 8, 13, 21, "?", "☕"];
@@ -11,7 +12,8 @@ const DEFAULT_CARDS = [0, 0.5, 1, 2, 3, 5, 8, 13, 21, "?", "☕"];
 export const CardFan: FC<CardFanProps> = ({
   selectedCards,
   toggleCardSelection,
-  className = ""
+  className = "",
+  options = false
 }) => {
   const [scaleFactor, setScaleFactor] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -41,7 +43,13 @@ export const CardFan: FC<CardFanProps> = ({
       className={`relative mt-4 h-56 w-full ${className}`}
       ref={containerRef}
     >
-      <div className="mb-2 text-sm">Pick poker cards to use:</div>
+      <div className="flex flex-row justify-between">
+        {!options && <div className="mb-2 text-sm">Pick poker cards to use:</div>}
+        <div className="text-xs text-muted-foreground">
+          Selected:{" "}
+          <span className="font-medium text-foreground">{selectedCards.length}</span>
+        </div>
+      </div>
       <div className="flex justify-center items-baseline h-full overflow-visible">
         {DEFAULT_CARDS.map((card, index) => {
           const total = DEFAULT_CARDS.length;
@@ -57,6 +65,8 @@ export const CardFan: FC<CardFanProps> = ({
           const selected = selectedCards.some(
             (c) => String(c) === String(card)
           );
+
+          const isSpecial = card === "?" || card === "☕";
 
           return (
             <button
@@ -86,6 +96,11 @@ export const CardFan: FC<CardFanProps> = ({
               }}
             >
               {card}
+              {isSpecial && (
+                <span className="absolute bottom-1 text-[8px] text-zinc-500 dark:text-zinc-400 italic">
+                  0 point vote
+                </span>
+              )}
             </button>
           );
         })}

@@ -317,15 +317,12 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
                     Pick which poker cards players can choose to vote
                   </p>
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  Selected:{" "}
-                  <span className="font-medium text-foreground">{selectedCount}</span>
-                </div>
               </div>
               <div className="mt-3">
                 <CardFan
                   selectedCards={selectedCards}
                   toggleCardSelection={toggleCardSelection}
+                  options
                 />
               </div>
             </section>

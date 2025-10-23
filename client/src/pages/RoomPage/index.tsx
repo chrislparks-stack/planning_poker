@@ -430,7 +430,6 @@ export function RoomPage() {
             </div>
           </PageLayout>
 
-
           <CreateUserDialog
             roomData={room}
             open={openCreateUserDialog}

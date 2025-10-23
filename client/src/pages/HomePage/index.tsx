@@ -267,16 +267,16 @@ export const HomePage: FC = () => {
                         </div>
 
                         <p className="font-semibold text-black dark:text-white text-base leading-tight truncate">
-                          Room: {storedRoom.RoomName || "Unnamed Room"}
+                          Room: {storedRoom?.RoomName || "Unnamed Room"}
                         </p>
 
                         <div className="flex items-center gap-1.5 text-xs text-zinc-800 dark:text-zinc-400">
                           <span>Last joined as</span>
                           <span className="text-accent font-medium">
-                            {storedUser.username || "Unknown User"}
+                            {storedUser?.username || "Unknown User"}
                           </span>
-                          {storedRoom.RoomOwner &&
-                            storedRoom.RoomOwner === storedUser.id && (
+                          {storedRoom?.RoomOwner &&
+                            storedRoom?.RoomOwner === storedUser?.id && (
                               <span className="text-[0.65rem] px-2 py-0.5 rounded-md bg-accent text-white font-medium">
                                 Room Owner
                               </span>
