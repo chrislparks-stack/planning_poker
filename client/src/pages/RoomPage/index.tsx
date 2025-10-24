@@ -59,7 +59,6 @@ export function RoomPage() {
       Object.keys(localStorage).forEach((key) => {
         if (key.startsWith(prefix)) {
           localStorage.removeItem(key);
-          console.log(`[KickBan] Cleared old key: ${key}`);
         }
       });
 
@@ -74,8 +73,6 @@ export function RoomPage() {
         });
         sessionStorage.setItem("HAS_JOINED_ROOM", "true");
       }
-
-      console.log("Joined room successfully:", data);
     },
     onError: (error) => {
       const msg = error.message?.toLowerCase() ?? "";
@@ -163,7 +160,6 @@ export function RoomPage() {
 
   // --- Initial join logic ---
   useEffect(() => {
-    console.log(user);
     if (user === undefined || !roomData) return;
 
     const isNewRoom = sessionStorage.getItem("NEW_ROOM_CREATED") === "true";

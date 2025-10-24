@@ -175,8 +175,6 @@ export function Room({ room }: RoomProps) {
   }
 
   function handlePromote(userId: string) {
-    console.log(userId);
-    console.log(room);
     if (room) {
       setRoomOwner({
         variables: {

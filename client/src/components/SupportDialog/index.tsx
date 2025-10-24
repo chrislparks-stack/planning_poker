@@ -105,7 +105,7 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
               className="rounded-lg border bg-card/60 backdrop-blur-sm p-4 shadow-sm"
             >
               <p className="text-sm leading-relaxed text-muted-foreground">
-                This project runs on caffeine, curiosity, and late-night code.
+                This project runs on caffeine, curiosity, and late-night coding.
                 If you’d like to support continued development, you can donate
                 below or visit{" "}
                 <a
@@ -139,12 +139,12 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
               <AccordionTrigger
                 className="px-4 py-3 text-sm font-semibold justify-center hover:no-underline focus:outline-none focus:ring-0 transition-all duration-700"
               >
-                {isOpen ? "Close Donation Panel" : "💙 Donate Here!"}
+                {isOpen ? "Close Donation Panel" : "Donate Here!"}
               </AccordionTrigger>
 
               <div
                 style={{
-                  maxHeight: isOpen ? "640px" : "0px",
+                  maxHeight: isOpen ? "600px" : "0px",
                   opacity: isOpen ? 1 : 0,
                   overflow: "hidden",
                   transition:
@@ -163,7 +163,7 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
                     src="https://ko-fi.com/crispyasian/?hidefeed=true&widget=true"
                     title="Ko-fi Donation Widget"
                     width="100%"
-                    height="600"
+                    height="550"
                     className="rounded-md border border-border shadow-sm"
                     allow="payment *"
                   />

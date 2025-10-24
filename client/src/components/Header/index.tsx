@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Copy } from "lucide-react";
-import {FC, SVGProps} from "react";
+import { FC } from "react";
 
 import { AccountMenu } from "@/components/AccountMenu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";

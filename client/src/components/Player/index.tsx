@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, {useEffect, useMemo, useRef, useState} from "react";
 import { createPortal } from "react-dom";
 
 import {
@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "@/types";
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+
 
 interface PlayerProps {
   user: User;
@@ -101,6 +103,41 @@ export function Player({
       localStorage.setItem(memoryKey, "banned");
     }
   }, [room, currentUserId, user.id, roomId]);
+
+  const cardIcon = useMemo(() => {
+    if (isCardPicked) {
+      return (
+        <DotLottieReact
+          key="picked"
+          src="https://lottie.host/8e391350-aac4-4a10-82a8-f15bbb520ebc/TRA06YDEQc.json"
+          autoplay
+          style={{ width: 80, height: 60, margin: -25 }}
+        />
+      );
+    }
+    if (isGameOver) {
+      return (
+        <DotLottieReact
+          key="gameover"
+          src="https://lottie.host/84d7e8fb-9c6b-4ab1-a2c0-927fe6c07ba5/DYND6jMXII.json"
+          loop
+          autoplay
+          style={{ width: 55, height:35, margin: -25 }}
+        />
+      );
+    }
+    return (
+      <DotLottieReact
+        key="waiting"
+        src="https://lottie.host/5f503f6d-b4fa-448b-8fe0-3a45c1e69a21/baw3omE5jy.json"
+        loop
+        autoplay
+        style={{ width: 80, height: 60, margin: -25 }}
+      />
+    );
+  }, [isCardPicked, isGameOver]);
+
+
 
   // --- Context menu logic ---
   const closeMenu = () => setMenuPos(null);
@@ -235,21 +272,24 @@ export function Player({
       <div className="py-1">
         {currentIsRoomOwner && room?.roomOwnerId !== user.id && (
           <>
+            <div className="w-full text-left px-3 py-2 text-sm font-semibold"> Room Owner Options</div>
             <button
               onClick={handleMakeOwner}
-              className="w-full text-left px-3 py-2 text-sm hover:bg-accent/10"
+              className="w-full text-left px-3 py-1 text-sm hover:bg-accent/10 flex flex-row"
             >
               Make room owner 👑
             </button>
+            <div className="my-1 border-t border-muted" />
+            <div className="w-full text-left px-3 py-2 text-sm font-semibold"> Kick/Ban Options</div>
             <button
               onClick={handleKick}
-              className="w-full text-left px-3 py-2 text-sm hover:bg-accent/10"
+              className="w-full text-left px-3 py-1 text-sm hover:bg-accent/10"
             >
               Kick user 🚪
             </button>
             <button
               onClick={handleBan}
-              className="w-full text-left px-3 py-2 text-sm text-destructive hover:bg-destructive/10"
+              className="w-full text-left px-3 py-1 text-sm text-destructive hover:bg-destructive/10"
             >
               Ban user 🚫
             </button>
@@ -259,15 +299,12 @@ export function Player({
     </div>
   ) : null;
 
-  // --- Card rendering ---
-  const cardSymbol = isCardPicked ? card ?? "✅" : isGameOver ? "😴" : "🤔";
   const interactiveProps =
     currentIsRoomOwner && !isTargetSelf
       ? {
           tabIndex: 0,
           onContextMenu: onCardContextMenu,
           onKeyDown: onCardKeyDown,
-          "aria-haspopup": "menu",
           "aria-expanded": !!menuPos
         }
       : { tabIndex: 0 };
@@ -280,8 +317,8 @@ export function Player({
           <Tooltip>
             <TooltipTrigger asChild>
               <div {...interactiveProps} style={{ cursor: "default" }}>
-                <Card className="hover:bg-transparent hover:shadow-none">
-                  {cardSymbol}
+                <Card className="hover:bg-transparent hover:shadow-none w-12">
+                  {cardIcon}
                 </Card>
               </div>
             </TooltipTrigger>
@@ -290,12 +327,12 @@ export function Player({
         </div>
       ) : (
         <div {...interactiveProps} style={{ cursor: "default" }}>
-          <Card className="hover:bg-transparent hover:shadow-none">
-            {cardSymbol}
+          <Card className="hover:bg-transparent hover:shadow-none w-12">
+            {cardIcon}
           </Card>
         </div>
       )}
-      <span className="text-sm mb-1">{user.username}</span>
+      <span className="text-sm mb-1 text-center">{user.username}</span>
       {portalRootRef.current && menu
         ? createPortal(menu, portalRootRef.current)
         : menu}
