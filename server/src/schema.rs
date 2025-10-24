@@ -14,6 +14,14 @@ use async_graphql::*;
 use futures_util::{lock::MutexGuard, Stream, StreamExt};
 use uuid::Uuid;
 
+#[derive(Clone, Debug, SimpleObject)]
+pub struct RoomEvent {
+    pub room_id: Uuid,
+    pub event_type: String,
+    pub target_user_id: Option<Uuid>,
+    pub room: Room,
+}
+
 async fn get_storage<'a>(ctx: &'a Context<'_>) -> MutexGuard<'a, HashMap<Uuid, Room>> {
     ctx.data_unchecked::<Storage>().lock().await
 }
@@ -70,7 +78,7 @@ impl MutationRoot {
     async fn create_room(
         &self,
         ctx: &Context<'_>,
-        room_id: Option<Uuid>, // <-- new optional argument
+        room_id: Option<Uuid>,
         name: Option<String>,
         cards: Vec<Card>,
     ) -> Result<Room> {
@@ -95,6 +103,7 @@ impl MutationRoot {
         ctx: &Context<'_>,
         room_id: EntityId,
         user: UserInput,
+        room_owner_id: Option<EntityId>,
     ) -> Result<Room> {
         let mut storage = get_storage(ctx).await;
 
@@ -109,9 +118,14 @@ impl MutationRoot {
                 if is_new_user {
                     if let Some(name) = &user.room_name {
                         room.name = Some(name.clone());
-                }
+                    }
 
-                    room.users.push(user.into());
+                    room.users.push(user.clone().into());
+
+                    if let Some(owner_id) = room_owner_id {
+                        let _ = room.set_room_owner(Some(owner_id));
+                    }
+
                     SimpleBroker::publish(room.get_room());
                 }
 
@@ -387,7 +401,18 @@ impl MutationRoot {
         match storage.get_mut(&room_id) {
             Some(room) => {
                 room.kick_user(target_user_id);
+
                 SimpleBroker::publish(room.get_room());
+
+                let event = RoomEvent {
+                    room_id,
+                    event_type: "USER_KICKED".to_string(),
+                    target_user_id: Some(target_user_id),
+                    room: room.get_room(),
+                };
+
+                SimpleBroker::publish(event);
+
                 Ok(room.get_room())
             }
             None => Err(Error::new("Room not found")),
@@ -405,7 +430,18 @@ impl MutationRoot {
         match storage.get_mut(&room_id) {
             Some(room) => {
                 room.ban_user(target_user_id);
+
                 SimpleBroker::publish(room.get_room());
+
+                let event = RoomEvent {
+                    room_id,
+                    event_type: "USER_BANNED".to_string(),
+                    target_user_id: Some(target_user_id),
+                    room: room.get_room(),
+                };
+
+                SimpleBroker::publish(event);
+
                 Ok(room.get_room())
             }
             None => Err(Error::new("Room not found")),
@@ -457,6 +493,13 @@ impl SubscriptionRoot {
         SimpleBroker::<Room>::subscribe().filter(move |event| {
             let is_current_room = room_id == event.id;
 
+            async move { is_current_room }
+        })
+    }
+
+    async fn room_events(&self, room_id: EntityId) -> impl Stream<Item = RoomEvent> {
+        SimpleBroker::<RoomEvent>::subscribe().filter(move |event| {
+            let is_current_room = room_id == event.room_id;
             async move { is_current_room }
         })
     }

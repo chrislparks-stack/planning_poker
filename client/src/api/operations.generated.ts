@@ -13,6 +13,8 @@ export type GameFragmentFragment = { __typename?: 'Game', id: string, table: Arr
 
 export type RoomFragmentFragment = { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } };
 
+export type RoomEventFragmentFragment = { __typename?: 'RoomEvent', roomId: string, eventType: string, targetUserId?: string | null, room: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
+
 export type CreateRoomMutationVariables = Types.Exact<{
   roomId?: Types.InputMaybe<Types.Scalars['UUID']['input']>;
   name?: Types.InputMaybe<Types.Scalars['String']['input']>;
@@ -32,6 +34,7 @@ export type CreateUserMutation = { __typename?: 'MutationRoot', createUser: { __
 export type JoinRoomMutationVariables = Types.Exact<{
   roomId: Types.Scalars['UUID']['input'];
   user: Types.UserInput;
+  roomOwnerId?: Types.InputMaybe<Types.Scalars['UUID']['input']>;
 }>;
 
 
@@ -162,6 +165,13 @@ export type RoomSubscriptionVariables = Types.Exact<{
 
 export type RoomSubscription = { __typename?: 'SubscriptionRoot', room: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
 
+export type RoomEventsSubscriptionVariables = Types.Exact<{
+  roomId: Types.Scalars['UUID']['input'];
+}>;
+
+
+export type RoomEventsSubscription = { __typename?: 'SubscriptionRoot', roomEvents: { __typename?: 'RoomEvent', roomId: string, eventType: string, targetUserId?: string | null, room: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } } };
+
 export type GetRoomQueryVariables = Types.Exact<{
   roomId: Types.Scalars['UUID']['input'];
 }>;
@@ -219,6 +229,16 @@ export const RoomFragmentFragmentDoc = gql`
     ${UserFragmentFragmentDoc}
 ${DeckFragmentFragmentDoc}
 ${GameFragmentFragmentDoc}`;
+export const RoomEventFragmentFragmentDoc = gql`
+    fragment RoomEventFragment on RoomEvent {
+  roomId
+  eventType
+  targetUserId
+  room {
+    ...RoomFragment
+  }
+}
+    ${RoomFragmentFragmentDoc}`;
 export const CreateRoomDocument = gql`
     mutation CreateRoom($roomId: UUID, $name: String, $cards: [String!]!) {
   createRoom(roomId: $roomId, name: $name, cards: $cards) {
@@ -288,8 +308,8 @@ export type CreateUserMutationHookResult = ReturnType<typeof useCreateUserMutati
 export type CreateUserMutationResult = Apollo.MutationResult<CreateUserMutation>;
 export type CreateUserMutationOptions = Apollo.BaseMutationOptions<CreateUserMutation, CreateUserMutationVariables>;
 export const JoinRoomDocument = gql`
-    mutation JoinRoom($roomId: UUID!, $user: UserInput!) {
-  joinRoom(roomId: $roomId, user: $user) {
+    mutation JoinRoom($roomId: UUID!, $user: UserInput!, $roomOwnerId: UUID) {
+  joinRoom(roomId: $roomId, user: $user, roomOwnerId: $roomOwnerId) {
     ...RoomFragment
   }
 }
@@ -311,6 +331,7 @@ export type JoinRoomMutationFn = Apollo.MutationFunction<JoinRoomMutation, JoinR
  *   variables: {
  *      roomId: // value for 'roomId'
  *      user: // value for 'user'
+ *      roomOwnerId: // value for 'roomOwnerId'
  *   },
  * });
  */
@@ -857,6 +878,36 @@ export function useRoomSubscription(baseOptions: Apollo.SubscriptionHookOptions<
       }
 export type RoomSubscriptionHookResult = ReturnType<typeof useRoomSubscription>;
 export type RoomSubscriptionResult = Apollo.SubscriptionResult<RoomSubscription>;
+export const RoomEventsDocument = gql`
+    subscription RoomEvents($roomId: UUID!) {
+  roomEvents(roomId: $roomId) {
+    ...RoomEventFragment
+  }
+}
+    ${RoomEventFragmentFragmentDoc}`;
+
+/**
+ * __useRoomEventsSubscription__
+ *
+ * To run a query within a React component, call `useRoomEventsSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useRoomEventsSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useRoomEventsSubscription({
+ *   variables: {
+ *      roomId: // value for 'roomId'
+ *   },
+ * });
+ */
+export function useRoomEventsSubscription(baseOptions: Apollo.SubscriptionHookOptions<RoomEventsSubscription, RoomEventsSubscriptionVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useSubscription<RoomEventsSubscription, RoomEventsSubscriptionVariables>(RoomEventsDocument, options);
+      }
+export type RoomEventsSubscriptionHookResult = ReturnType<typeof useRoomEventsSubscription>;
+export type RoomEventsSubscriptionResult = Apollo.SubscriptionResult<RoomEventsSubscription>;
 export const GetRoomDocument = gql`
     query GetRoom($roomId: UUID!) {
   roomById(roomId: $roomId) {

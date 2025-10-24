@@ -5,6 +5,7 @@ import {
   useGetRoomQuery,
   useJoinRoomMutation,
   useLogoutMutation,
+  useRoomEventsSubscription,
   useRoomSubscription,
   useSetRoomOwnerMutation,
   useUpdateDeckMutation
@@ -36,6 +37,11 @@ export function RoomPage() {
 
   const { data: subscriptionData, error: roomSubscriptionError } =
     useRoomSubscription({
+      variables: { roomId }
+    });
+
+  const { data: roomEventsData, error: roomEventsError } =
+    useRoomEventsSubscription({
       variables: { roomId }
     });
 
@@ -88,6 +94,7 @@ export function RoomPage() {
 
       if (msg.includes("banned")) {
         localStorage.setItem(memoryKey, "banned");
+        localStorage.removeItem("Room");
         toast({
           title: "You are banned",
           description: `You are banned from ${roomName}`,
@@ -109,48 +116,22 @@ export function RoomPage() {
 
   // --- Kick / Ban detection ---
   useEffect(() => {
-    if (!subscriptionData?.room || !user) return;
+    if (!roomEventsData?.roomEvents || !user) return;
 
-    const room = subscriptionData.room;
-    const userStillInRoom = room.users.some((u) => u.id === user.id);
-    const isBanned = room.bannedUsers?.includes(user.id);
+    const event = roomEventsData.roomEvents;
+    if (event.targetUserId !== user.id) return; // ignore events for other users
 
-    // avoid false positives before actual join
-    const hasJoinedOnce = sessionStorage.getItem("HAS_JOINED_ROOM") === "true";
-    if (!hasJoinedOnce && userStillInRoom) {
-      sessionStorage.setItem("HAS_JOINED_ROOM", "true");
-      return;
-    }
-    if (!hasJoinedOnce) return;
-
-    const roomName = room.name ?? "this room";
-    const ownerName =
-      room.users.find((u) => u.id === room.roomOwnerId)?.username ??
-      "the owner";
-
-    if (isBanned) {
-      toast({
-        title: "You were banned",
-        description: `You were banned from ${roomName} by ${ownerName}.`,
-        variant: "destructive"
-      });
+    if (event.eventType === "USER_KICKED") {
+      // don't double-toast if you triggered it yourself
+      if (!localStorage.getItem("KICKED")) {
+        toast({
+          title: "You were kicked",
+          description: "You were removed from the room.",
+          variant: "destructive"
+        });
+      }
       localStorage.removeItem("Room");
       sessionStorage.removeItem("HAS_JOINED_ROOM");
-      navigate({ to: "/" });
-      return;
-    }
-
-    if (!userStillInRoom && !isBanned) {
-      toast({
-        title: "You were kicked",
-        description: `You were kicked from ${roomName} by ${ownerName}.`,
-        variant: "destructive"
-      });
-
-      // Clean local/session state
-      localStorage.removeItem("Room");
-      sessionStorage.removeItem("HAS_JOINED_ROOM");
-
       // Force full auth logout: backend + local
       try {
         if (user?.id) {
@@ -166,16 +147,29 @@ export function RoomPage() {
         console.warn("Failed to run logoutMutation after kick:", err);
       }
     }
-  }, [subscriptionData, user, toast, navigate, logoutMutation, logout]);
+
+    if (event.eventType === "USER_BANNED") {
+      toast({
+        title: "You were banned",
+        description: "You have been banned from the room.",
+        variant: "destructive"
+      });
+      localStorage.removeItem("Room");
+      sessionStorage.removeItem("HAS_JOINED_ROOM");
+      navigate({ to: "/" });
+    }
+  }, [roomEventsData, user, toast, navigate]);
+
 
   // --- Initial join logic ---
   useEffect(() => {
-    if (!roomData) return;
+    console.log(user);
+    if (user === undefined || !roomData) return;
 
     const isNewRoom = sessionStorage.getItem("NEW_ROOM_CREATED") === "true";
     if (isNewRoom) {
-      setOpenCreateUserDialog(true);
       sessionStorage.removeItem("NEW_ROOM_CREATED");
+      setOpenCreateUserDialog(true);
       return;
     }
 
@@ -227,7 +221,7 @@ export function RoomPage() {
             username: user.username,
             roomName: roomName
           },
-          roomOwnerId: roomOwner
+          roomOwnerId: roomOwner && roomOwner.trim().length > 0 ? roomOwner : undefined
         }
       }).then(({ data }) => {
         const room = data?.joinRoom;
@@ -251,7 +245,6 @@ export function RoomPage() {
         } else if ((room.deck.cards as unknown as never[]).length < 1) {
           setOpenRoomOptionsDialog(true);
         }
-
       });
 
       isJoinRoomCalledRef.current = true;
@@ -334,12 +327,16 @@ export function RoomPage() {
 
   // --- Redirects ---
   useEffect(() => {
+    if (!roomId) return;
+    if (typeof roomId !== "string") return;
+
     const isValid = validateUUID(roomId);
     if (!isValid) {
       redirectingRef.current = true;
       navigate({ to: "/invalid-room/$roomId", params: { roomId } });
     }
-  }, [roomId, navigate, toast]);
+  }, [roomId, navigate]);
+
 
   useEffect(() => {
     if (roomData && roomData.roomById === null) {
@@ -373,6 +370,16 @@ export function RoomPage() {
       });
     }
   }, [roomError, toast, isMissingRoom]);
+
+  useEffect(() => {
+    if (!redirectingRef.current && roomEventsError) {
+      toast({
+        title: "Error",
+        description: `Room Event Error: ${roomEventsError.message}`,
+        variant: "destructive"
+      });
+    }
+  }, [roomEventsError, toast]);
 
   return (
     <div>

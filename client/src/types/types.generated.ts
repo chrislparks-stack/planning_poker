@@ -82,6 +82,7 @@ export type MutationRootEditUserArgs = {
 
 export type MutationRootJoinRoomArgs = {
   roomId: Scalars['UUID']['input'];
+  roomOwnerId?: InputMaybe<Scalars['UUID']['input']>;
   user: UserInput;
 };
 
@@ -187,13 +188,27 @@ export type Room = {
   users: Array<User>;
 };
 
+export type RoomEvent = {
+  __typename?: 'RoomEvent';
+  eventType: Scalars['String']['output'];
+  room: Room;
+  roomId: Scalars['UUID']['output'];
+  targetUserId?: Maybe<Scalars['UUID']['output']>;
+};
+
 export type SubscriptionRoot = {
   __typename?: 'SubscriptionRoot';
   room: Room;
+  roomEvents: RoomEvent;
 };
 
 
 export type SubscriptionRootRoomArgs = {
+  roomId: Scalars['UUID']['input'];
+};
+
+
+export type SubscriptionRootRoomEventsArgs = {
   roomId: Scalars['UUID']['input'];
 };
 

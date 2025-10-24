@@ -1,4 +1,5 @@
 import {
+  Coffee,
   LogOut,
   Moon,
   Palette,
@@ -28,6 +29,7 @@ import {
 import { useAuth } from "@/contexts";
 import { useToast } from "@/hooks/use-toast";
 import { Room } from "@/types";
+import {SupportDialog} from "@/components/SupportDialog";
 
 interface AccountMenuProps {
   room?: Room;
@@ -41,6 +43,7 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
   const [openRoomOptionsDialog, setOpenRoomOptionsDialog] = useState(false);
   const [openToggleModeDialog, setOpenToggleModeDialog] = useState(false);
   const [openConfirmLogoutDialog, setOpenConfirmLogoutDialog] = useState(false);
+  const [openSupportDialog, setOpenSupportDialog] = useState(false);
   const [setRoomOwner] = useSetRoomOwnerMutation();
   const [logoutMutation] = useLogoutMutation({
     onCompleted: async () => {
@@ -84,29 +87,13 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
           await setRoomOwner({
             variables: {
               roomId: roomId,
-              userId: null
+              userId: ""
             }
           });
         }
         localStorage.removeItem("Room");
       });
     }
-  }
-
-  function handleOpenEditUserDialog() {
-    setOpenEditUserDialog(true);
-  }
-
-  function handleOpenCardsUserDialog() {
-    setOpenRoomOptionsDialog(true);
-  }
-
-  function handleOpenToggleModeDialog() {
-    setOpenToggleModeDialog(true);
-  }
-
-  function handleOpenConfirmLogoutDialog() {
-    setOpenConfirmLogoutDialog(true);
   }
 
   return (
@@ -139,7 +126,7 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={handleOpenToggleModeDialog}>
+              <DropdownMenuItem onClick={() => setOpenToggleModeDialog(true)} className="cursor-pointer">
                 {localStorage.getItem("vite-ui-theme") == "light" ? (
                   <Sun className="mr-2 h-4 w-4" />
                 ) : localStorage.getItem("vite-ui-theme") == "dark" ? (
@@ -152,7 +139,7 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={handleOpenEditUserDialog}>
+              <DropdownMenuItem onClick={() => setOpenEditUserDialog(true)} className="cursor-pointer">
                 <User className="mr-2 h-4 w-4" />
                 <span>Change Username</span>
               </DropdownMenuItem>
@@ -161,7 +148,19 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
             {room && user.id === room.roomOwnerId && (
               <div>
                 <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={handleOpenCardsUserDialog}>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      if (user.id === room.roomOwnerId) {
+                        setOpenRoomOptionsDialog(true)
+                      } else {
+                        toast({
+                          title: "Error",
+                          description: "Only the room owner can update the room options.  You do not have the proper permissions.",
+                          variant: "default"
+                        });
+                      }
+                    }}
+                    className="cursor-pointer">
                     <Settings2 className="mr-2 h-4 w-4" />
                     <span>Change Room Options</span>
                   </DropdownMenuItem>
@@ -169,7 +168,14 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
                 <DropdownMenuSeparator />
               </div>
             )}
-            <DropdownMenuItem onClick={handleOpenConfirmLogoutDialog}>
+            <DropdownMenuGroup>
+              <DropdownMenuItem onClick={() => setOpenSupportDialog(true)} className="cursor-pointer">
+                <Coffee className="mr-2 h-4 w-4" />
+                <span>Support</span>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setOpenConfirmLogoutDialog(true)} className="cursor-pointer">
               <LogOut className="mr-2 h-4 w-4" />
               <span>Logout</span>
             </DropdownMenuItem>
@@ -195,6 +201,7 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
         room={room}
         onConfirm={handleLogout}
       />
+      <SupportDialog open={openSupportDialog} setOpen={setOpenSupportDialog} />
     </>
   );
 };

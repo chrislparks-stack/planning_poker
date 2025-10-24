@@ -14,6 +14,7 @@ import {
 import { useAuth } from "@/contexts";
 import { useCopyRoomUrlToClipboard } from "@/hooks";
 import { Room, User } from "@/types";
+import SummitIcon from "@/assets/SummitIcon.png";
 
 interface HeaderProps {
   room?: Room;
@@ -30,66 +31,17 @@ export const Header: FC<HeaderProps> = ({ room, users }) => {
     }
   };
 
-  function Logo(props: SVGProps<SVGSVGElement>) {
-    return (
-      <svg
-        viewBox="0 0 100 100"
-        xmlns="http://www.w3.org/2000/svg"
-        {...props}
-        role="img"
-        aria-label="PokerPlanning.org Logo"
-      >
-        <defs>
-          <linearGradient
-            id="logoGradient"
-            x1="0"
-            y1="0"
-            x2="100"
-            y2="0"
-            gradientUnits="userSpaceOnUse"
-          >
-            <stop offset="0%" style={{ stopColor: "var(--accent-start)" }} />
-            <stop
-              offset="25%"
-              style={{ stopColor: "hsl(var(--accent-stop-1))" }}
-            />
-            <stop
-              offset="50%"
-              style={{ stopColor: "hsl(var(--accent-stop-2))" }}
-            />
-            <stop
-              offset="100%"
-              style={{ stopColor: "hsl(var(--accent-stop-3))" }}
-            />
-          </linearGradient>
-        </defs>
-
-        <rect
-          x="10"
-          y="10"
-          width="80"
-          height="80"
-          rx="20"
-          fill="url(#logoGradient)"
-        />
-        <path
-          d="M30 50 C 30 30, 70 30, 70 50 C 70 70, 30 70, 30 50"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={6}
-          style={{ color: "hsl(var(--accent-foreground))" }}
-        />
-      </svg>
-    );
-  }
-
   return (
     <header className="flex justify-between items-center h-14 px-4 border-b">
       <div className="flex items-center space-x-4">
         <Tooltip>
           <TooltipTrigger asChild>
             <Link to="/" className="text-lg font-semibold flex items-center">
-              <Logo className="h-8 w-8 mr-2" />
+              <img
+                src={SummitIcon}
+                alt="Summit Icon"
+                className="h-8 w-auto transition-transform duration-300 group-hover:scale-[1.03] mr-2 mt-1"
+              />
               <span className="hidden md:block">
                 {" "}
                 {room?.name ?? "Planning Poker"}
