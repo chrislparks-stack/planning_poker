@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use futures_util::lock::Mutex;
+use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::domain::room::Room;

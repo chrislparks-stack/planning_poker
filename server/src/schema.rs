@@ -11,7 +11,8 @@ use crate::{
     types::{Card, EntityId, Storage},
 };
 use async_graphql::*;
-use futures_util::{lock::MutexGuard, Stream, StreamExt};
+use futures_util::{Stream, StreamExt};
+use tokio::sync::MutexGuard;
 use uuid::Uuid;
 
 #[derive(Clone, Debug, SimpleObject)]
@@ -85,7 +86,9 @@ impl MutationRoot {
         let mut storage = get_storage(ctx).await;
 
         // Create room using provided UUID or generate new one
-        let room = Room::new_with_id(room_id, name, cards);
+        let mut room = Room::new_with_id(room_id, name, cards);
+
+        room.touch();
 
         // Store and publish
         storage.insert(room.id, room.clone());
@@ -126,6 +129,8 @@ impl MutationRoot {
                         let _ = room.set_room_owner(Some(owner_id));
                     }
 
+                    room.touch();
+
                     SimpleBroker::publish(room.get_room());
                 }
 
@@ -141,6 +146,8 @@ impl MutationRoot {
         match storage.get_mut(&input.room_id) {
             Some(room) => {
                 room.deck.cards = input.cards.clone();
+
+                room.touch();
 
                 SimpleBroker::publish(room.get_room());
 
@@ -161,6 +168,9 @@ impl MutationRoot {
         match storage.get_mut(&room_id) {
             Some(room) => {
                 room.rename(name);
+
+                room.touch();
+
                 SimpleBroker::publish(room.get_room());
                 Ok(room.get_room())
             }
@@ -179,6 +189,9 @@ impl MutationRoot {
         match storage.get_mut(&room_id) {
             Some(room) => {
                 room.enable_countdown(enabled);
+
+                room.touch();
+
                 SimpleBroker::publish(room.get_room());
                 Ok(room.get_room())
             }
@@ -208,6 +221,8 @@ impl MutationRoot {
             }
 
             room.start_countdown();
+            room.touch();
+
             SimpleBroker::publish(room.get_room());
         }
 
@@ -224,6 +239,7 @@ impl MutationRoot {
                 }
 
                 room.update_countdown_value(remaining);
+                room.touch();
                 SimpleBroker::publish(room.get_room());
             }
             drop(storage);
@@ -234,6 +250,7 @@ impl MutationRoot {
             Some(room) => {
                 if room.reveal_stage.as_deref() != Some("cancelled") {
                     room.complete_countdown();
+                    room.touch();
                     SimpleBroker::publish(room.get_room());
                 }
                 Ok(room.get_room())
@@ -260,6 +277,9 @@ impl MutationRoot {
                 }
 
                 room.cancel_countdown();
+
+                room.touch();
+
                 SimpleBroker::publish(room.get_room());
                 Ok(room.get_room())
             }
@@ -278,6 +298,8 @@ impl MutationRoot {
         match storage.get_mut(&room_id) {
             Some(room) => {
                 room.set_room_owner(user_id)?;
+                room.touch();
+
                 SimpleBroker::publish(room.get_room());
                 Ok(room.get_room())
             }
@@ -300,16 +322,30 @@ impl MutationRoot {
                 if room.is_user_exist(user_id) {
                     room.edit_user(user_id, username.clone());
 
+                    room.touch();
+
                     SimpleBroker::publish(room.get_room());
                 }
-
                 (key, room)
             })
             .collect();
 
+        let (last_card_picked, last_card_value) = storage
+            .values()
+            .find_map(|room| {
+                room.users
+                    .iter()
+                    .find(|u| u.id == user_id)
+                    .map(|u| (u.last_card_picked.clone(), u.last_card_value))
+            })
+            .map(|(a, b)| (a, b))
+            .unwrap_or((None, None));
+
         Ok(User {
             id: user_id,
             username,
+            last_card_picked,
+            last_card_value,
         })
     }
 
@@ -322,6 +358,8 @@ impl MutationRoot {
             .map(|(key, mut room)| {
                 if room.is_user_exist(user_id) {
                     room.remove_user(user_id);
+
+                    room.touch();
 
                     SimpleBroker::publish(room.get_room());
                 }
@@ -344,13 +382,23 @@ impl MutationRoot {
 
         match storage.get_mut(&room_id) {
             Some(room) => {
-                // Remove any existing card for this user
                 room.game.table.retain(|u| u.user_id != user_id);
 
-                // If the card is not empty, add the new card
+                if let Some(user) = room.users.iter_mut().find(|u| u.id == user_id) {
+                    if card.trim().is_empty() {
+                        user.last_card_picked = None;
+                        user.last_card_value = None;
+                    } else {
+                        user.last_card_picked = Some(card.clone());
+                        user.last_card_value = crate::domain::user::parse_card_to_number(&card);
+                    }
+                }
+
                 if !card.trim().is_empty() {
                     room.game.table.push(UserCard::new(user_id, card));
                 }
+
+                room.touch();
 
                 SimpleBroker::publish(room.get_room());
                 Ok(room.get_room())
@@ -365,6 +413,8 @@ impl MutationRoot {
         match storage.get_mut(&room_id) {
             Some(room) => {
                 room.is_game_over = true;
+
+                room.touch();
 
                 SimpleBroker::publish(room.get_room());
 
@@ -381,6 +431,13 @@ impl MutationRoot {
             Some(room) => {
                 room.is_game_over = false;
                 room.game = Game::new();
+
+                for u in room.users.iter_mut() {
+                    u.last_card_picked = None;
+                    u.last_card_value = None;
+                }
+
+                room.touch();
 
                 SimpleBroker::publish(room.get_room());
 
@@ -401,6 +458,8 @@ impl MutationRoot {
         match storage.get_mut(&room_id) {
             Some(room) => {
                 room.kick_user(target_user_id);
+
+                room.touch();
 
                 SimpleBroker::publish(room.get_room());
 
@@ -427,25 +486,27 @@ impl MutationRoot {
     ) -> Result<Room> {
         let mut storage = get_storage(ctx).await;
 
-        match storage.get_mut(&room_id) {
-            Some(room) => {
-                room.ban_user(target_user_id);
+            match storage.get_mut(&room_id) {
+                Some(room) => {
+                    room.ban_user(target_user_id);
 
-                SimpleBroker::publish(room.get_room());
+                    room.touch();
 
-                let event = RoomEvent {
-                    room_id,
-                    event_type: "USER_BANNED".to_string(),
-                    target_user_id: Some(target_user_id),
-                    room: room.get_room(),
-                };
+                    SimpleBroker::publish(room.get_room());
 
-                SimpleBroker::publish(event);
+                    let event = RoomEvent {
+                        room_id,
+                        event_type: "USER_BANNED".to_string(),
+                        target_user_id: Some(target_user_id),
+                        room: room.get_room(),
+                    };
 
-                Ok(room.get_room())
+                    SimpleBroker::publish(event);
+
+                    Ok(room.get_room())
+                }
+                None => Err(Error::new("Room not found")),
             }
-            None => Err(Error::new("Room not found")),
-        }
     }
 
     async fn unban_user(
@@ -459,6 +520,9 @@ impl MutationRoot {
         match storage.get_mut(&room_id) {
             Some(room) => {
                 room.unban_user(target_user_id);
+
+                room.touch();
+
                 SimpleBroker::publish(room.get_room());
                 Ok(room.get_room())
             }
@@ -477,6 +541,9 @@ impl MutationRoot {
         match storage.get_mut(&room_id) {
             Some(room) => {
                 room.toggle_confirm_new_game(enabled);
+
+                room.touch();
+
                 SimpleBroker::publish(room.get_room());
                 Ok(room.get_room())
             }

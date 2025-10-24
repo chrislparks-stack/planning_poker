@@ -1,5 +1,6 @@
 use async_graphql::SimpleObject;
 use uuid::Uuid;
+use chrono::{DateTime, Utc};
 
 use crate::types::{Card, EntityId};
 
@@ -23,6 +24,9 @@ pub struct Room {
     pub reveal_stage: Option<String>,
     pub countdown_value: Option<i32>,
     pub confirm_new_game: bool,
+
+    #[graphql(skip)]
+    pub last_active: DateTime<Utc>,
 }
 
 impl Room {
@@ -40,6 +44,7 @@ impl Room {
             reveal_stage: Some("idle".to_string()),
             countdown_value: None,
             confirm_new_game: true,
+            last_active: Utc::now(),
         }
     }
 
@@ -47,6 +52,8 @@ impl Room {
         Self::new_with_id(None, name, cards)
     }
 
+    /// Return a Room snapshot suitable for publishing to clients.
+    /// Hides card values unless the game is over (keeps your previous behavior).
     pub fn get_room(&self) -> Room {
         if self.is_game_over {
             self.clone()
@@ -179,5 +186,28 @@ impl Room {
 
     pub fn toggle_confirm_new_game(&mut self, enabled: bool) {
         self.confirm_new_game = enabled;
+    }
+
+    // === Activity / cleanup helpers ===
+    pub fn touch(&mut self) {
+        self.last_active = Utc::now();
+    }
+
+    /// Conservative guard: return false if the room is currently doing something
+    /// we shouldn't interrupt (e.g. a countdown in progress).
+    pub fn is_safe_to_remove(&self) -> bool {
+        if self.reveal_stage.as_deref() == Some("countdown") {
+            return false;
+        }
+        true
+    }
+
+    /// Returns true if the room's last_active is older than the provided TTL.
+    pub fn is_inactive(&self, ttl: std::time::Duration) -> bool {
+        let age = Utc::now().signed_duration_since(self.last_active);
+        match age.to_std() {
+            Ok(d) => d > ttl,
+            Err(_) => true,
+        }
     }
 }

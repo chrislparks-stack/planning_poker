@@ -76,9 +76,9 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
         >
           <Bar
             dataKey="Votes"
-            fill="hsl(var(--chart-1))"
+            fill="hsl(var(--accent))"
             radius={5}
-            fillOpacity={0.6}
+            fillOpacity={0.8}
             activeBar={<Rectangle fillOpacity={0.8} />}
           >
             // Replace your LabelList block with this:
@@ -128,19 +128,17 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
                         x={x + width / 2}
                         dy="1.2em"
                         fontSize={10}
-                        fill="#a78bfa"
+                        className="text-white font-bold"
                       >
                         MAJORITY
                       </tspan>
                     )}
                     {isMajority && !canPlaceAbove && (
-                      // If we put the label inside the bar and it's the majority, add a small badge above the text
                       <tspan
                         x={x + width / 2}
                         dy="1.6em"
                         fontSize={9}
-                        fill="#a78bfa"
-                        fontWeight="600"
+                        className="text-white font-bold"
                       >
                         MAJORITY
                       </tspan>

@@ -220,6 +220,8 @@ export type UpdateDeckInput = {
 export type User = {
   __typename?: 'User';
   id: Scalars['UUID']['output'];
+  lastCardPicked?: Maybe<Scalars['String']['output']>;
+  lastCardValue?: Maybe<Scalars['Float']['output']>;
   username: Scalars['String']['output'];
 };
 
@@ -231,6 +233,7 @@ export type UserCard = {
 
 export type UserInput = {
   id: Scalars['UUID']['input'];
+  lastCardPicked?: InputMaybe<Scalars['String']['input']>;
   roomName?: InputMaybe<Scalars['String']['input']>;
   username: Scalars['String']['input'];
 };

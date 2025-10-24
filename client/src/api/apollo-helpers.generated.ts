@@ -63,9 +63,11 @@ export type SubscriptionRootFieldPolicy = {
 	room?: FieldPolicy<any> | FieldReadFunction<any>,
 	roomEvents?: FieldPolicy<any> | FieldReadFunction<any>
 };
-export type UserKeySpecifier = ('id' | 'username' | UserKeySpecifier)[];
+export type UserKeySpecifier = ('id' | 'lastCardPicked' | 'lastCardValue' | 'username' | UserKeySpecifier)[];
 export type UserFieldPolicy = {
 	id?: FieldPolicy<any> | FieldReadFunction<any>,
+	lastCardPicked?: FieldPolicy<any> | FieldReadFunction<any>,
+	lastCardValue?: FieldPolicy<any> | FieldReadFunction<any>,
 	username?: FieldPolicy<any> | FieldReadFunction<any>
 };
 export type UserCardKeySpecifier = ('card' | 'userId' | UserCardKeySpecifier)[];

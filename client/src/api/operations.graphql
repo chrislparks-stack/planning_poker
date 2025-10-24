@@ -1,6 +1,8 @@
 fragment UserFragment on User {
   id
   username
+  lastCardPicked
+  lastCardValue
 }
 
 fragment DeckFragment on Deck {
