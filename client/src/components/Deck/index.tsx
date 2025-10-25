@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 
-import { usePickCardMutation } from "@/api";
+import {
+  useGetRoomQuery,
+  useRoomSubscription,
+  usePickCardMutation,
+} from "@/api";
 import { Card } from "@/components/Card";
 import { useAuth } from "@/contexts";
 import { useKeyboardControls } from "@/hooks";
@@ -10,15 +14,33 @@ import { UserCard } from "@/types";
 
 interface DeckProps {
   roomId: string;
-  isGameOver: boolean;
+  isGameOver?: boolean;
   cards: string[];
   table: UserCard[] | undefined;
 }
 
-export function Deck({ roomId, isGameOver, cards, table }: DeckProps) {
-  const { user } = useAuth();
+export function Deck({ roomId, isGameOver: isGameOverProp, cards }: DeckProps) {
+  const { user: authUser } = useAuth();
   const { toast } = useToast();
   const { cardsContainerRef } = useKeyboardControls();
+
+  // query + subscription
+  const { data: queryData, refetch } = useGetRoomQuery({
+    variables: { roomId },
+  });
+
+  const { data: subData } = useRoomSubscription({
+    variables: { roomId },
+  });
+
+  // authoritative room (subscription preferred)
+  const room = subData?.room ?? queryData?.roomById ?? null;
+
+  // find the current user object in the authoritative room
+  const currentUser = room?.users?.find((u) => u.id === authUser?.id) ?? null;
+
+  // authoritative isGameOver from server if present
+  const isGameOver = room?.isGameOver ?? isGameOverProp ?? false;
 
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
 
@@ -27,34 +49,50 @@ export function Deck({ roomId, isGameOver, cards, table }: DeckProps) {
       toast({
         title: "Error",
         description: `Pick card: ${error.message}`,
-        variant: "destructive"
+        variant: "destructive",
       });
-    }
+    },
   });
 
   useEffect(() => {
-    // Reset selection when game is reset
-    if (!isGameOver) {
-      setSelectedCard(null);
-    }
-  }, [isGameOver]);
+    const serverPick = currentUser?.lastCardPicked ?? null;
+
+    setSelectedCard(serverPick);
+  }, [room, authUser?.id, isGameOver]);
 
   const handleCardClick = (card: string) => async () => {
-    if (!user) return;
+    if (!authUser?.id) return;
 
     const isSelected = selectedCard === card;
     const cardToSend = isSelected ? "" : card;
 
-    await pickCardMutation({
-      variables: {
-        userId: user.id,
-        roomId,
-        card: cardToSend
-      }
-    });
-
-    // Locally track the selected card for *this* user only
+    // optimistic UI update
     setSelectedCard(isSelected ? null : card);
+
+    try {
+      await pickCardMutation({
+        variables: {
+          userId: authUser.id,
+          roomId,
+          card: cardToSend,
+        },
+      });
+
+      try {
+        const result = await refetch({ roomId });
+        const refreshedRoom = result?.data?.roomById ?? null;
+        const refreshedUser = refreshedRoom?.users?.find((u: any) => u.id === authUser.id) ?? null;
+        const authoritativePick = refreshedUser?.lastCardPicked ?? null;
+
+        setSelectedCard(authoritativePick);
+      } catch {
+        // If refetch fails, we keep the optimistic state. Subscription will typically reconcile soon.
+      }
+    } catch (err) {
+      // revert optimistic change on error
+      setSelectedCard(isSelected ? card : null);
+      // mutation onError already shows toast
+    }
   };
 
   return (
@@ -63,7 +101,7 @@ export function Deck({ roomId, isGameOver, cards, table }: DeckProps) {
         const isCardPicked = selectedCard === card;
         return (
           <div
-            key={card}
+            key={String(card)}
             className={cn(
               "transition-margin-bottom duration-100 min-w-[5vw] max-w-[80px]",
               isCardPicked ? "mb-8" : "mb-0"

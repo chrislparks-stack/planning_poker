@@ -1,57 +1,116 @@
 /** @type {import('tailwindcss').Config} */
+function hslVar(varName) {
+	return ({ opacityValue }) => {
+		if (opacityValue !== undefined) {
+			return `hsl(var(${varName}) / ${opacityValue})`;
+		}
+		return `hsl(var(${varName}))`;
+	};
+}
+
 module.exports = {
-  darkMode: ["class"],
-  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
-  theme: {
-    extend: {
-      borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
-      },
-      colors: {
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
-        },
-        popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
-        },
-        primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
-        },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
-        },
-        muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-        },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
-        },
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        chart: {
-          1: "hsl(var(--chart-1))",
-          2: "hsl(var(--chart-2))",
-          3: "hsl(var(--chart-3))",
-          4: "hsl(var(--chart-4))",
-          5: "hsl(var(--chart-5))",
-        },
-      },
-    },
-  },
-  plugins: [require("tailwindcss-animate")],
+	darkMode: ["class"],
+	content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+	theme: {
+		extend: {
+			borderRadius: {
+				lg: "var(--radius)",
+				md: "calc(var(--radius) - 2px)",
+				sm: "calc(var(--radius) - 4px)"
+			},
+
+			// ---- COLORS ----
+			colors: {
+				background: hslVar("--background"),
+				foreground: hslVar("--foreground"),
+				card: {
+					DEFAULT: hslVar("--card"),
+					foreground: hslVar("--card-foreground")
+				},
+				popover: {
+					DEFAULT: hslVar("--popover"),
+					foreground: hslVar("--popover-foreground")
+				},
+				primary: {
+					DEFAULT: hslVar("--primary"),
+					foreground: hslVar("--primary-foreground")
+				},
+				secondary: {
+					DEFAULT: hslVar("--secondary"),
+					foreground: hslVar("--secondary-foreground")
+				},
+				muted: {
+					DEFAULT: hslVar("--muted"),
+					foreground: hslVar("--muted-foreground")
+				},
+				accent: {
+					DEFAULT: hslVar("--accent"),
+					foreground: hslVar("--accent-foreground")
+				},
+				"accent-hover": hslVar("--accent-hover"),
+				"accent-active": hslVar("--accent-active"),
+				"accent-foreground": hslVar("--accent-foreground"),
+
+				"accent-lilac": {
+					DEFAULT: hslVar("--accent-lilac"),
+					foreground: hslVar("--accent-lilac-foreground"),
+					hover: hslVar("--accent-lilac-hover")
+				},
+				"accent-aqua": {
+					DEFAULT: hslVar("--accent-aqua"),
+					foreground: hslVar("--accent-aqua-foreground"),
+					hover: hslVar("--accent-aqua-hover")
+				},
+				"accent-emerald": {
+					DEFAULT: hslVar("--accent-emerald"),
+					foreground: hslVar("--accent-emerald-foreground"),
+					hover: hslVar("--accent-emerald-hover")
+				},
+				"accent-rose": {
+					DEFAULT: hslVar("--accent-rose"),
+					foreground: hslVar("--accent-rose-foreground"),
+					hover: hslVar("--accent-rose-hover")
+				},
+				"accent-amber": {
+					DEFAULT: hslVar("--accent-amber"),
+					foreground: hslVar("--accent-amber-foreground"),
+					hover: hslVar("--accent-amber-hover")
+				},
+
+				destructive: {
+					DEFAULT: hslVar("--destructive"),
+					foreground: hslVar("--destructive-foreground")
+				},
+
+				border: hslVar("--border"),
+				input: hslVar("--input"),
+				ring: hslVar("--ring"),
+
+				chart: {
+					1: hslVar("--chart-1"),
+					2: hslVar("--chart-2"),
+					3: hslVar("--chart-3"),
+					4: hslVar("--chart-4"),
+					5: hslVar("--chart-5")
+				}
+			},
+
+			// ---- ANIMATIONS ----
+			keyframes: {
+				"accordion-down": {
+					from: { height: "0" },
+					to: { height: "var(--radix-accordion-content-height)" }
+				},
+				"accordion-up": {
+					from: { height: "var(--radix-accordion-content-height)" },
+					to: { height: "0" }
+				}
+			},
+			animation: {
+				"accordion-down": "accordion-down 0.7s ease-out",
+				"accordion-up": "accordion-up 0.7s ease-out",
+			}
+		}
+	},
+	plugins: [require("tailwindcss-animate")]
 };

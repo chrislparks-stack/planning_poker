@@ -14,6 +14,7 @@ import {
 import { useAuth } from "@/contexts";
 import { useCopyRoomUrlToClipboard } from "@/hooks";
 import { Room, User } from "@/types";
+import SummitIcon from "@/assets/SummitIcon.png";
 
 interface HeaderProps {
   room?: Room;
@@ -33,17 +34,24 @@ export const Header: FC<HeaderProps> = ({ room, users }) => {
   return (
     <header className="flex justify-between items-center h-14 px-4 border-b">
       <div className="flex items-center space-x-4">
-        <Link to="/" className="text-lg font-semibold flex items-center">
-          <img
-            src="/logo.svg"
-            alt="PokerPlanning.org Logo"
-            className="h-8 w-8 mr-2"
-          />
-          <span className="hidden md:block">
-            {" "}
-            {room?.name ?? "Apps Planning Poker"}
-          </span>
-        </Link>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Link to="/" className="text-lg font-semibold flex items-center">
+              <img
+                src={SummitIcon}
+                alt="Summit Icon"
+                className="h-8 w-auto transition-transform duration-300 group-hover:scale-[1.03] mr-2 mt-1"
+              />
+              <span className="hidden md:block">
+                {" "}
+                {room?.name ?? "Planning Poker"}
+              </span>
+            </Link>
+          </TooltipTrigger>
+          <TooltipContent sideOffset={15}>
+            <p>Home</p>
+          </TooltipContent>
+        </Tooltip>
         {room && (
           <>
             <Separator orientation="vertical" className="h-6" />
@@ -53,7 +61,7 @@ export const Header: FC<HeaderProps> = ({ room, users }) => {
                   <Copy className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
+              <TooltipContent sideOffset={15}>
                 <p>Copy room link</p>
               </TooltipContent>
             </Tooltip>
@@ -77,7 +85,7 @@ export const Header: FC<HeaderProps> = ({ room, users }) => {
                         </AvatarFallback>
                       </Avatar>
                     </TooltipTrigger>
-                    <TooltipContent>
+                    <TooltipContent sideOffset={15}>
                       <p>{user.username}</p>
                     </TooltipContent>
                   </Tooltip>

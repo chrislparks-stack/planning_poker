@@ -1,9 +1,8 @@
-import { ChevronDown, ChevronUp } from "lucide-react";
 import { useRef, useEffect, useState, useMemo } from "react";
 
+import { useSetRoomOwnerMutation } from "@/api";
 import { Player } from "@/components/Player";
 import { Table } from "@/components/Table";
-import { Button } from "@/components/ui/button";
 import { Room as RoomType } from "@/types";
 import { getPickedUserCard } from "@/utils";
 
@@ -17,9 +16,9 @@ interface Position {
 }
 
 export function Room({ room }: RoomProps) {
-  const tableRef = useRef<HTMLDivElement>(null);
+  const tableRef = useRef<HTMLDivElement | null>(null);
   const [tableRect, setTableRect] = useState<DOMRect | null>(null);
-  const [issuesOpen, setIssuesOpen] = useState(false);
+  const [setRoomOwner] = useSetRoomOwnerMutation();
 
   // Update the table's bounding rectangle on mount and when the window is resized.
   useEffect(() => {
@@ -33,10 +32,6 @@ export function Room({ room }: RoomProps) {
     window.addEventListener("resize", updateTableRect);
     return () => window.removeEventListener("resize", updateTableRect);
   }, []);
-
-  function handleIssues() {
-    setIssuesOpen(!issuesOpen);
-  }
 
   /**
    * Compute player positions along the table edges while avoiding overlaps.
@@ -179,26 +174,31 @@ export function Room({ room }: RoomProps) {
     );
   }
 
+  function handlePromote(userId: string) {
+    if (room) {
+      setRoomOwner({
+        variables: {
+          roomId: room.id,
+          userId: userId
+        }
+      });
+    }
+  }
+
   return (
     <div
-      className="relative flex flex-col items-center justify-center w-full min-h-[500px]"
+      className="relative flex flex-col items-center justify-center w-full min-h-[450px]"
       style={{
-        height: "calc(100vh)",
+        height: "calc(50vh)",
         overflow: "hidden",
-        position: "relative"
+        position: "relative",
+        transform: "translateY(calc(25% - 1vh))"
       }}
     >
-      <Button
-        className="absolute left-10 top-5 min-h-[20px] min-w-[100px] py-6 px-3 border-2 leading-normal"
-        onClick={handleIssues}
-      >
-        {" "}
-        Issues {issuesOpen ? <ChevronUp /> : <ChevronDown />}{" "}
-      </Button>
       <div className="relative">
         <Table
+          room={room}
           innerRef={tableRef}
-          roomId={room.id}
           isCardsPicked={room.game.table.length > 0}
           isGameOver={room.isGameOver}
         />
@@ -222,6 +222,7 @@ export function Room({ room }: RoomProps) {
                 isGameOver={room.isGameOver}
                 card={pickedCard?.card}
                 roomId={room.id}
+                onMakeOwner={(userId) => handlePromote(userId)}
               />
             </div>
           );

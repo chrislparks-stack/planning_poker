@@ -1,13 +1,20 @@
-import { GalleryHorizontalEnd, LogOut, Settings } from "lucide-react";
+import {
+  Coffee,
+  LogOut,
+  Moon,
+  Palette,
+  Settings,
+  Settings2,
+  Sun,
+  User
+} from "lucide-react";
 import { FC, useEffect, useState } from "react";
 
-import {
-  useLogoutMutation,
-  useSetRoomOwnerMutation,
-  useUpdateDeckMutation
-} from "@/api";
-import { EditCardsDialog } from "@/components/EditCardsDialog";
+import { useLogoutMutation, useSetRoomOwnerMutation } from "@/api";
+import { ConfirmLogoutDialog } from "@/components/ConfirmLogoutDialog";
 import { EditUserDialog } from "@/components/EditUserDialog";
+import { RoomOptionsDialog } from "@/components/RoomOptionsDialog";
+import { ToggleModeDialog } from "@/components/ToggleModeDialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +29,7 @@ import {
 import { useAuth } from "@/contexts";
 import { useToast } from "@/hooks/use-toast";
 import { Room } from "@/types";
+import {SupportDialog} from "@/components/SupportDialog";
 
 interface AccountMenuProps {
   room?: Room;
@@ -32,11 +40,13 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
   const { toast } = useToast();
   const [roomId, setRoomId] = useState("");
   const [openEditUserDialog, setOpenEditUserDialog] = useState(false);
-  const [openEditCardsDialog, setOpenEditCardsDialog] = useState(false);
+  const [openRoomOptionsDialog, setOpenRoomOptionsDialog] = useState(false);
+  const [openToggleModeDialog, setOpenToggleModeDialog] = useState(false);
+  const [openConfirmLogoutDialog, setOpenConfirmLogoutDialog] = useState(false);
+  const [openSupportDialog, setOpenSupportDialog] = useState(false);
   const [setRoomOwner] = useSetRoomOwnerMutation();
-  const [updateDeck] = useUpdateDeckMutation();
   const [logoutMutation] = useLogoutMutation({
-    onCompleted() {
+    onCompleted: async () => {
       logout?.();
     },
     onError: (error) => {
@@ -56,34 +66,34 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
 
   async function handleLogout() {
     if (user) {
-      await setRoomOwner({
-        variables: {
-          roomId: roomId,
-          userId: null
-        }
-      });
-      await updateDeck({
-        variables: {
-          input: {
-            roomId,
-            cards: []
-          }
-        }
-      });
       await logoutMutation({
         variables: {
           userId: user.id
         }
+      }).then(async () => {
+        if (room && room.users.length > 1) {
+          for (const remainingUsers of room.users) {
+            if (remainingUsers.id != user.id) {
+              await setRoomOwner({
+                variables: {
+                  roomId: roomId,
+                  userId: remainingUsers.id
+                }
+              });
+              break;
+            }
+          }
+        } else {
+          await setRoomOwner({
+            variables: {
+              roomId: roomId,
+              userId: ""
+            }
+          });
+        }
+        localStorage.removeItem("Room");
       });
     }
-  }
-
-  function handleOpenEditUserDialog() {
-    setOpenEditUserDialog(true);
-  }
-
-  function handleOpenCardsUserDialog() {
-    setOpenEditCardsDialog(true);
   }
 
   return (
@@ -98,12 +108,17 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
             >
               <Avatar className="h-10 w-10">
                 <AvatarFallback>
-                  {user.username[0].toUpperCase()}
+                  <Settings />
                 </AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56" align="end" forceMount>
+          <DropdownMenuContent
+            className="w-56"
+            align="end"
+            forceMount
+            sideOffset={10}
+          >
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
                 <p className="text-lg font-bold leading-none"> Settings </p>
@@ -111,8 +126,21 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={handleOpenEditUserDialog}>
-                <Settings className="mr-2 h-4 w-4" />
+              <DropdownMenuItem onClick={() => setOpenToggleModeDialog(true)} className="cursor-pointer">
+                {localStorage.getItem("vite-ui-theme") == "light" ? (
+                  <Sun className="mr-2 h-4 w-4" />
+                ) : localStorage.getItem("vite-ui-theme") == "dark" ? (
+                  <Moon className="mr-2 h-4 w-4" />
+                ) : (
+                  <Palette className="mr-2 h-4 w-4" />
+                )}
+                <span>Change Theme</span>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuItem onClick={() => setOpenEditUserDialog(true)} className="cursor-pointer">
+                <User className="mr-2 h-4 w-4" />
                 <span>Change Username</span>
               </DropdownMenuItem>
             </DropdownMenuGroup>
@@ -120,15 +148,34 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
             {room && user.id === room.roomOwnerId && (
               <div>
                 <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={handleOpenCardsUserDialog}>
-                    <GalleryHorizontalEnd className="mr-2 h-4 w-4" />
-                    <span>Change Cards</span>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      if (user.id === room.roomOwnerId) {
+                        setOpenRoomOptionsDialog(true)
+                      } else {
+                        toast({
+                          title: "Error",
+                          description: "Only the room owner can update the room options.  You do not have the proper permissions.",
+                          variant: "default"
+                        });
+                      }
+                    }}
+                    className="cursor-pointer">
+                    <Settings2 className="mr-2 h-4 w-4" />
+                    <span>Change Room Options</span>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
               </div>
             )}
-            <DropdownMenuItem onClick={handleLogout}>
+            <DropdownMenuGroup>
+              <DropdownMenuItem onClick={() => setOpenSupportDialog(true)} className="cursor-pointer">
+                <Coffee className="mr-2 h-4 w-4" />
+                <span>Support</span>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setOpenConfirmLogoutDialog(true)} className="cursor-pointer">
               <LogOut className="mr-2 h-4 w-4" />
               <span>Logout</span>
             </DropdownMenuItem>
@@ -139,11 +186,22 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
         open={openEditUserDialog}
         setOpen={setOpenEditUserDialog}
       />
-      <EditCardsDialog
-        open={openEditCardsDialog}
-        setOpen={setOpenEditCardsDialog}
+      <RoomOptionsDialog
+        open={openRoomOptionsDialog}
+        setOpen={setOpenRoomOptionsDialog}
         room={room}
       />
+      <ToggleModeDialog
+        open={openToggleModeDialog}
+        setOpen={setOpenToggleModeDialog}
+      />
+      <ConfirmLogoutDialog
+        open={openConfirmLogoutDialog}
+        setOpen={setOpenConfirmLogoutDialog}
+        room={room}
+        onConfirm={handleLogout}
+      />
+      <SupportDialog open={openSupportDialog} setOpen={setOpenSupportDialog} />
     </>
   );
 };

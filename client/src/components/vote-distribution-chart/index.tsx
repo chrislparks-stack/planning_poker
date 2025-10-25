@@ -76,29 +76,83 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
         >
           <Bar
             dataKey="Votes"
-            fill="hsl(var(--chart-1))"
+            fill="hsl(var(--accent))"
             radius={5}
-            fillOpacity={0.6}
+            fillOpacity={0.8}
             activeBar={<Rectangle fillOpacity={0.8} />}
           >
             <LabelList
               dataKey="Votes"
-              content={({ x, y, value, width }) => {
-                if (x == null || y == null || width == null) return null;
+              content={({
+                          x,
+                          y,
+                          value,
+                          width,
+                          height,
+                        }: {
+                x?: number | string;
+                y?: number | string;
+                value?: number | string;
+                width?: number | string;
+                height?: number | string;
+              }) => {
+                // tiny helper to coerce string|number|undefined -> number safely
+                const toNum = (v?: number | string, fallback = 0) =>
+                  typeof v === "number" ? v : v ? parseFloat(String(v)) || fallback : fallback;
 
-                const labelY = y - 10;
-                const finalY = labelY < 10 ? 10 : labelY;
+                const nx = toNum(x);
+                const ny = toNum(y);
+                const nwidth = toNum(width);
+                const nheight = toNum(height);
+                const nvalue = toNum(value);
+
+                if (Number.isNaN(nx) || Number.isNaN(ny) || Number.isNaN(nwidth) || Number.isNaN(nheight)) {
+                  return null;
+                }
+
+                const isMajority = nvalue === maxCardCount;
+                const paddingAbove = 6; // px above the bar
+                const labelFontSize = 12;
+
+                const canPlaceAbove = ny - paddingAbove - labelFontSize > 0;
+                let labelY: number;
+                let fillColor = "white";
+
+                if (canPlaceAbove) {
+                  labelY = ny - paddingAbove;
+                  fillColor = "#111827";
+                } else {
+                  labelY = ny + nheight / 2;
+                  fillColor = "white";
+                }
+
+                const centerX = nx + nwidth / 2;
 
                 return (
                   <text
-                    x={x + width / 2}
-                    y={finalY + 50}
-                    fill="white"
+                    x={centerX}
+                    y={labelY}
+                    fill={fillColor}
                     textAnchor="middle"
-                    fontSize={12}
+                    fontSize={labelFontSize}
                     className="tabular-nums"
+                    dominantBaseline="middle"
                   >
-                    # of votes: {value}
+                    <tspan x={centerX} fontWeight={isMajority ? "bold" : "normal"}>
+                      Votes: {nvalue}
+                    </tspan>
+
+                    {isMajority && canPlaceAbove && (
+                      <tspan x={centerX} dy="1.2em" fontSize={10} className="text-white font-bold">
+                        MAJORITY
+                      </tspan>
+                    )}
+
+                    {isMajority && !canPlaceAbove && (
+                      <tspan x={centerX} dy="1.6em" fontSize={9} className="text-white font-bold">
+                        MAJORITY
+                      </tspan>
+                    )}
                   </text>
                 );
               }}

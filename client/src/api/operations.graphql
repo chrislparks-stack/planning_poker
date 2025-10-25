@@ -1,6 +1,8 @@
 fragment UserFragment on User {
   id
   username
+  lastCardPicked
+  lastCardValue
 }
 
 fragment DeckFragment on Deck {
@@ -28,16 +30,30 @@ fragment RoomFragment on Room {
   users {
     ...UserFragment
   }
+  bannedUsers
   deck {
     ...DeckFragment
   }
   game {
     ...GameFragment
   }
+  countdownEnabled
+  revealStage
+  countdownValue
+  confirmNewGame
 }
 
-mutation CreateRoom($name: String, $cards: [String]) {
-  createRoom(name: $name, cards: $cards) {
+fragment RoomEventFragment on RoomEvent {
+  roomId
+  eventType
+  targetUserId
+  room {
+    ...RoomFragment
+  }
+}
+
+mutation CreateRoom($roomId: UUID, $name: String, $cards: [String!]!) {
+  createRoom(roomId: $roomId, name: $name, cards: $cards) {
     ...RoomFragment
   }
 }
@@ -48,14 +64,38 @@ mutation CreateUser($username: String!) {
   }
 }
 
-mutation JoinRoom($roomId: UUID!, $user: UserInput!) {
-  joinRoom(roomId: $roomId, user: $user) {
+mutation JoinRoom($roomId: UUID!, $user: UserInput!, $roomOwnerId: UUID) {
+  joinRoom(roomId: $roomId, user: $user, roomOwnerId: $roomOwnerId) {
     ...RoomFragment
   }
 }
 
-mutation UpdateDeck($room_id: UUID!, $cards: [String!]!) {
-  updateDeck(input: { room_id: $room_id, cards: $cards }) {
+mutation UpdateDeck($roomId: UUID!, $cards: [String!]!) {
+  updateDeck(input: { roomId: $roomId, cards: $cards }) {
+    ...RoomFragment
+  }
+}
+
+mutation RenameRoom($roomId: UUID!, $name: String) {
+  renameRoom(roomId: $roomId, name: $name) {
+    ...RoomFragment
+  }
+}
+
+mutation ToggleCountdownOption($roomId: UUID!, $enabled: Boolean!) {
+  toggleCountdownOption(roomId: $roomId, enabled: $enabled) {
+    ...RoomFragment
+  }
+}
+
+mutation StartRevealCountdown($roomId: UUID!, $userId: UUID) {
+  startRevealCountdown(roomId: $roomId, userId: $userId) {
+    ...RoomFragment
+  }
+}
+
+mutation CancelRevealCountdown($roomId: UUID!, $userId: UUID) {
+  cancelRevealCountdown(roomId: $roomId, userId: $userId) {
     ...RoomFragment
   }
 }
@@ -94,9 +134,39 @@ mutation ResetGame($roomId: UUID!) {
   }
 }
 
+mutation KickUser($roomId: UUID!, $targetUserId: UUID!) {
+  kickUser(roomId: $roomId, targetUserId: $targetUserId) {
+    ...RoomFragment
+  }
+}
+
+mutation BanUser($roomId: UUID!, $targetUserId: UUID!) {
+  banUser(roomId: $roomId, targetUserId: $targetUserId) {
+    ...RoomFragment
+  }
+}
+
+mutation UnbanUser($roomId: UUID!, $targetUserId: UUID!) {
+  unbanUser(roomId: $roomId, targetUserId: $targetUserId) {
+    ...RoomFragment
+  }
+}
+
+mutation ToggleConfirmNewGame($roomId: UUID!, $enabled: Boolean!) {
+  toggleConfirmNewGame(roomId: $roomId, enabled: $enabled) {
+    ...RoomFragment
+  }
+}
+
 subscription Room($roomId: UUID!) {
   room(roomId: $roomId) {
     ...RoomFragment
+  }
+}
+
+subscription RoomEvents($roomId: UUID!) {
+  roomEvents(roomId: $roomId) {
+    ...RoomEventFragment
   }
 }
 
