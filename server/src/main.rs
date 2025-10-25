@@ -80,7 +80,6 @@ fn spawn_room_cleanup_task(
             const BASE_PER_ROOM: usize = 200;        // base bytes per room
             const PER_USER_BYTES: usize = 180;       // bytes approximated per user
             const PER_DECK_CARD_BYTES: usize = 16;   // per deck card count
-            const PER_TABLE_CARD_BYTES: usize = 24;  // per table entry (if you want to include)
 
             // compute total estimated bytes and collect stale room ids
             let mut total_estimated_bytes: usize = 0;
