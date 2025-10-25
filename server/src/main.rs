@@ -28,11 +28,6 @@ use uuid::Uuid;
 
 use prometheus::{Encoder, TextEncoder, Registry, IntCounter, IntGauge};
 
-/// Spawn a background task that periodically prunes inactive rooms.
-///
-/// - `check_interval` : how often to scan for stale rooms (use `StdDuration`)
-/// - `room_ttl` : rooms inactive for longer than this will be removed
-/// - metrics/counters are cloned into the task so it can update them
 fn spawn_room_cleanup_task(
     storage: Storage,
     check_interval: StdDuration,
@@ -40,6 +35,8 @@ fn spawn_room_cleanup_task(
     rooms_evicted: IntCounter,
     rooms_scanned: IntCounter,
     rooms_current: IntGauge,
+    rooms_total_bytes_estimate: IntGauge, // new: sum of per-room estimate
+    rooms_avg_bytes_estimate: IntGauge,   // new: average per-room estimate
 ) {
     tokio::spawn(async move {
         let mut ticker = tokio::time::interval(check_interval);
@@ -54,32 +51,61 @@ fn spawn_room_cleanup_task(
 
             info!("Room cleanup tick: scanning rooms for inactivity...");
 
-            // Snapshot the map under lock quickly
-            let snapshot: Vec<(Uuid, crate::domain::room::Room)> = {
-                let guard = storage.lock().await;
-                guard
-                    .iter()
-                    .map(|(id, room)| (*id, room.clone()))
-                    .collect()
-            };
+            // Lightweight metadata snapshot collected *under lock*.
+            // We avoid cloning full Room objects to prevent transient doubling.
+            let mut snapshot_meta: Vec<(Uuid, usize, usize, bool, i64)> = Vec::new();
+            // (id, user_count, deck_card_count, safe_to_remove, last_active_unix_seconds)
 
-            let total_seen = snapshot.len();
+            {
+                let guard = storage.lock().await;
+                for (id, room) in guard.iter() {
+                    let user_count = room.users.len();
+                    let deck_count = room.deck.cards.len();
+                    let safe = room.is_safe_to_remove();
+                    // last_active -> seconds since epoch, quick stable scalar
+                    let last_active_secs = room.last_active.timestamp();
+
+                    snapshot_meta.push((*id, user_count, deck_count, safe, last_active_secs));
+                }
+            } // release lock quickly
+
+            let total_seen = snapshot_meta.len();
             rooms_current.set(total_seen as i64);
             rooms_scanned.inc_by(total_seen as u64);
 
-            let stale_ids: Vec<Uuid> = snapshot
-                .into_iter()
-                .filter_map(|(id, room)| {
-                    if !room.is_safe_to_remove() {
-                        return None;
-                    }
-                    if room.is_inactive(room_ttl) {
-                        Some(id)
-                    } else {
-                        None
-                    }
-                })
-                .collect();
+            // Estimate bytes cheaply per-room (metadata-only):
+            // We use a tiny model: base + per_user * users + per_deck_card * deck_count
+            // Tweak constants to taste; these are conservative, cheap approximations.
+            const BASE_PER_ROOM: usize = 200;        // base bytes per room
+            const PER_USER_BYTES: usize = 180;       // bytes approximated per user
+            const PER_DECK_CARD_BYTES: usize = 16;   // per deck card count
+            const PER_TABLE_CARD_BYTES: usize = 24;  // per table entry (if you want to include)
+
+            // compute total estimated bytes and collect stale room ids
+            let mut total_estimated_bytes: usize = 0;
+            let mut stale_ids: Vec<Uuid> = Vec::new();
+            let now_secs = chrono::Utc::now().timestamp();
+
+            for (id, user_count, deck_count, safe, last_active_secs) in snapshot_meta.iter() {
+                let est = BASE_PER_ROOM
+                    + user_count.saturating_mul(PER_USER_BYTES)
+                    + deck_count.saturating_mul(PER_DECK_CARD_BYTES);
+                total_estimated_bytes = total_estimated_bytes.saturating_add(est);
+
+                // inactivity check using TTL (we must compare wall times)
+                let age_secs = now_secs.saturating_sub(*last_active_secs);
+                if *safe && (age_secs as u64) > room_ttl.as_secs() {
+                    stale_ids.push(*id);
+                }
+            }
+
+            // update estimate metrics
+            rooms_total_bytes_estimate.set(total_estimated_bytes as i64);
+            if total_seen > 0 {
+                rooms_avg_bytes_estimate.set((total_estimated_bytes / total_seen) as i64);
+            } else {
+                rooms_avg_bytes_estimate.set(0);
+            }
 
             if stale_ids.is_empty() {
                 debug!("Room cleanup: no stale rooms found this tick.");
@@ -88,6 +114,7 @@ fn spawn_room_cleanup_task(
 
             info!("Room cleanup: found {} stale room(s) to remove.", stale_ids.len());
 
+            // Remove stale rooms one-by-one under lock (small critical section)
             for id in stale_ids {
                 if let Some(expired_room) = {
                     let mut guard = storage.lock().await;
@@ -140,7 +167,18 @@ async fn main() -> std::io::Result<()> {
     let rooms_evicted = IntCounter::new("rooms_evicted_total", "Total rooms evicted by cleanup").unwrap();
     let rooms_scanned = IntCounter::new("rooms_scanned_total", "Total rooms scanned by cleanup").unwrap();
     let rooms_current = IntGauge::new("rooms_current", "Current number of rooms in memory").unwrap();
+    let rooms_total_bytes_estimate = IntGauge::new(
+        "rooms_total_bytes_estimate",
+        "Estimated total bytes for all rooms (metadata-only estimator)"
+    ).unwrap();
 
+    let rooms_avg_bytes_estimate = IntGauge::new(
+        "rooms_avg_bytes_estimate",
+        "Estimated average bytes per room (metadata-only estimator)"
+    ).unwrap();
+
+    registry.register(Box::new(rooms_total_bytes_estimate.clone())).ok();
+    registry.register(Box::new(rooms_avg_bytes_estimate.clone())).ok();
     registry.register(Box::new(rooms_evicted.clone())).ok();
     registry.register(Box::new(rooms_scanned.clone())).ok();
     registry.register(Box::new(rooms_current.clone())).ok();
@@ -155,6 +193,8 @@ async fn main() -> std::io::Result<()> {
         rooms_evicted.clone(),
         rooms_scanned.clone(),
         rooms_current.clone(),
+        rooms_total_bytes_estimate.clone(),
+        rooms_avg_bytes_estimate.clone(),
     );
 
     let schema = Schema::build(QueryRoot, MutationRoot, SubscriptionRoot)
