@@ -23,6 +23,7 @@ mod simple_broker;
 mod types;
 
 use std::{collections::HashMap, sync::Arc, time::Duration as StdDuration};
+use std::env;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
@@ -157,7 +158,22 @@ async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(env);
 
     let settings = get_configuration().expect("Failed to read settings.");
-    let server_address = settings.get_server_address();
+    let configured_addr = settings.get_server_address();
+
+    // Respect the PORT env var (used by Fly) if present, otherwise fall back to the port
+    // part of your configured server address (or 8000 as a final fallback).
+    let port = env::var("PORT").unwrap_or_else(|_| {
+        configured_addr
+            .split(':')
+            .last()
+            .unwrap_or("8000")
+            .to_string()
+    });
+
+    let server_bind_addr = format!("0.0.0.0:{}", port);
+
+    println!("Playground (local): http://127.0.0.1:{}", port);
+    println!("Server will bind to: {}", server_bind_addr);
 
     let storage: Storage = Arc::new(Mutex::new(HashMap::new()));
 
@@ -201,8 +217,6 @@ async fn main() -> std::io::Result<()> {
         .data(storage.clone())
         .finish();
 
-    println!("Playground: http://{}", server_address);
-
     // Expose /metrics endpoint and GraphQL endpoints
     HttpServer::new(move || {
         let registry = registry.clone();
@@ -239,7 +253,7 @@ async fn main() -> std::io::Result<()> {
                     .to(health_check),
             )
     })
-    .bind(server_address)?
+    .bind(server_bind_addr)?
     .run()
     .await
 }
