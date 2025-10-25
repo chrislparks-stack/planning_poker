@@ -11,20 +11,25 @@ import {
   TooltipProvider
 } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import SummitLogo from "@/assets/SummitLogo.png";
 
 export const HomePage: FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const [createRoomMutation, { loading }] = useCreateRoomMutation({
-    onCompleted: (data) => {
+    onCompleted: async (data) => {
       sessionStorage.setItem("NEW_ROOM_CREATED", "true");
+
+      // Give the backend a moment to fully register the new room
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       navigate({
         to: "/room/$roomId",
         params: { roomId: data.createRoom.id }
       }).catch((e) => console.log(e));
     },
+
     onError: (error) => {
       toast({
         title: "Error",
@@ -109,70 +114,11 @@ export const HomePage: FC = () => {
               to="/"
               className="-m-1.5 p-1.5 flex flex-col items-center justify-center group"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 160 70"
-                className="w-20 h-8 -mt-2 -mb-2 transition-transform duration-300 group-hover:-rotate-1"
-              >
-                <defs>
-                  <linearGradient
-                    id="sharedGradient"
-                    x1="0"
-                    y1="0"
-                    x2="160"
-                    y2="0"
-                    gradientUnits="userSpaceOnUse"
-                  >
-                    <stop
-                      offset="0%"
-                      style={{ stopColor: "var(--accent-start)" }}
-                    />
-                    <stop offset="30%" stopColor="hsl(var(--accent-stop-1))" />
-                    <stop offset="50%" stopColor="hsl(var(--accent-stop-2))" />
-                    <stop offset="100%" stopColor="hsl(var(--accent-stop-3))" />
-                  </linearGradient>
-                </defs>
-
-                {[
-                  { n: "0", r: -33, x: 40, y: 43 },
-                  { n: "1", r: -24, x: 54, y: 34 },
-                  { n: "3", r: -12, x: 70, y: 28 },
-                  { n: "5", r: 0, x: 86, y: 26 },
-                  { n: "8", r: 12, x: 102, y: 28 },
-                  { n: "13", r: 24, x: 118, y: 34 },
-                  { n: "21", r: 33, x: 133, y: 43 }
-                ].map((c, i) => (
-                  <g key={i} transform={`rotate(${c.r} ${c.x} ${c.y})`}>
-                    <rect
-                      x={c.x - 9}
-                      y={c.y - 14}
-                      width="18"
-                      height="26"
-                      rx="2.5"
-                      // use the sharedGradient
-                      className={`
-                        drop-shadow-sm transition-all duration-500
-                        stroke-zinc-400 dark:stroke-zinc-700
-                      `}
-                      fill="url(#sharedGradient)"
-                    />
-                    <text
-                      x={c.x}
-                      y={c.y + 2}
-                      fontSize="6"
-                      fontWeight="700"
-                      textAnchor="middle"
-                      className="fill-gray-900 dark:fill-white transition-colors duration-500"
-                    >
-                      {c.n}
-                    </text>
-                  </g>
-                ))}
-              </svg>
-
-              <span className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
-                Planning Poker
-              </span>
+              <img
+                src={SummitLogo}
+                alt="Summit Logo"
+                className="h-12 w-auto transition-transform duration-300 group-hover:scale-[1.03]"
+              />
             </Link>
           </div>
 
@@ -221,13 +167,13 @@ export const HomePage: FC = () => {
         <div className="mx-auto max-w-4xl py-32 sm:py-38 lg:py-46">
           <div className="text-center">
             <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-6xl">
-              Collaborate and Estimate Faster with Planning Poker
+              Collaborate and Estimate Faster with Summit Planning Poker
             </h1>
             <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300">
-              Apps Poker Planning offers an open-source, intuitive platform for
+              Summit offers an open-source, intuitive platform for
               Agile development teams to collaboratively estimate story points
               online. Perfect for Agile workflows, our tool makes
-              consensus-based estimation simple, fun, and effective.
+              collaboration-based estimation simple, fun, and effective.
             </p>
 
             <div className="mt-10 flex items-center justify-center gap-x-10">

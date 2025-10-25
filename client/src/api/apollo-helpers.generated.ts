@@ -51,13 +51,23 @@ export type RoomFieldPolicy = {
 	roomOwnerId?: FieldPolicy<any> | FieldReadFunction<any>,
 	users?: FieldPolicy<any> | FieldReadFunction<any>
 };
-export type SubscriptionRootKeySpecifier = ('room' | SubscriptionRootKeySpecifier)[];
-export type SubscriptionRootFieldPolicy = {
-	room?: FieldPolicy<any> | FieldReadFunction<any>
+export type RoomEventKeySpecifier = ('eventType' | 'room' | 'roomId' | 'targetUserId' | RoomEventKeySpecifier)[];
+export type RoomEventFieldPolicy = {
+	eventType?: FieldPolicy<any> | FieldReadFunction<any>,
+	room?: FieldPolicy<any> | FieldReadFunction<any>,
+	roomId?: FieldPolicy<any> | FieldReadFunction<any>,
+	targetUserId?: FieldPolicy<any> | FieldReadFunction<any>
 };
-export type UserKeySpecifier = ('id' | 'username' | UserKeySpecifier)[];
+export type SubscriptionRootKeySpecifier = ('room' | 'roomEvents' | SubscriptionRootKeySpecifier)[];
+export type SubscriptionRootFieldPolicy = {
+	room?: FieldPolicy<any> | FieldReadFunction<any>,
+	roomEvents?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type UserKeySpecifier = ('id' | 'lastCardPicked' | 'lastCardValue' | 'username' | UserKeySpecifier)[];
 export type UserFieldPolicy = {
 	id?: FieldPolicy<any> | FieldReadFunction<any>,
+	lastCardPicked?: FieldPolicy<any> | FieldReadFunction<any>,
+	lastCardValue?: FieldPolicy<any> | FieldReadFunction<any>,
 	username?: FieldPolicy<any> | FieldReadFunction<any>
 };
 export type UserCardKeySpecifier = ('card' | 'userId' | UserCardKeySpecifier)[];
@@ -85,6 +95,10 @@ export type StrictTypedTypePolicies = {
 	Room?: Omit<TypePolicy, "fields" | "keyFields"> & {
 		keyFields?: false | RoomKeySpecifier | (() => undefined | RoomKeySpecifier),
 		fields?: RoomFieldPolicy,
+	},
+	RoomEvent?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | RoomEventKeySpecifier | (() => undefined | RoomEventKeySpecifier),
+		fields?: RoomEventFieldPolicy,
 	},
 	SubscriptionRoot?: Omit<TypePolicy, "fields" | "keyFields"> & {
 		keyFields?: false | SubscriptionRootKeySpecifier | (() => undefined | SubscriptionRootKeySpecifier),

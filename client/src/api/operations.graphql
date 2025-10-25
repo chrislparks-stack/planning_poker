@@ -1,6 +1,8 @@
 fragment UserFragment on User {
   id
   username
+  lastCardPicked
+  lastCardValue
 }
 
 fragment DeckFragment on Deck {
@@ -41,6 +43,15 @@ fragment RoomFragment on Room {
   confirmNewGame
 }
 
+fragment RoomEventFragment on RoomEvent {
+  roomId
+  eventType
+  targetUserId
+  room {
+    ...RoomFragment
+  }
+}
+
 mutation CreateRoom($roomId: UUID, $name: String, $cards: [String!]!) {
   createRoom(roomId: $roomId, name: $name, cards: $cards) {
     ...RoomFragment
@@ -53,8 +64,8 @@ mutation CreateUser($username: String!) {
   }
 }
 
-mutation JoinRoom($roomId: UUID!, $user: UserInput!) {
-  joinRoom(roomId: $roomId, user: $user) {
+mutation JoinRoom($roomId: UUID!, $user: UserInput!, $roomOwnerId: UUID) {
+  joinRoom(roomId: $roomId, user: $user, roomOwnerId: $roomOwnerId) {
     ...RoomFragment
   }
 }
@@ -150,6 +161,12 @@ mutation ToggleConfirmNewGame($roomId: UUID!, $enabled: Boolean!) {
 subscription Room($roomId: UUID!) {
   room(roomId: $roomId) {
     ...RoomFragment
+  }
+}
+
+subscription RoomEvents($roomId: UUID!) {
+  roomEvents(roomId: $roomId) {
+    ...RoomEventFragment
   }
 }
 

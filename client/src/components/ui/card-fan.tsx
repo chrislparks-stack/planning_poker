@@ -97,7 +97,7 @@ export const CardFan: FC<CardFanProps> = ({
             >
               {card}
               {isSpecial && (
-                <span className="absolute bottom-1 text-[8px] text-zinc-500 dark:text-zinc-400 italic">
+                <span className="absolute bottom-1 text-[8px] text-zinc-100 dark:text-zinc-300 italic">
                   0 point vote
                 </span>
               )}

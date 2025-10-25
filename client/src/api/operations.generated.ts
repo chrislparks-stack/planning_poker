@@ -3,7 +3,7 @@ import * as Types from '../types/types.generated';
 import { gql } from '@apollo/client';
 import * as Apollo from '@apollo/client';
 const defaultOptions = {} as const;
-export type UserFragmentFragment = { __typename?: 'User', id: string, username: string };
+export type UserFragmentFragment = { __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null };
 
 export type DeckFragmentFragment = { __typename?: 'Deck', id: string, cards: Array<string> };
 
@@ -11,7 +11,9 @@ export type UserCardFragmentFragment = { __typename?: 'UserCard', userId: string
 
 export type GameFragmentFragment = { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> };
 
-export type RoomFragmentFragment = { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } };
+export type RoomFragmentFragment = { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } };
+
+export type RoomEventFragmentFragment = { __typename?: 'RoomEvent', roomId: string, eventType: string, targetUserId?: string | null, room: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
 
 export type CreateRoomMutationVariables = Types.Exact<{
   roomId?: Types.InputMaybe<Types.Scalars['UUID']['input']>;
@@ -20,22 +22,23 @@ export type CreateRoomMutationVariables = Types.Exact<{
 }>;
 
 
-export type CreateRoomMutation = { __typename?: 'MutationRoot', createRoom: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
+export type CreateRoomMutation = { __typename?: 'MutationRoot', createRoom: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
 
 export type CreateUserMutationVariables = Types.Exact<{
   username: Types.Scalars['String']['input'];
 }>;
 
 
-export type CreateUserMutation = { __typename?: 'MutationRoot', createUser: { __typename?: 'User', id: string, username: string } };
+export type CreateUserMutation = { __typename?: 'MutationRoot', createUser: { __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null } };
 
 export type JoinRoomMutationVariables = Types.Exact<{
   roomId: Types.Scalars['UUID']['input'];
   user: Types.UserInput;
+  roomOwnerId?: Types.InputMaybe<Types.Scalars['UUID']['input']>;
 }>;
 
 
-export type JoinRoomMutation = { __typename?: 'MutationRoot', joinRoom: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
+export type JoinRoomMutation = { __typename?: 'MutationRoot', joinRoom: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
 
 export type UpdateDeckMutationVariables = Types.Exact<{
   roomId: Types.Scalars['UUID']['input'];
@@ -43,7 +46,7 @@ export type UpdateDeckMutationVariables = Types.Exact<{
 }>;
 
 
-export type UpdateDeckMutation = { __typename?: 'MutationRoot', updateDeck: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
+export type UpdateDeckMutation = { __typename?: 'MutationRoot', updateDeck: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
 
 export type RenameRoomMutationVariables = Types.Exact<{
   roomId: Types.Scalars['UUID']['input'];
@@ -51,7 +54,7 @@ export type RenameRoomMutationVariables = Types.Exact<{
 }>;
 
 
-export type RenameRoomMutation = { __typename?: 'MutationRoot', renameRoom: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
+export type RenameRoomMutation = { __typename?: 'MutationRoot', renameRoom: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
 
 export type ToggleCountdownOptionMutationVariables = Types.Exact<{
   roomId: Types.Scalars['UUID']['input'];
@@ -59,7 +62,7 @@ export type ToggleCountdownOptionMutationVariables = Types.Exact<{
 }>;
 
 
-export type ToggleCountdownOptionMutation = { __typename?: 'MutationRoot', toggleCountdownOption: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
+export type ToggleCountdownOptionMutation = { __typename?: 'MutationRoot', toggleCountdownOption: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
 
 export type StartRevealCountdownMutationVariables = Types.Exact<{
   roomId: Types.Scalars['UUID']['input'];
@@ -67,7 +70,7 @@ export type StartRevealCountdownMutationVariables = Types.Exact<{
 }>;
 
 
-export type StartRevealCountdownMutation = { __typename?: 'MutationRoot', startRevealCountdown: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
+export type StartRevealCountdownMutation = { __typename?: 'MutationRoot', startRevealCountdown: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
 
 export type CancelRevealCountdownMutationVariables = Types.Exact<{
   roomId: Types.Scalars['UUID']['input'];
@@ -75,7 +78,7 @@ export type CancelRevealCountdownMutationVariables = Types.Exact<{
 }>;
 
 
-export type CancelRevealCountdownMutation = { __typename?: 'MutationRoot', cancelRevealCountdown: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
+export type CancelRevealCountdownMutation = { __typename?: 'MutationRoot', cancelRevealCountdown: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
 
 export type SetRoomOwnerMutationVariables = Types.Exact<{
   roomId: Types.Scalars['UUID']['input'];
@@ -83,7 +86,7 @@ export type SetRoomOwnerMutationVariables = Types.Exact<{
 }>;
 
 
-export type SetRoomOwnerMutation = { __typename?: 'MutationRoot', setRoomOwner: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
+export type SetRoomOwnerMutation = { __typename?: 'MutationRoot', setRoomOwner: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
 
 export type EditUserMutationVariables = Types.Exact<{
   userId: Types.Scalars['UUID']['input'];
@@ -91,7 +94,7 @@ export type EditUserMutationVariables = Types.Exact<{
 }>;
 
 
-export type EditUserMutation = { __typename?: 'MutationRoot', editUser: { __typename?: 'User', id: string, username: string } };
+export type EditUserMutation = { __typename?: 'MutationRoot', editUser: { __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null } };
 
 export type LogoutMutationVariables = Types.Exact<{
   userId: Types.Scalars['UUID']['input'];
@@ -107,21 +110,21 @@ export type PickCardMutationVariables = Types.Exact<{
 }>;
 
 
-export type PickCardMutation = { __typename?: 'MutationRoot', pickCard: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
+export type PickCardMutation = { __typename?: 'MutationRoot', pickCard: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
 
 export type ShowCardsMutationVariables = Types.Exact<{
   roomId: Types.Scalars['UUID']['input'];
 }>;
 
 
-export type ShowCardsMutation = { __typename?: 'MutationRoot', showCards: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
+export type ShowCardsMutation = { __typename?: 'MutationRoot', showCards: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
 
 export type ResetGameMutationVariables = Types.Exact<{
   roomId: Types.Scalars['UUID']['input'];
 }>;
 
 
-export type ResetGameMutation = { __typename?: 'MutationRoot', resetGame: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
+export type ResetGameMutation = { __typename?: 'MutationRoot', resetGame: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
 
 export type KickUserMutationVariables = Types.Exact<{
   roomId: Types.Scalars['UUID']['input'];
@@ -129,7 +132,7 @@ export type KickUserMutationVariables = Types.Exact<{
 }>;
 
 
-export type KickUserMutation = { __typename?: 'MutationRoot', kickUser: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
+export type KickUserMutation = { __typename?: 'MutationRoot', kickUser: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
 
 export type BanUserMutationVariables = Types.Exact<{
   roomId: Types.Scalars['UUID']['input'];
@@ -137,7 +140,7 @@ export type BanUserMutationVariables = Types.Exact<{
 }>;
 
 
-export type BanUserMutation = { __typename?: 'MutationRoot', banUser: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
+export type BanUserMutation = { __typename?: 'MutationRoot', banUser: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
 
 export type UnbanUserMutationVariables = Types.Exact<{
   roomId: Types.Scalars['UUID']['input'];
@@ -145,7 +148,7 @@ export type UnbanUserMutationVariables = Types.Exact<{
 }>;
 
 
-export type UnbanUserMutation = { __typename?: 'MutationRoot', unbanUser: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
+export type UnbanUserMutation = { __typename?: 'MutationRoot', unbanUser: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
 
 export type ToggleConfirmNewGameMutationVariables = Types.Exact<{
   roomId: Types.Scalars['UUID']['input'];
@@ -153,26 +156,35 @@ export type ToggleConfirmNewGameMutationVariables = Types.Exact<{
 }>;
 
 
-export type ToggleConfirmNewGameMutation = { __typename?: 'MutationRoot', toggleConfirmNewGame: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
+export type ToggleConfirmNewGameMutation = { __typename?: 'MutationRoot', toggleConfirmNewGame: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
 
 export type RoomSubscriptionVariables = Types.Exact<{
   roomId: Types.Scalars['UUID']['input'];
 }>;
 
 
-export type RoomSubscription = { __typename?: 'SubscriptionRoot', room: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
+export type RoomSubscription = { __typename?: 'SubscriptionRoot', room: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } };
+
+export type RoomEventsSubscriptionVariables = Types.Exact<{
+  roomId: Types.Scalars['UUID']['input'];
+}>;
+
+
+export type RoomEventsSubscription = { __typename?: 'SubscriptionRoot', roomEvents: { __typename?: 'RoomEvent', roomId: string, eventType: string, targetUserId?: string | null, room: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } } };
 
 export type GetRoomQueryVariables = Types.Exact<{
   roomId: Types.Scalars['UUID']['input'];
 }>;
 
 
-export type GetRoomQuery = { __typename?: 'QueryRoot', roomById?: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } | null };
+export type GetRoomQuery = { __typename?: 'QueryRoot', roomById?: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } | null };
 
 export const UserFragmentFragmentDoc = gql`
     fragment UserFragment on User {
   id
   username
+  lastCardPicked
+  lastCardValue
 }
     `;
 export const DeckFragmentFragmentDoc = gql`
@@ -219,6 +231,16 @@ export const RoomFragmentFragmentDoc = gql`
     ${UserFragmentFragmentDoc}
 ${DeckFragmentFragmentDoc}
 ${GameFragmentFragmentDoc}`;
+export const RoomEventFragmentFragmentDoc = gql`
+    fragment RoomEventFragment on RoomEvent {
+  roomId
+  eventType
+  targetUserId
+  room {
+    ...RoomFragment
+  }
+}
+    ${RoomFragmentFragmentDoc}`;
 export const CreateRoomDocument = gql`
     mutation CreateRoom($roomId: UUID, $name: String, $cards: [String!]!) {
   createRoom(roomId: $roomId, name: $name, cards: $cards) {
@@ -288,8 +310,8 @@ export type CreateUserMutationHookResult = ReturnType<typeof useCreateUserMutati
 export type CreateUserMutationResult = Apollo.MutationResult<CreateUserMutation>;
 export type CreateUserMutationOptions = Apollo.BaseMutationOptions<CreateUserMutation, CreateUserMutationVariables>;
 export const JoinRoomDocument = gql`
-    mutation JoinRoom($roomId: UUID!, $user: UserInput!) {
-  joinRoom(roomId: $roomId, user: $user) {
+    mutation JoinRoom($roomId: UUID!, $user: UserInput!, $roomOwnerId: UUID) {
+  joinRoom(roomId: $roomId, user: $user, roomOwnerId: $roomOwnerId) {
     ...RoomFragment
   }
 }
@@ -311,6 +333,7 @@ export type JoinRoomMutationFn = Apollo.MutationFunction<JoinRoomMutation, JoinR
  *   variables: {
  *      roomId: // value for 'roomId'
  *      user: // value for 'user'
+ *      roomOwnerId: // value for 'roomOwnerId'
  *   },
  * });
  */
@@ -857,6 +880,36 @@ export function useRoomSubscription(baseOptions: Apollo.SubscriptionHookOptions<
       }
 export type RoomSubscriptionHookResult = ReturnType<typeof useRoomSubscription>;
 export type RoomSubscriptionResult = Apollo.SubscriptionResult<RoomSubscription>;
+export const RoomEventsDocument = gql`
+    subscription RoomEvents($roomId: UUID!) {
+  roomEvents(roomId: $roomId) {
+    ...RoomEventFragment
+  }
+}
+    ${RoomEventFragmentFragmentDoc}`;
+
+/**
+ * __useRoomEventsSubscription__
+ *
+ * To run a query within a React component, call `useRoomEventsSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useRoomEventsSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useRoomEventsSubscription({
+ *   variables: {
+ *      roomId: // value for 'roomId'
+ *   },
+ * });
+ */
+export function useRoomEventsSubscription(baseOptions: Apollo.SubscriptionHookOptions<RoomEventsSubscription, RoomEventsSubscriptionVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useSubscription<RoomEventsSubscription, RoomEventsSubscriptionVariables>(RoomEventsDocument, options);
+      }
+export type RoomEventsSubscriptionHookResult = ReturnType<typeof useRoomEventsSubscription>;
+export type RoomEventsSubscriptionResult = Apollo.SubscriptionResult<RoomEventsSubscription>;
 export const GetRoomDocument = gql`
     query GetRoom($roomId: UUID!) {
   roomById(roomId: $roomId) {

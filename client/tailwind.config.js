@@ -1,107 +1,116 @@
 /** @type {import('tailwindcss').Config} */
 function hslVar(varName) {
-  // supports `bg-accent/50` style:
-  return ({ opacityValue }) => {
-    if (opacityValue !== undefined) {
-      return `hsl(var(${varName}) / ${opacityValue})`;
-    }
-    return `hsl(var(${varName}))`;
-  };
+	return ({ opacityValue }) => {
+		if (opacityValue !== undefined) {
+			return `hsl(var(${varName}) / ${opacityValue})`;
+		}
+		return `hsl(var(${varName}))`;
+	};
 }
 
 module.exports = {
-  darkMode: ["class"],
-  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
-  theme: {
-    extend: {
-      borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)"
-      },
+	darkMode: ["class"],
+	content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+	theme: {
+		extend: {
+			borderRadius: {
+				lg: "var(--radius)",
+				md: "calc(var(--radius) - 2px)",
+				sm: "calc(var(--radius) - 4px)"
+			},
 
-      // ---- COLORS ----
-      colors: {
-        background: hslVar("--background"),
-        foreground: hslVar("--foreground"),
+			// ---- COLORS ----
+			colors: {
+				background: hslVar("--background"),
+				foreground: hslVar("--foreground"),
+				card: {
+					DEFAULT: hslVar("--card"),
+					foreground: hslVar("--card-foreground")
+				},
+				popover: {
+					DEFAULT: hslVar("--popover"),
+					foreground: hslVar("--popover-foreground")
+				},
+				primary: {
+					DEFAULT: hslVar("--primary"),
+					foreground: hslVar("--primary-foreground")
+				},
+				secondary: {
+					DEFAULT: hslVar("--secondary"),
+					foreground: hslVar("--secondary-foreground")
+				},
+				muted: {
+					DEFAULT: hslVar("--muted"),
+					foreground: hslVar("--muted-foreground")
+				},
+				accent: {
+					DEFAULT: hslVar("--accent"),
+					foreground: hslVar("--accent-foreground")
+				},
+				"accent-hover": hslVar("--accent-hover"),
+				"accent-active": hslVar("--accent-active"),
+				"accent-foreground": hslVar("--accent-foreground"),
 
-        card: {
-          DEFAULT: hslVar("--card"),
-          foreground: hslVar("--card-foreground")
-        },
-        popover: {
-          DEFAULT: hslVar("--popover"),
-          foreground: hslVar("--popover-foreground")
-        },
+				"accent-lilac": {
+					DEFAULT: hslVar("--accent-lilac"),
+					foreground: hslVar("--accent-lilac-foreground"),
+					hover: hslVar("--accent-lilac-hover")
+				},
+				"accent-aqua": {
+					DEFAULT: hslVar("--accent-aqua"),
+					foreground: hslVar("--accent-aqua-foreground"),
+					hover: hslVar("--accent-aqua-hover")
+				},
+				"accent-emerald": {
+					DEFAULT: hslVar("--accent-emerald"),
+					foreground: hslVar("--accent-emerald-foreground"),
+					hover: hslVar("--accent-emerald-hover")
+				},
+				"accent-rose": {
+					DEFAULT: hslVar("--accent-rose"),
+					foreground: hslVar("--accent-rose-foreground"),
+					hover: hslVar("--accent-rose-hover")
+				},
+				"accent-amber": {
+					DEFAULT: hslVar("--accent-amber"),
+					foreground: hslVar("--accent-amber-foreground"),
+					hover: hslVar("--accent-amber-hover")
+				},
 
-        primary: {
-          DEFAULT: hslVar("--primary"),
-          foreground: hslVar("--primary-foreground")
-        },
-        secondary: {
-          DEFAULT: hslVar("--secondary"),
-          foreground: hslVar("--secondary-foreground")
-        },
-        muted: {
-          DEFAULT: hslVar("--muted"),
-          foreground: hslVar("--muted-foreground")
-        },
+				destructive: {
+					DEFAULT: hslVar("--destructive"),
+					foreground: hslVar("--destructive-foreground")
+				},
 
-        // The dynamic "active" accent (set by dialog at runtime)
-        accent: {
-          DEFAULT: hslVar("--accent"),
-          foreground: hslVar("--accent-foreground")
-        },
+				border: hslVar("--border"),
+				input: hslVar("--input"),
+				ring: hslVar("--ring"),
 
-        "accent-hover": hslVar("--accent-hover"),
-        "accent-active": hslVar("--accent-active"),
-        "accent-foreground": hslVar("--accent-foreground"),
+				chart: {
+					1: hslVar("--chart-1"),
+					2: hslVar("--chart-2"),
+					3: hslVar("--chart-3"),
+					4: hslVar("--chart-4"),
+					5: hslVar("--chart-5")
+				}
+			},
 
-        // Named palettes — static variable names we also define in CSS
-        "accent-lilac": {
-          DEFAULT: hslVar("--accent-lilac"),
-          foreground: hslVar("--accent-lilac-foreground"),
-          hover: hslVar("--accent-lilac-hover")
-        },
-        "accent-aqua": {
-          DEFAULT: hslVar("--accent-aqua"),
-          foreground: hslVar("--accent-aqua-foreground"),
-          hover: hslVar("--accent-aqua-hover")
-        },
-        "accent-emerald": {
-          DEFAULT: hslVar("--accent-emerald"),
-          foreground: hslVar("--accent-emerald-foreground"),
-          hover: hslVar("--accent-emerald-hover")
-        },
-        "accent-rose": {
-          DEFAULT: hslVar("--accent-rose"),
-          foreground: hslVar("--accent-rose-foreground"),
-          hover: hslVar("--accent-rose-hover")
-        },
-        "accent-amber": {
-          DEFAULT: hslVar("--accent-amber"),
-          foreground: hslVar("--accent-amber-foreground"),
-          hover: hslVar("--accent-amber-hover")
-        },
-
-        destructive: {
-          DEFAULT: hslVar("--destructive"),
-          foreground: hslVar("--destructive-foreground")
-        },
-
-        border: hslVar("--border"),
-        input: hslVar("--input"),
-        ring: hslVar("--ring"),
-
-        chart: {
-          1: hslVar("--chart-1"),
-          2: hslVar("--chart-2"),
-          3: hslVar("--chart-3"),
-          4: hslVar("--chart-4"),
-          5: hslVar("--chart-5")
-        }
-      }
-    }
-  },
-  plugins: [require("tailwindcss-animate")]
+			// ---- ANIMATIONS ----
+			keyframes: {
+				"accordion-down": {
+					from: { height: "0" },
+					to: { height: "var(--radix-accordion-content-height)" }
+				},
+				"accordion-up": {
+					from: { height: "var(--radix-accordion-content-height)" },
+					to: { height: "0" }
+				}
+			},
+			animation: {
+				"accordion-down": "accordion-down 0.7s ease-out",
+				"accordion-up": "accordion-up 0.7s ease-out",
+			}
+		}
+	},
+	plugins: [require("tailwindcss-animate")]
 };

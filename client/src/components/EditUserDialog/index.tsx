@@ -18,34 +18,39 @@ interface EditUserDialogProps {
   setOpen: (open: boolean) => void;
 }
 
-/**
- * EditUserDialog — reimagined user update modal.
- * Sleek, modern, and consistent with app-wide visual style.
- */
 export const EditUserDialog: FC<EditUserDialogProps> = ({ open, setOpen }) => {
   const { user, login } = useAuth();
   const { toast } = useToast();
   const [username, setUsername] = useState("");
 
   useEffect(() => {
-    if (open) {
-      try {
-        const raw = localStorage.getItem("user");
-        const parsed = JSON.parse(raw!);
-        setUsername(parsed?.username ?? "");
-      } catch (err) {
-        console.warn("Failed to parse username:", err);
-      }
+    if (!open) return;
+
+    // Prefer the live user from context (keeps us in-sync), fallback to localStorage.
+    if (user?.username) {
+      setUsername(user.username);
+      return;
     }
-  }, [open]);
+
+    try {
+      const raw = localStorage.getItem("user");
+      const parsed = raw ? JSON.parse(raw) : null;
+      setUsername(parsed?.username ?? "");
+    } catch (err) {
+      console.warn("Failed to parse username from localStorage:", err);
+      setUsername("");
+    }
+  }, [open, user]);
 
   const [editUserMutation, { loading }] = useEditUserMutation({
     onCompleted: (data) => {
+      // mutation only runs when the username has actually changed, so this is a true update
       login?.({
         id: data.editUser.id,
         username: data.editUser.username,
       });
       setOpen(false);
+
       toast({
         title: "Username updated",
         description: "Your username has been successfully changed",
@@ -61,7 +66,9 @@ export const EditUserDialog: FC<EditUserDialogProps> = ({ open, setOpen }) => {
   });
 
   const handleSubmit = async () => {
-    if (!username.trim()) {
+    const trimmed = username.trim();
+
+    if (!trimmed) {
       toast({
         title: "Username required",
         description: "Please enter a valid username",
@@ -70,12 +77,23 @@ export const EditUserDialog: FC<EditUserDialogProps> = ({ open, setOpen }) => {
       return;
     }
 
+    if (user && trimmed === (user.username ?? "")) {
+      setOpen(false);
+      return;
+    }
+
     if (user) {
       await editUserMutation({
         variables: {
           userId: user.id,
-          username: username.trim(),
+          username: trimmed,
         },
+      });
+    } else {
+      toast({
+        title: "Not signed in",
+        description: "Please sign in before updating your username",
+        variant: "destructive",
       });
     }
   };

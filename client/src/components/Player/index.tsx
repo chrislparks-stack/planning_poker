@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, {useEffect, useMemo, useRef, useState} from "react";
 import { createPortal } from "react-dom";
 
 import {
@@ -15,12 +15,16 @@ import {
 } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "@/types";
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import {useTheme} from "@/components";
+import {Ban, Crown, DoorOpen} from "lucide-react";
+
 
 interface PlayerProps {
   user: User;
   isCardPicked: boolean;
   isGameOver: boolean;
-  card: string | null | undefined;
+  card?: string | null | undefined;
   roomId: string;
   onMakeOwner?: (userId: string) => Promise<void> | void;
 }
@@ -31,11 +35,13 @@ export function Player({
   user,
   isCardPicked,
   isGameOver,
-  card,
   roomId,
   onMakeOwner
 }: PlayerProps) {
   const { toast } = useToast();
+  const { theme } = useTheme();
+  const systemPrefersDark = typeof window !== "undefined" && window.matchMedia ?
+    window.matchMedia("(prefers-color-scheme: dark)").matches : false;
 
   // --- Queries & Subscriptions ---
   const { data: roomData } = useGetRoomQuery({ variables: { roomId } });
@@ -101,6 +107,45 @@ export function Player({
       localStorage.setItem(memoryKey, "banned");
     }
   }, [room, currentUserId, user.id, roomId]);
+
+  const cardIcon = useMemo(() => {
+    const waitingIcon = () =>{
+      if (theme === "dark" || (theme === "system" && systemPrefersDark)) {
+        return ("https://lottie.host/5f503f6d-b4fa-448b-8fe0-3a45c1e69a21/baw3omE5jy.json");
+      }
+      return ("https://lottie.host/3e8b13ae-fcf0-4059-86e5-da5c00d47aed/ZdfJuColeq.json");
+    }
+    if (isCardPicked) {
+      return (
+        <DotLottieReact
+          key="picked"
+          src="https://lottie.host/8e391350-aac4-4a10-82a8-f15bbb520ebc/TRA06YDEQc.json"
+          autoplay
+          style={{ width: 80, height: 60, margin: -25 }}
+        />
+      );
+    }
+    if (isGameOver) {
+      return (
+        <DotLottieReact
+          key="gameover"
+          src="https://lottie.host/407d17f3-a83c-46ca-ab4c-981dcbc77919/TKjtavdeuG.json"
+          loop
+          autoplay
+          style={{ width: 55, height:35, margin: -25 }}
+        />
+      );
+    }
+    return (
+      <DotLottieReact
+        key="waiting"
+        src={waitingIcon()}
+        autoplay
+        loop
+        style={{ width: 80, height: 60, margin: -25 }}
+      />
+    );
+  }, [isCardPicked, isGameOver, theme, systemPrefersDark]);
 
   // --- Context menu logic ---
   const closeMenu = () => setMenuPos(null);
@@ -235,23 +280,26 @@ export function Player({
       <div className="py-1">
         {currentIsRoomOwner && room?.roomOwnerId !== user.id && (
           <>
+            <div className="w-full text-left px-3 py-2 text-sm font-semibold"> Room Owner Options</div>
             <button
               onClick={handleMakeOwner}
-              className="w-full text-left px-3 py-2 text-sm hover:bg-accent/10"
+              className="w-full text-left px-3 py-1 text-sm hover:bg-accent/10 flex flex-row"
             >
-              Make room owner 👑
+              <Crown className="h-4 w-4 mr-2"/> Make room owner
             </button>
+            <div className="my-1 border-t border-muted" />
+            <div className="w-full text-left px-3 py-2 text-sm font-semibold"> Kick/Ban Options</div>
             <button
               onClick={handleKick}
-              className="w-full text-left px-3 py-2 text-sm hover:bg-accent/10"
+              className="w-full text-left px-3 py-1 text-sm hover:bg-accent/10 flex flex-row"
             >
-              Kick user 🚪
+              Kick user <DoorOpen className="h-4 w-4 ml-2"/>
             </button>
             <button
               onClick={handleBan}
-              className="w-full text-left px-3 py-2 text-sm text-destructive hover:bg-destructive/10"
+              className="w-full text-left px-3 py-1 text-sm text-destructive hover:bg-destructive/10 flex flex-row"
             >
-              Ban user 🚫
+              Ban user <Ban className="h-4 w-4 text-red-600 ml-2"/>
             </button>
           </>
         )}
@@ -259,15 +307,12 @@ export function Player({
     </div>
   ) : null;
 
-  // --- Card rendering ---
-  const cardSymbol = isCardPicked ? card ?? "✅" : isGameOver ? "😴" : "🤔";
   const interactiveProps =
     currentIsRoomOwner && !isTargetSelf
       ? {
           tabIndex: 0,
           onContextMenu: onCardContextMenu,
           onKeyDown: onCardKeyDown,
-          "aria-haspopup": "menu",
           "aria-expanded": !!menuPos
         }
       : { tabIndex: 0 };
@@ -276,12 +321,23 @@ export function Player({
     <div className="flex flex-col items-center" data-testid="player">
       {room?.roomOwnerId === user.id ? (
         <div className="flex flex-col items-center">
-          👑
           <Tooltip>
             <TooltipTrigger asChild>
               <div {...interactiveProps} style={{ cursor: "default" }}>
-                <Card className="hover:bg-transparent hover:shadow-none">
-                  {cardSymbol}
+                <Card
+                  className={`hover:bg-transparent hover:shadow-none w-12 bg-gradient-to-br from-accent/20 via-transparent to-accent/5`}
+                >
+                  <>
+                    <Crown
+                      className="absolute top-1 left-1 w-3 h-3 text-accent/70 fill-accent/70"
+                      strokeWidth={2}
+                    />
+                    <Crown
+                      className="absolute bottom-[27px] right-1 w-3 h-3 text-accent/70 fill-accent/70 rotate-180"
+                      strokeWidth={2}
+                    />
+                  </>
+                  {cardIcon}
                 </Card>
               </div>
             </TooltipTrigger>
@@ -290,12 +346,12 @@ export function Player({
         </div>
       ) : (
         <div {...interactiveProps} style={{ cursor: "default" }}>
-          <Card className="hover:bg-transparent hover:shadow-none">
-            {cardSymbol}
+          <Card className="hover:bg-transparent hover:shadow-none w-12 bg-gradient-to-br from-accent/20 via-transparent to-accent/5">
+            {cardIcon}
           </Card>
         </div>
       )}
-      <span className="text-sm mb-1">{user.username}</span>
+      <span className="text-sm mb-1 text-center">{user.username}</span>
       {portalRootRef.current && menu
         ? createPortal(menu, portalRootRef.current)
         : menu}

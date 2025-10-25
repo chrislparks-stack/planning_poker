@@ -29,11 +29,11 @@ interface CreateUserDialogProps {
 const DEFAULT_CARDS = [0, 0.5, 1, 2, 3, 5, 8, 13, 21, "?", "☕"];
 
 export const CreateUserDialog: FC<CreateUserDialogProps> = ({
-                                                              roomData,
-                                                              onJoin,
-                                                              open,
-                                                              setOpen
-                                                            }) => {
+  roomData,
+  onJoin,
+  open,
+  setOpen
+}) => {
   const { login } = useAuth();
   const { toast } = useToast();
   const [roomName, setRoomName] = useState("");
@@ -136,6 +136,7 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
           border border-border/50 shadow-[0_8px_32px_rgb(0_0_0_/_0.4)]
           p-0 overflow-hidden animate-in fade-in-0 zoom-in-95
         "
+        noCloseButton
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >

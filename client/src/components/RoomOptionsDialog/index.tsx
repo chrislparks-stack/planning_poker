@@ -172,8 +172,6 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
     }
   };
 
-  const selectedCount = selectedCards.length;
-
   return (
       <Dialog
         key={sizeKey}
