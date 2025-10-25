@@ -1,3 +1,6 @@
-# https://www.robotstxt.org/robotstxt.html
+# public/robots.txt
 User-agent: *
-Disallow:
+Allow: /
+
+Sitemap: https://summitplanningpoker.com/sitemap.xml
+Host: https://summitplanningpoker.com

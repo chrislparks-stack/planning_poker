@@ -318,6 +318,33 @@ export function RoomPage() {
   const room =
     subscriptionData?.room ?? roomData?.roomById ?? joinRoomData?.joinRoom;
 
+  const APP_NAME = "Summit Planning Poker";
+  const prevTitleRef = useRef<string>(
+    typeof document !== "undefined" ? document.title : APP_NAME
+  );
+
+  useEffect(() => {
+    if (!prevTitleRef.current) {
+      prevTitleRef.current = typeof document !== "undefined" ? document.title : APP_NAME;
+    }
+
+    if (room) {
+      const userCount = room.users?.length ?? 0;
+      const hasName = typeof room.name === "string" && room.name.trim().length > 0;
+
+      const titleBase = hasName
+        ? room.name!.trim() : openCreateUserDialog ? "Creating New Room..." : "Private Room";
+
+      document.title = `${titleBase} ${userCount > 0 ? ` (${userCount} player${userCount === 1 ? "" : "s"})` : ""} | ${APP_NAME}`;
+    } else {
+      document.title = APP_NAME;
+    }
+
+    return () => {
+      document.title = prevTitleRef.current || APP_NAME;
+    };
+  }, [room?.name, room?.users?.length, openCreateUserDialog]);
+
   const isMissingRoom =
     roomData && roomData.roomById === null && !joinRoomData && !subscriptionData;
 
