@@ -60,6 +60,7 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
+        aria-label="Kofi Support Page"
         className="
           flex flex-col w-[90vw] max-w-[620px] max-h-[88vh]
           rounded-2xl backdrop-blur-md bg-background/85
