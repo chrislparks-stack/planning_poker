@@ -398,6 +398,7 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
       }}
     >
       <DialogContent
+        aria-label="Adjustment of theme and accents"
         className="
           flex flex-col w-[90vw] max-w-[480px] max-h-[90vh]
           rounded-2xl backdrop-blur-md bg-background/80

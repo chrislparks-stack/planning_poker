@@ -190,6 +190,7 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
         }}
       >
         <DialogContent
+          aria-label="Room Options configuration"
           className="
             flex flex-col w-[90vw] max-w-[700px] max-h-[90vh] sm:max-h-[92vh]
             rounded-2xl backdrop-blur-md bg-background/80

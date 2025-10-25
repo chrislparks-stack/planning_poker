@@ -130,6 +130,7 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
+        aria-label="Edit Username"
         className="
           flex flex-col w-[90vw] max-w-[650px] max-h-[90vh]
           rounded-2xl backdrop-blur-md bg-background/80

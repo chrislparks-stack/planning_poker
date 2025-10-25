@@ -44,8 +44,6 @@ export default defineConfig(({ mode }) => {
   const GRAPHQL_ENDPOINT = env.VITE_GRAPHQL_ENDPOINT;
   const GOOGLE_ANALYTICS_ID = env.VITE_GOOGLE_ANALYTICS_ID;
 
-  console.log("GRAPHQL_ENDPOINT", GRAPHQL_ENDPOINT);
-
   return {
     plugins: [
       tanstackRouter(),
