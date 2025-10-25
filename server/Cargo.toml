@@ -1,6 +1,6 @@
 [package]
 name = "planning-poker-server"
-version = "1.0.1"
+version = "1.0.2"
 authors = ["INQTR <ivanchenko.b@gmail.com>, Chris Parks <chrislparks7@gmail.com>"]
 homepage = "https://summitplanningpoker.com/"
 edition = "2024"
@@ -33,6 +33,7 @@ actix-cors = "0.7"
 chrono = { version = "0.4", features = ["serde"] }
 log = "0.4.28"
 prometheus = "0.14.0"
+sysinfo = "0.37.2"
 
 [[bin]]
 name = "poker-planning"

@@ -19,7 +19,6 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import {useTheme} from "@/components";
 import {Ban, Crown, DoorOpen} from "lucide-react";
 
-
 interface PlayerProps {
   user: User;
   isCardPicked: boolean;
@@ -35,6 +34,7 @@ export function Player({
   user,
   isCardPicked,
   isGameOver,
+  card,
   roomId,
   onMakeOwner
 }: PlayerProps) {
@@ -116,14 +116,24 @@ export function Player({
       return ("https://lottie.host/3e8b13ae-fcf0-4059-86e5-da5c00d47aed/ZdfJuColeq.json");
     }
     if (isCardPicked) {
-      return (
-        <DotLottieReact
-          key="picked"
-          src="https://lottie.host/8e391350-aac4-4a10-82a8-f15bbb520ebc/TRA06YDEQc.json"
-          autoplay
-          style={{ width: 80, height: 60, margin: -25 }}
-        />
-      );
+      if (isGameOver) {
+        return (
+          <div
+            className="text-3xl font-semibold text-gray-900 dark:text-gray-300"
+          >
+            {card}
+          </div>
+        );
+      } else {
+        return (
+          <DotLottieReact
+            key="picked"
+            src="https://lottie.host/8e391350-aac4-4a10-82a8-f15bbb520ebc/TRA06YDEQc.json"
+            autoplay
+            style={{width: 80, height: 60, margin: -25}}
+          />
+        );
+      }
     }
     if (isGameOver) {
       return (
@@ -132,7 +142,7 @@ export function Player({
           src="https://lottie.host/407d17f3-a83c-46ca-ab4c-981dcbc77919/TKjtavdeuG.json"
           loop
           autoplay
-          style={{ width: 55, height:35, margin: -25 }}
+          style={{ width: 50, height: 35, margin: -25 }}
         />
       );
     }
@@ -142,10 +152,10 @@ export function Player({
         src={waitingIcon()}
         autoplay
         loop
-        style={{ width: 80, height: 60, margin: -25 }}
+        style={{ width: 65, height: 50, margin: -25 }}
       />
     );
-  }, [isCardPicked, isGameOver, theme, systemPrefersDark]);
+  }, [isCardPicked, isGameOver, theme, systemPrefersDark, card]);
 
   // --- Context menu logic ---
   const closeMenu = () => setMenuPos(null);
