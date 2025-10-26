@@ -1,3 +1,4 @@
+// src/main.tsx
 import { ApolloProvider } from "@apollo/client";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
@@ -11,22 +12,20 @@ import { AuthProvider } from "@/contexts";
 import { applyAccent } from "@/lib/theme-accent";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 
-import "./index.css";
-
 import { TooltipProvider } from "./components/ui/tooltip";
 import { routeTree } from "./routeTree.gen";
 
-// NEW: apply stored accent before mount so gradients & SVGs have the right colors on first paint
+import "./index.css";
+
+import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 try {
   if (typeof document !== "undefined") {
     const stored = localStorage.getItem("accent") || "lilac";
-    // persist: false so we only write runtime tokens now (we'll persist on Save in the dialog)
     applyAccent(stored, { persist: false });
   }
 } catch (err) {
-  // if localStorage access is blocked or applyAccent fails, don't crash the app
-  // eslint-disable-next-line no-console
   console.warn("Failed to apply stored accent on startup:", err);
 }
 
@@ -46,6 +45,8 @@ const root = createRoot(container);
 
 root.render(
   <StrictMode>
+    {import.meta.env.PROD ? <VercelAnalytics /> : null}
+    {import.meta.env.PROD ? <SpeedInsights /> : null}
     <Toaster />
     <ThemeProvider defaultTheme="dark">
       <ApolloProvider client={client}>

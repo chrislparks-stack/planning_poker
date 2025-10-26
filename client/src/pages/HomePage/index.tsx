@@ -157,7 +157,7 @@ export const HomePage: FC = () => {
             }
             
             html, body {
-              overflow: hidden;
+              overflow-x: hidden;
               margin: 0;
               padding: 0;           
             }
@@ -166,7 +166,7 @@ export const HomePage: FC = () => {
 
         <div className="mx-auto max-w-4xl py-32 sm:py-38 lg:py-46">
           <div className="text-center">
-            <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-6xl">
+            <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold tracking-tight text-gray-900 dark:text-white">
               Collaborate and Estimate Faster with Summit Planning Poker
             </h1>
             <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300">
