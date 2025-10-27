@@ -1,6 +1,5 @@
 // scripts/write-vercel-manifest.mjs
 import { mkdirSync, cpSync, writeFileSync } from "fs";
-import path from "path";
 
 const outRoot = ".vercel/output";
 
@@ -15,11 +14,7 @@ const config = {
   version: 3,
   overrides: {
     "index.html": { path: "index.html" }
-  },
-  routes: [
-    { handle: "filesystem" },
-    { src: "/.*", dest: "/index.html" }
-  ]
+  }
 };
 
 writeFileSync(`${outRoot}/config.json`, JSON.stringify(config, null, 2));
