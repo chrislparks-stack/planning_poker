@@ -10,6 +10,7 @@
     "dev": "vite",
     "build": "vite build",
     "vercel-build": "vite build",
+    "postbuild": "node scripts/write-vercel-manifest.mjs",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --ext ts,tsx --fix",
     "preview": "vite preview",
