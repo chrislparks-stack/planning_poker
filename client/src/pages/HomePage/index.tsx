@@ -83,9 +83,8 @@ export const HomePage: FC = () => {
       setValidRoom(true);
     } else if (!roomCheckLoading && !data?.roomById?.id) {
       setValidRoom(false);
-      localStorage.removeItem("Room");
     }
-  }, [data, roomError, roomCheckLoading, storedRoom?.RoomID]);
+  }, [data, roomError, roomCheckLoading, storedRoom?.RoomID, loading]);
 
   // ===== Handlers =====
   function onCreateRoom() {
