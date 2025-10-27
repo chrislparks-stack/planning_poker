@@ -17,6 +17,6 @@
     { "source": "/index.html", "destination": "/", "permanent": true }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "/dist/index.html" }
+    { "src": "/(.*)", "dest": "index.html" }
   ]
 }
