@@ -6,14 +6,16 @@ const redirectHtml = `
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta http-equiv="refresh" content="0; url=/?redirect=${encodeURIComponent(
-  window.location.pathname + window.location.search
-)}" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Redirecting...</title>
+    <meta http-equiv="refresh" content="0;url=/" />
     <script>
-      const dest = '/?redirect=' + encodeURIComponent(location.pathname + location.search);
-      location.replace(dest);
+      const redirect = '/?redirect=' + encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.replace(redirect);
     </script>
   </head>
+  <body></body>
 </html>
 `;
 
