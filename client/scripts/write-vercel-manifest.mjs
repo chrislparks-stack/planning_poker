@@ -1,19 +1,24 @@
-import { mkdirSync, writeFileSync, cpSync } from "fs";
+import { mkdirSync, cpSync, writeFileSync } from "fs";
+import path from "path";
 
-mkdirSync(".vercel/output/static", { recursive: true });
+const outputDir = ".vercel/output";
 
-// Copy the built Vite output into the static directory
-cpSync("dist", ".vercel/output/static", { recursive: true });
+// 1. Copy Vite build into `.vercel/output/static`
+mkdirSync(path.join(outputDir, "static"), { recursive: true });
+cpSync("dist", path.join(outputDir, "static"), { recursive: true });
 
-// Write the routing config
+// 2. Write the routing config
 const config = {
   version: 3,
   routes: [
     { handle: "filesystem" },
-    { src: "/(.*)", dest: "/index.html" }
+    { src: "/.*", dest: "/index.html" }
   ]
 };
 
-writeFileSync(".vercel/output/config.json", JSON.stringify(config, null, 2));
+writeFileSync(
+  path.join(outputDir, "config.json"),
+  JSON.stringify(config, null, 2)
+);
 
-console.log("✅ Build Output API manifest and static files prepared");
+console.log("✅ Prepared Build Output API bundle in .vercel/output");
