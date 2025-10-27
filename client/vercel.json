@@ -18,8 +18,5 @@
   ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "errorOverrides": [
-    { "statusCode": 404, "destination": "/index.html" }
   ]
 }
