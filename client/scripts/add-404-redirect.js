@@ -1,22 +1,22 @@
-import fs from "fs";
-import path from "path";
+// scripts/add-404-redirect.js
+import { writeFileSync } from "fs";
+import { resolve } from "path";
 
-const outDir = "dist";
-const filePath = path.join(outDir, "404.html");
-
-const html = `
+const redirectHtml = `
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta http-equiv="refresh" content="0;url=/" />
+    <meta http-equiv="refresh" content="0; url=/?redirect=${encodeURIComponent(
+  window.location.pathname + window.location.search
+)}" />
     <script>
-      const path = window.location.pathname + window.location.search + window.location.hash;
-      window.location.replace("/?" + path);
+      const dest = '/?redirect=' + encodeURIComponent(location.pathname + location.search);
+      location.replace(dest);
     </script>
   </head>
-  <body></body>
 </html>
 `;
 
-fs.writeFileSync(filePath, html.trim());
-console.log("Added 404.html redirect to /");
+const outPath = resolve("dist", "404.html");
+writeFileSync(outPath, redirectHtml.trim());
+console.log("✅ 404.html redirect created:", outPath);
