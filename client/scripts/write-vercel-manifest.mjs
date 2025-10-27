@@ -13,4 +13,4 @@ const manifest = {
 };
 
 fs.writeFileSync(".vercel/output/config.json", JSON.stringify(manifest, null, 2));
-console.log("✅ Vercel Build Output API manifest created");
+console.log("Vercel Build Output API manifest created");
