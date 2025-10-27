@@ -1,24 +1,27 @@
+// scripts/write-vercel-manifest.mjs
 import { mkdirSync, cpSync, writeFileSync } from "fs";
 import path from "path";
 
-const outputDir = ".vercel/output";
+const outRoot = ".vercel/output";
 
-// 1. Copy Vite build into `.vercel/output/static`
-mkdirSync(path.join(outputDir, "static"), { recursive: true });
-cpSync("dist", path.join(outputDir, "static"), { recursive: true });
+// Create directories
+mkdirSync(`${outRoot}/static`, { recursive: true });
 
-// 2. Write the routing config
+// Copy Vite dist → static
+cpSync("dist", `${outRoot}/static`, { recursive: true });
+
+// Create Build Output API manifest
 const config = {
   version: 3,
+  overrides: {
+    "index.html": { path: "index.html" }
+  },
   routes: [
     { handle: "filesystem" },
     { src: "/.*", dest: "/index.html" }
   ]
 };
 
-writeFileSync(
-  path.join(outputDir, "config.json"),
-  JSON.stringify(config, null, 2)
-);
+writeFileSync(`${outRoot}/config.json`, JSON.stringify(config, null, 2));
 
-console.log("✅ Prepared Build Output API bundle in .vercel/output");
+console.log("✅ Build Output API manifest written to .vercel/output/config.json");
