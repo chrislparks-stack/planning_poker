@@ -11,7 +11,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts";
 import { applyAccent } from "@/lib/theme-accent";
 import { NotFoundPage } from "@/pages/NotFoundPage";
-
 import { TooltipProvider } from "./components/ui/tooltip";
 import { routeTree } from "./routeTree.gen";
 
@@ -33,9 +32,29 @@ const router = createRouter({
   routeTree,
   defaultNotFoundComponent: NotFoundPage
 });
+
 declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router;
+  }
+}
+
+if (typeof window !== "undefined") {
+  const params = new URLSearchParams(window.location.search);
+  const redirect = params.get("redirect");
+
+  if (redirect) {
+    // Rewrite URL to look clean (no ?redirect=)
+    const newUrl = window.location.origin + redirect;
+    window.history.replaceState(null, "", newUrl);
+
+    // Navigate within the SPA to hydrate the intended route
+    setTimeout(() => {
+      const result = router.navigate({ to: redirect });
+      Promise.resolve(result).catch((err) => {
+        console.warn("Redirect rehydration failed:", err);
+      });
+    }, 0);
   }
 }
 
