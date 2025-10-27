@@ -1,6 +1,5 @@
 {
   "framework": null,
-  "buildCommand": "",
   "outputDirectory": ".vercel/output",
   "cleanUrls": true,
   "trailingSlash": false
