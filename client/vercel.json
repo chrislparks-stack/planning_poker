@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": ".vercel/output",
+  "outputDirectory": "vercel_build",
   "framework": null,
   "cleanUrls": true,
   "trailingSlash": false,
