@@ -13,7 +13,10 @@
       ]
     }
   ],
-  "routes": [
-    { "src": "/(.*)", "dest": "/index.html" }
+  "redirects": [
+    { "source": "/index.html", "destination": "/", "permanent": true }
+  ],
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
