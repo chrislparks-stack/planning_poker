@@ -21,4 +21,4 @@ const redirectHtml = `
 
 const outPath = resolve("dist", "404.html");
 writeFileSync(outPath, redirectHtml.trim());
-console.log("✅ 404.html redirect created:", outPath);
+console.log("404.html redirect created:", outPath);
