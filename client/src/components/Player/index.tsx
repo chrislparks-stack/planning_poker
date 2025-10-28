@@ -17,7 +17,8 @@ import { useToast } from "@/hooks/use-toast";
 import { User } from "@/types";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import {useTheme} from "@/components";
-import {Ban, Crown, DoorOpen} from "lucide-react";
+import {Ban, Crown, DoorOpen, MessageSquareText} from "lucide-react";
+import {ChatInputWrapper} from "@/components/ui/chat-input-wrapper.tsx";
 
 interface PlayerProps {
   user: User;
@@ -53,6 +54,7 @@ export function Player({
   const roomName = room?.name ?? "this room";
   const [kickUser] = useKickUserMutation();
   const [banUser] = useBanUserMutation();
+  const [showChatInput, setShowChatInput] = useState(false);
 
   // --- Local state ---
   const [menuPos, setMenuPos] = useState<MenuPos>(null);
@@ -277,6 +279,13 @@ export function Player({
     }
   };
 
+  const handleSendChat = (msg: string) => {
+    console.log("Open chat clicked for room:", roomId);
+    console.log("User", user, "clicked the chat button");
+    console.log("Message:", msg);
+  };
+
+
   // --- Context menu UI ---
   const menu = menuPos ? (
     <div
@@ -353,12 +362,51 @@ export function Player({
             </TooltipTrigger>
             <TooltipContent side="right">Room Owner</TooltipContent>
           </Tooltip>
+          {isTargetSelf && (
+            <button
+              onClick={() => setShowChatInput(!showChatInput)}
+              title="Open chat"
+              className="absolute -right-7 p-1 rounded-full bg-background/80 hover:bg-accent/20 border border-border shadow-sm"
+            >
+              <MessageSquareText className="w-4 h-4 text-accent" />
+            </button>
+          )}
+          {isTargetSelf && (
+            <ChatInputWrapper
+              onSend={(msg) => handleSendChat(msg)}
+              onClose={() => setShowChatInput(false)}
+              isOpen={showChatInput}
+              className="-right-[275px] top-8"
+            />
+          )}
+
         </div>
       ) : (
-        <div {...interactiveProps} style={{ cursor: "default" }}>
-          <Card className="hover:bg-transparent hover:shadow-none w-12 bg-gradient-to-br from-accent/20 via-transparent to-accent/5">
-            {cardIcon}
-          </Card>
+        <div className="relative flex flex-col items-center" style={{ cursor: "default" }}>
+          {/* Player card */}
+          <div {...interactiveProps}>
+            <Card className="hover:bg-transparent hover:shadow-none w-12 bg-gradient-to-br from-accent/20 via-transparent to-accent/5">
+              {cardIcon}
+            </Card>
+          </div>
+
+          {isTargetSelf && (
+            <button
+              onClick={() => setShowChatInput(!showChatInput)}
+              title="Open chat"
+              className="absolute -right-7 p-1 rounded-full bg-background/80 hover:bg-accent/20 border border-border shadow-sm"
+            >
+              <MessageSquareText className="w-4 h-4 text-accent" />
+            </button>
+          )}
+          {isTargetSelf && (
+            <ChatInputWrapper
+              onSend={(msg) => handleSendChat(msg)}
+              onClose={() => setShowChatInput(false)}
+              isOpen={showChatInput}
+              className="-right-[275px] top-8"
+            />
+          )}
         </div>
       )}
       <span className="text-sm mb-1 text-center">{user.username}</span>

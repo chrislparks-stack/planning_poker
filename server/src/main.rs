@@ -5,7 +5,6 @@ use crate::{
     types::Storage,
 };
 use actix_cors::Cors;
-
 use actix_web::{
     guard, middleware,
     web::{self, Data},
@@ -28,8 +27,7 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use prometheus::{Encoder, TextEncoder, Registry, IntCounter, IntGauge};
-
-use sysinfo::{Pid, System };
+use sysinfo::{Pid, System};
 
 fn spawn_room_cleanup_task(
     storage: Storage,
@@ -51,75 +49,65 @@ fn spawn_room_cleanup_task(
 
         loop {
             ticker.tick().await;
-
             info!("Room cleanup tick: scanning rooms for inactivity...");
 
-            let mut snapshot_meta: Vec<(Uuid, usize, usize, bool, i64)> = Vec::new();
-            {
-                debug!("cleanup: attempting to acquire storage lock for snapshot");
-                let guard = storage.lock().await;
-                debug!("cleanup: acquired storage lock (rooms={})", guard.len());
-
-                for (id, room) in guard.iter() {
-                    let user_count = room.users.len();
-                    let deck_count = room.deck.cards.len();
-                    let safe = room.is_safe_to_remove();
-                    let last_active_secs = room.last_active.timestamp();
-
-                    snapshot_meta.push((*id, user_count, deck_count, safe, last_active_secs));
-                }
-                // guard drops here
-                debug!("cleanup: released storage lock after snapshot");
-            }
-
-            let total_seen = snapshot_meta.len();
-            rooms_current.set(total_seen as i64);
-            rooms_scanned.inc_by(total_seen as u64);
-
-            const BASE_PER_ROOM: usize = 200;
-            const PER_USER_BYTES: usize = 180;
-            const PER_DECK_CARD_BYTES: usize = 16;
-
+            // Snapshot and analyze under lock
             let mut total_estimated_bytes: usize = 0;
             let mut stale_ids: Vec<Uuid> = Vec::new();
-            let now_secs = chrono::Utc::now().timestamp();
+            let total_seen;
 
-            for (id, user_count, deck_count, safe, last_active_secs) in snapshot_meta.iter() {
-                let est = BASE_PER_ROOM
-                    + user_count.saturating_mul(PER_USER_BYTES)
-                    + deck_count.saturating_mul(PER_DECK_CARD_BYTES);
-                total_estimated_bytes = total_estimated_bytes.saturating_add(est);
+            {
+                debug!("cleanup: acquiring storage lock for snapshot");
+                let guard = storage.lock().await;
+                total_seen = guard.len();
+                rooms_current.set(total_seen as i64);
+                rooms_scanned.inc_by(total_seen as u64);
 
-                let age_secs = now_secs.saturating_sub(*last_active_secs);
-                if *safe && (age_secs as u64) > room_ttl.as_secs() {
-                    stale_ids.push(*id);
+                const BASE_PER_ROOM: usize = 200;
+                const PER_USER_BYTES: usize = 180;
+                const PER_DECK_CARD_BYTES: usize = 16;
+
+                for (id, room) in guard.iter() {
+                    let est = BASE_PER_ROOM
+                        + room.users.len().saturating_mul(PER_USER_BYTES)
+                        + room.deck.cards.len().saturating_mul(PER_DECK_CARD_BYTES);
+                    total_estimated_bytes = total_estimated_bytes.saturating_add(est);
+
+                    if room.is_safe_to_remove() && room.is_inactive(room_ttl) {
+                        stale_ids.push(*id);
+                    }
                 }
-            }
 
-            rooms_total_bytes_estimate.set(total_estimated_bytes as i64);
-            if total_seen > 0 {
-                rooms_avg_bytes_estimate.set((total_estimated_bytes / total_seen) as i64);
-            } else {
-                rooms_avg_bytes_estimate.set(0);
-            }
+                rooms_total_bytes_estimate.set(total_estimated_bytes as i64);
+                rooms_avg_bytes_estimate.set(if total_seen > 0 {
+                    (total_estimated_bytes / total_seen) as i64
+                } else {
+                    0
+                });
+            } // guard drops here
 
             if stale_ids.is_empty() {
-                debug!("Room cleanup: no stale rooms found this tick.");
+                info!("Room cleanup: no inactive rooms to clean up this tick ({} rooms total).", total_seen);
                 continue;
             }
 
-            info!("Room cleanup: found {} stale room(s) to remove.", stale_ids.len());
+            let mut rooms_removed = 0usize;
+            let mut users_removed = 0usize;
 
             for id in stale_ids {
                 if let Some(expired_room) = {
                     let mut guard = storage.lock().await;
                     guard.remove(&id)
                 } {
+                    let user_count = expired_room.users.len();
+                    users_removed += user_count;
+                    rooms_removed += 1;
+
                     info!(
                         "Room cleanup: removing stale room {} (name: {:?}, users: {})",
                         id,
                         expired_room.name,
-                        expired_room.users.len()
+                        user_count
                     );
 
                     let event = RoomEvent {
@@ -130,16 +118,16 @@ fn spawn_room_cleanup_task(
                     };
 
                     crate::simple_broker::SimpleBroker::publish(event);
-
                     rooms_evicted.inc();
-                    info!("Room cleanup: published ROOM_EXPIRED for room {}", id);
                 } else {
-                    warn!(
-                        "Room cleanup: attempted to remove stale room {}, but it was not found (race?).",
-                        id
-                    );
+                    warn!("Room cleanup: attempted to remove stale room {}, but it was not found (race?)", id);
                 }
             }
+
+            info!(
+                "Room cleanup complete: removed {} room(s), freeing {} user slot(s).",
+                rooms_removed, users_removed
+            );
         }
     });
 }
@@ -177,7 +165,6 @@ fn spawn_heartbeat_task(
                     total_deck_cards += room.deck.cards.len();
                 }
 
-                // guard drops here
                 debug!("heartbeat: released storage lock after snapshot");
                 (room_count, total_users, total_deck_cards)
             };
@@ -201,26 +188,20 @@ fn spawn_heartbeat_task(
             system.refresh_all();
 
             let (mem_mib, cpu_pct_x100) = if let Some(proc) = system.process(pid) {
-                // memory() returns kB on many platforms; convert to MiB for Prometheus
                 let mem_kb = proc.memory();
                 let mem_mib = (mem_kb / 1024) as i64;
-
-                // cpu_usage() returns a float percent (0.0..100.0)
                 let cpu_pct = proc.cpu_usage();
                 let cpu_pct_x100 = (cpu_pct * 100.0) as i64;
-
                 (mem_mib, cpu_pct_x100)
             } else {
                 (0i64, 0i64)
             };
 
-            // Update metrics
             total_users_gauge.set(total_users as i64);
             avg_users_per_room_gauge.set(avg_users_per_room.round() as i64);
             process_memory_mib.set(mem_mib);
             process_cpu_percent_x100.set(cpu_pct_x100);
 
-            // Compose a human-friendly heartbeat log line
             info!(
                 "[heartbeat] rooms={} total_users={} avg_users_per_room={:.2} est_total_room_bytes={}B proc_mem={}MiB proc_cpu_x100={} (x100)",
                 room_count,
@@ -244,7 +225,6 @@ async fn main() -> std::io::Result<()> {
     let settings = get_configuration().expect("Failed to read settings.");
     let configured_addr = settings.get_server_address();
 
-    // Respect the PORT env var (used by Fly) if present, otherwise fall back to the port
     let port = env::var("PORT").unwrap_or_else(|_| {
         configured_addr
             .split(':')
@@ -270,7 +250,6 @@ async fn main() -> std::io::Result<()> {
         "rooms_total_bytes_estimate",
         "Estimated total bytes for all rooms (metadata-only estimator)"
     ).unwrap();
-
     let rooms_avg_bytes_estimate = IntGauge::new(
         "rooms_avg_bytes_estimate",
         "Estimated average bytes per room (metadata-only estimator)"
@@ -287,7 +266,6 @@ async fn main() -> std::io::Result<()> {
     registry.register(Box::new(rooms_evicted.clone())).ok();
     registry.register(Box::new(rooms_scanned.clone())).ok();
     registry.register(Box::new(rooms_current.clone())).ok();
-
     registry.register(Box::new(total_users.clone())).ok();
     registry.register(Box::new(avg_users_per_room.clone())).ok();
     registry.register(Box::new(process_memory_mib.clone())).ok();
@@ -295,7 +273,7 @@ async fn main() -> std::io::Result<()> {
 
     let registry = Arc::new(registry);
 
-    // Spawn the cleanup task: check every 30 minutes, evict rooms idle > 8 days
+    // Spawn the cleanup task: every 30 minutes, remove rooms inactive > 8 days
     spawn_room_cleanup_task(
         storage.clone(),
         StdDuration::from_secs(60 * 30),
@@ -307,7 +285,7 @@ async fn main() -> std::io::Result<()> {
         rooms_avg_bytes_estimate.clone(),
     );
 
-    // Spawn heartbeat task. interval controlled by env HEARTBEAT_INTERVAL_SECS (default 60)
+    // Spawn heartbeat task
     let hb_interval_secs: u64 = env::var("HEARTBEAT_INTERVAL_SECS")
         .ok()
         .and_then(|s| s.parse::<u64>().ok())
@@ -326,7 +304,6 @@ async fn main() -> std::io::Result<()> {
         .data(storage.clone())
         .finish();
 
-    // Expose /metrics endpoint and GraphQL endpoints
     HttpServer::new(move || {
         let registry = registry.clone();
 

@@ -1,6 +1,7 @@
 use async_graphql::SimpleObject;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use std::time::Instant;
 
 use crate::types::{Card, EntityId};
 
@@ -27,6 +28,10 @@ pub struct Room {
 
     #[graphql(skip)]
     pub last_active: DateTime<Utc>,
+
+    #[graphql(skip)]
+    pub last_active_instant: Instant,
+    pub chat_history: Vec<crate::domain::chat::ChatMessage>
 }
 
 impl Room {
@@ -45,15 +50,17 @@ impl Room {
             countdown_value: None,
             confirm_new_game: true,
             last_active: Utc::now(),
+            last_active_instant: Instant::now(),
+            chat_history: Vec::new(),
         }
     }
 
+    #[allow(dead_code)]
     pub fn new(name: Option<String>, cards: Vec<Card>) -> Self {
         Self::new_with_id(None, name, cards)
     }
 
     /// Return a Room snapshot suitable for publishing to clients.
-    /// Hides card values unless the game is over (keeps your previous behavior).
     pub fn get_room(&self) -> Room {
         if self.is_game_over {
             self.clone()
@@ -84,39 +91,16 @@ impl Room {
     }
 
     pub fn edit_user(&mut self, user_id: EntityId, username: String) {
-        let users: Vec<User> = self
-            .users
-            .clone()
-            .into_iter()
-            .map(|mut user| {
-                if user.id == user_id {
-                    user.username = username.clone();
-                }
-                user
-            })
-            .collect();
-
-        self.users = users;
+        for user in &mut self.users {
+            if user.id == user_id {
+                user.username = username.clone();
+            }
+        }
     }
 
     pub fn remove_user(&mut self, user_id: EntityId) {
-        let users: Vec<User> = self
-            .users
-            .clone()
-            .into_iter()
-            .filter(|user| user.id != user_id)
-            .collect();
-
-        let table: Vec<UserCard> = self
-            .game
-            .table
-            .clone()
-            .into_iter()
-            .filter(|user_card| user_card.user_id != user_id)
-            .collect();
-
-        self.users = users;
-        self.game.table = table;
+        self.users.retain(|user| user.id != user_id);
+        self.game.table.retain(|uc| uc.user_id != user_id);
     }
 
     pub fn set_room_owner(&mut self, user_id: Option<EntityId>) -> Result<(), String> {
@@ -191,23 +175,21 @@ impl Room {
     // === Activity / cleanup helpers ===
     pub fn touch(&mut self) {
         self.last_active = Utc::now();
+        self.last_active_instant = Instant::now();
     }
 
-    /// Conservative guard: return false if the room is currently doing something
-    /// we shouldn't interrupt (e.g. a countdown in progress).
     pub fn is_safe_to_remove(&self) -> bool {
-        if self.reveal_stage.as_deref() == Some("countdown") {
-            return false;
-        }
-        true
+        self.reveal_stage.as_deref() != Some("countdown")
     }
 
-    /// Returns true if the room's last_active is older than the provided TTL.
     pub fn is_inactive(&self, ttl: std::time::Duration) -> bool {
-        let age = Utc::now().signed_duration_since(self.last_active);
-        match age.to_std() {
-            Ok(d) => d > ttl,
-            Err(_) => true,
+        self.last_active_instant.elapsed() > ttl
+    }
+
+    pub fn push_chat(&mut self, msg: crate::domain::chat::ChatMessage) {
+        self.chat_history.push(msg);
+        if self.chat_history.len() > 100 {
+            self.chat_history.drain(0..self.chat_history.len() - 100);
         }
     }
 }
