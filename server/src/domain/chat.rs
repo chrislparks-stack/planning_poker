@@ -9,8 +9,16 @@ pub struct ChatMessage {
     pub room_id: Uuid,
     pub user_id: Uuid,
     pub username: String,
+
+    /// The plain-text version of the message (for search and fallback rendering)
     pub content: String,
+
+    /// Optional formatted (HTML or Markdown) version of the message
+    pub formatted_content: Option<String>,
+
+    /// Message type: "text", "html", "gif", "image", etc.
     pub content_type: String,
+
     pub timestamp: DateTime<Utc>,
 }
 
@@ -20,6 +28,7 @@ impl ChatMessage {
         user_id: Uuid,
         username: String,
         content: String,
+        formatted_content: Option<String>,
         content_type: String,
     ) -> Self {
         ChatMessage {
@@ -28,6 +37,7 @@ impl ChatMessage {
             user_id,
             username,
             content,
+            formatted_content,
             content_type,
             timestamp: Utc::now(),
         }

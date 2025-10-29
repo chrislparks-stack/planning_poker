@@ -28,6 +28,7 @@ fragment ChatMessageFragment on ChatMessage {
     userId
     username
     content
+    formattedContent
     contentType
     timestamp
 }
@@ -175,6 +176,7 @@ mutation SendChatMessage(
     $userId: UUID!
     $username: String!
     $content: String!
+    $formattedContent: String
     $contentType: String!
 ) {
     sendChatMessage(
@@ -183,6 +185,7 @@ mutation SendChatMessage(
             userId: $userId
             username: $username
             content: $content
+            formattedContent: $formattedContent
             contentType: $contentType
         }
     ) {

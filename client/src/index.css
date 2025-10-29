@@ -87,6 +87,21 @@
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
   }
+
+  /* Responsive */
+  .resposive .react-colorful {
+    width: auto;
+  }
+
+  /* Small */
+  .small .react-colorful {
+    width: 100px;
+    height: 100px;
+  }
+  .small .react-colorful__hue {
+    height: 20px;
+  }
+
 }
 
 /* ---------- APPLY SOME BASE HELPERS ---------- */

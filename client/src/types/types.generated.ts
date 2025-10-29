@@ -12,7 +12,24 @@ export type Scalars = {
   Boolean: { input: boolean; output: boolean; }
   Int: { input: number; output: number; }
   Float: { input: number; output: number; }
+  DateTime: { input: string; output: string; }
   UUID: { input: string; output: string; }
+};
+
+/** A chat message within a room. */
+export type ChatMessage = {
+  __typename?: 'ChatMessage';
+  /** The plain-text version of the message (for search and fallback rendering) */
+  content: Scalars['String']['output'];
+  /** Message type: "text", "html", "gif", "image", etc. */
+  contentType: Scalars['String']['output'];
+  /** Optional formatted (HTML or Markdown) version of the message */
+  formattedContent?: Maybe<Scalars['String']['output']>;
+  id: Scalars['UUID']['output'];
+  roomId: Scalars['UUID']['output'];
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['UUID']['output'];
+  username: Scalars['String']['output'];
 };
 
 export type Deck = {
@@ -40,6 +57,7 @@ export type MutationRoot = {
   pickCard: Room;
   renameRoom: Room;
   resetGame: Room;
+  sendChatMessage: ChatMessage;
   setRoomOwner: Room;
   showCards: Room;
   startRevealCountdown: Room;
@@ -116,6 +134,11 @@ export type MutationRootResetGameArgs = {
 };
 
 
+export type MutationRootSendChatMessageArgs = {
+  input: SendChatInput;
+};
+
+
 export type MutationRootSetRoomOwnerArgs = {
   roomId: Scalars['UUID']['input'];
   userId?: InputMaybe<Scalars['UUID']['input']>;
@@ -175,6 +198,7 @@ export type QueryRootUserRoomsArgs = {
 export type Room = {
   __typename?: 'Room';
   bannedUsers: Array<Scalars['UUID']['output']>;
+  chatHistory: Array<ChatMessage>;
   confirmNewGame: Scalars['Boolean']['output'];
   countdownEnabled: Scalars['Boolean']['output'];
   countdownValue?: Maybe<Scalars['Int']['output']>;
@@ -196,14 +220,29 @@ export type RoomEvent = {
   targetUserId?: Maybe<Scalars['UUID']['output']>;
 };
 
+export type SendChatInput = {
+  content: Scalars['String']['input'];
+  contentType: Scalars['String']['input'];
+  formattedContent?: InputMaybe<Scalars['String']['input']>;
+  roomId: Scalars['UUID']['input'];
+  userId: Scalars['UUID']['input'];
+  username: Scalars['String']['input'];
+};
+
 export type SubscriptionRoot = {
   __typename?: 'SubscriptionRoot';
   room: Room;
+  roomChat: ChatMessage;
   roomEvents: RoomEvent;
 };
 
 
 export type SubscriptionRootRoomArgs = {
+  roomId: Scalars['UUID']['input'];
+};
+
+
+export type SubscriptionRootRoomChatArgs = {
   roomId: Scalars['UUID']['input'];
 };
 

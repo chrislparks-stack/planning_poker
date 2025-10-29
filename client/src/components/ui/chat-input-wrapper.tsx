@@ -1,3 +1,4 @@
+// @ts-ignore
 import React, { useEffect, useState } from "react";
 import { ChatInput } from "@/components/ui/chat-input";
 
@@ -7,7 +8,7 @@ export const ChatInputWrapper = ({
    className,
    isOpen,
  }: {
-  onSend: (message: string) => void;
+  onSend: (plain: string, formatted: string) => void;
   onClose: () => void;
   className?: string;
   isOpen: boolean;
@@ -43,7 +44,7 @@ export const ChatInputWrapper = ({
 
   return (
     <div
-      className={`absolute ${className} z-50 transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] ${animClass}`}
+      className={`absolute ${className} z-50 transition-all duration-400 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; ${animClass}`}
       style={{ opacity: 0, transform: "translateY(-8px)", animationFillMode: "forwards" }}
     >
       <ChatInput onSend={onSend} onClose={handleInternalClose} />

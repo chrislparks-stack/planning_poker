@@ -5,7 +5,7 @@ import {
   useGetRoomQuery,
   useRoomSubscription,
   useKickUserMutation,
-  useBanUserMutation
+  useBanUserMutation, useSendChatMessageMutation, useRoomChatSubscription,
 } from "@/api";
 import { Card } from "@/components/Card";
 import {
@@ -19,6 +19,7 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import {useTheme} from "@/components";
 import {Ban, Crown, DoorOpen, MessageSquareText} from "lucide-react";
 import {ChatInputWrapper} from "@/components/ui/chat-input-wrapper.tsx";
+import {ChatBubble} from "@/components/ui/chat-bubble.tsx";
 
 interface PlayerProps {
   user: User;
@@ -41,6 +42,7 @@ export function Player({
 }: PlayerProps) {
   const { toast } = useToast();
   const { theme } = useTheme();
+  const cardRef = useRef<HTMLDivElement>(null);
   const systemPrefersDark = typeof window !== "undefined" && window.matchMedia ?
     window.matchMedia("(prefers-color-scheme: dark)").matches : false;
 
@@ -49,12 +51,14 @@ export function Player({
   const { data: subscriptionData } = useRoomSubscription({
     variables: { roomId }
   });
+  const [sendChatMessage] = useSendChatMessageMutation();
 
   const room = subscriptionData?.room ?? roomData?.roomById;
   const roomName = room?.name ?? "this room";
   const [kickUser] = useKickUserMutation();
   const [banUser] = useBanUserMutation();
   const [showChatInput, setShowChatInput] = useState(false);
+  const [lastChat, setLastChat] = useState<string | null>(null);
 
   // --- Local state ---
   const [menuPos, setMenuPos] = useState<MenuPos>(null);
@@ -279,12 +283,40 @@ export function Player({
     }
   };
 
-  const handleSendChat = (msg: string) => {
-    console.log("Open chat clicked for room:", roomId);
-    console.log("User", user, "clicked the chat button");
-    console.log("Message:", msg);
-  };
+  useRoomChatSubscription({
+    variables: { roomId },
+    onData: ({ data }) => {
+      const msg = data?.data?.roomChat;
+      if (msg && msg.userId === user.id) {
+        setLastChat(msg.formattedContent || msg.content);
+        setTimeout(() => setLastChat(null), 3500);
+      }
+    },
+  });
 
+
+  const handleSendChat = async (plain: string, formatted: string) => {
+    if (!currentUserId || !roomId) return;
+    try {
+      await sendChatMessage({
+        variables: {
+          roomId,
+          userId: currentUserId,
+          username: user.username,
+          content: plain,
+          formattedContent: formatted,
+          contentType: "html",
+        },
+      });
+    } catch (err) {
+      console.error("Failed to send chat:", err);
+      toast({
+        title: "Message failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
+  };
 
   // --- Context menu UI ---
   const menu = menuPos ? (
@@ -339,7 +371,8 @@ export function Player({
   return (
     <div className="flex flex-col items-center" data-testid="player">
       {room?.roomOwnerId === user.id ? (
-        <div className="flex flex-col items-center">
+        <div className="flex flex-col items-center" ref={cardRef}>
+          {lastChat && <ChatBubble key={lastChat + user.id} message={lastChat} anchorRef={cardRef} />}
           <Tooltip>
             <TooltipTrigger asChild>
               <div {...interactiveProps} style={{ cursor: "default" }}>
@@ -373,7 +406,7 @@ export function Player({
           )}
           {isTargetSelf && (
             <ChatInputWrapper
-              onSend={(msg) => handleSendChat(msg)}
+              onSend={(plain: string, formatted: string) => handleSendChat(plain, formatted)}
               onClose={() => setShowChatInput(false)}
               isOpen={showChatInput}
               className="-right-[275px] top-8"
@@ -382,7 +415,8 @@ export function Player({
 
         </div>
       ) : (
-        <div className="relative flex flex-col items-center" style={{ cursor: "default" }}>
+        <div className="relative flex flex-col items-center" style={{ cursor: "default" }} ref={cardRef}>
+          {lastChat && <ChatBubble key={lastChat + user.id} message={lastChat} anchorRef={cardRef} />}
           {/* Player card */}
           <div {...interactiveProps}>
             <Card className="hover:bg-transparent hover:shadow-none w-12 bg-gradient-to-br from-accent/20 via-transparent to-accent/5">
@@ -401,7 +435,7 @@ export function Player({
           )}
           {isTargetSelf && (
             <ChatInputWrapper
-              onSend={(msg) => handleSendChat(msg)}
+              onSend={(plain: string, formatted: string) => handleSendChat(plain, formatted)}
               onClose={() => setShowChatInput(false)}
               isOpen={showChatInput}
               className="-right-[275px] top-8"

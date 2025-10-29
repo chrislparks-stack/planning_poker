@@ -79,8 +79,10 @@ pub struct SendChatInput {
     pub user_id: Uuid,
     pub username: String,
     pub content: String,
+    pub formatted_content: Option<String>,
     pub content_type: String,
 }
+
 
 pub struct MutationRoot;
 
@@ -568,21 +570,24 @@ impl MutationRoot {
     ) -> Result<ChatMessage> {
         let mut storage = get_storage(ctx).await;
 
-        let room = storage.get_mut(&input.room_id)
+        let room = storage
+            .get_mut(&input.room_id)
             .ok_or(Error::new("Room not found"))?;
 
+        // Use the new formatted_content field
         let msg = ChatMessage::new(
             input.room_id,
             input.user_id,
             input.username.clone(),
             input.content.clone(),
+            input.formatted_content.clone(),
             input.content_type.clone(),
         );
 
         room.push_chat(msg.clone());
         room.touch();
 
-        crate::simple_broker::SimpleBroker::publish(msg.clone());
+        SimpleBroker::publish(msg.clone());
 
         Ok(msg)
     }
