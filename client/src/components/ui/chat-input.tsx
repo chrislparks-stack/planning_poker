@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import tenorLogo from "@/assets/PB_tenor_logo_grey_vertical.svg";
 import { HexColorPicker } from "react-colorful";
+import {OverlayPortal} from "@/utils/overlayPortal.tsx";
 
 interface ChatInputProps {
   onSend: (plain: string, formatted: string) => void;
@@ -258,7 +259,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   // --- FIX: increase stacking context for all overlays ---
   const customPicker = showCustomPicker ? (
     <div
-      className="absolute -top-[65px] left-[262px] bg-popover border border-border rounded-xl shadow-xl p-3 z-[99999] w-[120px]"
+      className="absolute -top-[65px] left-[262px] bg-popover border border-border rounded-xl shadow-xl p-3 w-[120px]"
       onClick={(e) => e.stopPropagation()}
     >
       <section className="small">
@@ -279,11 +280,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const gifPicker = showGifPicker ? (
     <div
       ref={gifPickerRef}
-      className="fixed z-[99998] w-[252px] max-h-[210px] overflow-y-auto border border-border rounded-xl shadow-xl bg-popover"
+      className="fixed w-[252px] max-h-[210px] overflow-y-auto border border-border rounded-xl shadow-xl bg-popover"
       style={{ top: `${pickerPos.top}px`, left: `${pickerPos.left}px` }}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="sticky top-0 z-20 bg-popover/90 backdrop-blur-md p-3 border-b border-border flex justify-between items-center">
+      <div className="sticky top-0 bg-popover/90 backdrop-blur-md p-3 border-b border-border flex justify-between items-center">
         <input
           type="text"
           placeholder="Search Tenor GIFs..."
@@ -321,164 +322,165 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   ) : null;
 
   return (
-    <div
-      ref={containerRef}
-      className={cn(
-        "rounded-2xl bg-accent/20 border border-accent/30 shadow-lg backdrop-blur-md",
-        "flex flex-col items-stretch justify-center px-2 pt-1 pb-2 space-y-2 relative",
-        "z-[99997]",
-        className
-      )}
-      style={{ width: 270 }}
-    >
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={onFileSelected}
-        className="hidden"
-      />
-
-      {/* Toolbar */}
-      <div className="flex justify-between px-1 items-center relative">
-        <div className="flex gap-1">
-          {[{ icon: <Bold size={14} />, key: "bold", cmd: "bold" },
-            { icon: <Italic size={14} />, key: "italic", cmd: "italic" },
-            { icon: <Underline size={14} />, key: "underline", cmd: "underline" }].map(({ icon, key, cmd }) => (
-            <button
-              key={key}
-              onClick={() => applyCommand(cmd)}
-              className={cn(
-                "p-[5px] rounded-md text-accent hover:bg-accent/10 transition",
-                activeFormats[key as keyof typeof activeFormats] &&
-                "bg-accent/25 ring-1 ring-accent/50"
-              )}
-            >
-              {icon}
-            </button>
-          ))}
-          <button
-            onClick={() => setShowPalette((s) => !s)}
-            className={cn(
-              "p-[5px] rounded-md text-accent hover:bg-accent/10 transition",
-              showPalette && "bg-accent/25 ring-1 ring-accent/50"
-            )}
-            title="Text color"
-          >
-            <Palette size={14} />
-          </button>
-        </div>
-
-        <div className="flex gap-1">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowGifPicker((s) => !s);
-            }}
-            className="p-[5px] rounded-md text-accent hover:bg-accent/10 transition"
-            title="Insert GIF"
-          >
-            <ImagePlay size={15} />
-          </button>
-          <button
-            onClick={handleImageUpload}
-            title="Upload Image"
-            className="p-[5px] rounded-md text-accent hover:bg-accent/10 transition"
-          >
-            <Camera size={15} />
-          </button>
-        </div>
-      </div>
-
-      {/* Color palette */}
+    <OverlayPortal>
       <div
+        ref={containerRef}
         className={cn(
-          "relative flex justify-center gap-2 transition-all duration-200 overflow-visible items-center",
-          showPalette ? "max-h-12 opacity-100 mt-1" : "max-h-0 opacity-0 overflow-hidden"
+          "rounded-2xl bg-accent/20 border border-accent/30 shadow-lg backdrop-blur-md",
+          "flex flex-col items-stretch justify-center px-2 pt-1 pb-2 space-y-2 relative",
+          className
         )}
-        onClick={(e) => e.stopPropagation()}
+        style={{ width: 270 }}
       >
-        {colors.map(({ color, name }) => (
-          <button
-            key={color}
-            className="w-5 h-5 rounded-full border border-border hover:scale-110 hover:shadow-md transition-transform"
-            style={{ backgroundColor: color }}
-            title={name}
-            onClick={() => applyColor(color)}
-          />
-        ))}
-        <button
-          onClick={() => setShowCustomPicker((v) => !v)}
-          className="relative w-5 h-5 rounded-full border border-border flex items-center justify-center hover:scale-110 transition-transform bg-gradient-to-r from-accent/40 to-background"
-          title="Custom color"
-        >
-          <Droplet size={13} className="text-accent" />
-        </button>
-        {customPicker}
-      </div>
-
-      {portalRoot && showGifPicker && createPortal(gifPicker, portalRoot)}
-
-      {/* Input + chips */}
-      <div className="relative w-full z-[99996]">
-        <div
-          ref={editorRef}
-          contentEditable
-          suppressContentEditableWarning
-          className={cn(
-            "w-full bg-background/95 text-sm rounded-xl min-h-[38px] max-h-[80px]",
-            "px-3 py-2 pr-10 outline-none overflow-y-auto focus:ring-1 focus:ring-accent"
-          )}
-          style={{ whiteSpace: "pre-wrap" }}
-          onInput={(e) => {
-            const el = e.currentTarget;
-            const hasText = !!el.textContent?.trim();
-            setIsEmpty(!hasText && attachments.length === 0);
-          }}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={onFileSelected}
+          className="hidden"
         />
 
-        {attachments.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-2 px-2">
-            {attachments.map((src, i) => (
-              <div
-                key={i}
-                className="relative w-[48px] h-[48px] rounded-md overflow-hidden border border-border flex-shrink-0 group cursor-pointer"
+        {/* Toolbar */}
+        <div className="flex justify-between px-1 items-center relative">
+          <div className="flex gap-1">
+            {[{ icon: <Bold size={14} />, key: "bold", cmd: "bold" },
+              { icon: <Italic size={14} />, key: "italic", cmd: "italic" },
+              { icon: <Underline size={14} />, key: "underline", cmd: "underline" }].map(({ icon, key, cmd }) => (
+              <button
+                key={key}
+                onClick={() => applyCommand(cmd)}
+                className={cn(
+                  "p-[5px] rounded-md text-accent hover:bg-accent/10 transition",
+                  activeFormats[key as keyof typeof activeFormats] &&
+                  "bg-accent/25 ring-1 ring-accent/50"
+                )}
               >
-                <img
-                  src={src}
-                  alt="attachment"
-                  className="object-cover w-full h-full rounded-md transition-transform group-hover:scale-105"
-                />
-                <div
-                  onClick={() =>
-                    setAttachments((prev) =>
-                      prev.filter((_, idx) => idx !== i)
-                    )
-                  }
-                  className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-medium tracking-wide"
-                >
-                  <X size={22} strokeWidth={2.5} className="opacity-80 mb-0.5" />
-                  REMOVE
-                </div>
-              </div>
+                {icon}
+              </button>
             ))}
+            <button
+              onClick={() => setShowPalette((s) => !s)}
+              className={cn(
+                "p-[5px] rounded-md text-accent hover:bg-accent/10 transition",
+                showPalette && "bg-accent/25 ring-1 ring-accent/50"
+              )}
+              title="Text color"
+            >
+              <Palette size={14} />
+            </button>
           </div>
-        )}
 
-        {isEmpty && (
-          <span className="absolute left-3 top-2 text-muted-foreground text-sm opacity-60 pointer-events-none select-none">
-            Type message...
-          </span>
-        )}
+          <div className="flex gap-1">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowGifPicker((s) => !s);
+              }}
+              className="p-[5px] rounded-md text-accent hover:bg-accent/10 transition"
+              title="Insert GIF"
+            >
+              <ImagePlay size={15} />
+            </button>
+            <button
+              onClick={handleImageUpload}
+              title="Upload Image"
+              className="p-[5px] rounded-md text-accent hover:bg-accent/10 transition"
+            >
+              <Camera size={15} />
+            </button>
+          </div>
+        </div>
 
-        <button
-          onClick={handleSend}
-          className="absolute right-2 bottom-1 p-1.5 rounded-md text-accent hover:bg-accent/10 transition"
-          title="Send"
+        {/* Color palette */}
+        <div
+          className={cn(
+            "relative flex justify-center gap-2 transition-all duration-200 overflow-visible items-center",
+            showPalette ? "max-h-12 opacity-100 mt-1" : "max-h-0 opacity-0 overflow-hidden"
+          )}
+          onClick={(e) => e.stopPropagation()}
         >
-          <SendHorizonal size={18} strokeWidth={2} />
-        </button>
+          {colors.map(({ color, name }) => (
+            <button
+              key={color}
+              className="w-5 h-5 rounded-full border border-border hover:scale-110 hover:shadow-md transition-transform"
+              style={{ backgroundColor: color }}
+              title={name}
+              onClick={() => applyColor(color)}
+            />
+          ))}
+          <button
+            onClick={() => setShowCustomPicker((v) => !v)}
+            className="relative w-5 h-5 rounded-full border border-border flex items-center justify-center hover:scale-110 transition-transform bg-gradient-to-r from-accent/40 to-background"
+            title="Custom color"
+          >
+            <Droplet size={13} className="text-accent" />
+          </button>
+          {customPicker}
+        </div>
+
+        {portalRoot && showGifPicker && createPortal(gifPicker, portalRoot)}
+
+        {/* Input + chips */}
+        <div className="relative w-full">
+          <div
+            ref={editorRef}
+            contentEditable
+            suppressContentEditableWarning
+            className={cn(
+              "w-full bg-background/95 text-sm rounded-xl min-h-[38px] max-h-[80px]",
+              "px-3 py-2 pr-10 outline-none overflow-y-auto focus:ring-1 focus:ring-accent"
+            )}
+            style={{ whiteSpace: "pre-wrap" }}
+            onInput={(e) => {
+              const el = e.currentTarget;
+              const hasText = !!el.textContent?.trim();
+              setIsEmpty(!hasText && attachments.length === 0);
+            }}
+          />
+
+          {attachments.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2 px-2">
+              {attachments.map((src, i) => (
+                <div
+                  key={i}
+                  className="relative w-[48px] h-[48px] rounded-md overflow-hidden border border-border flex-shrink-0 group cursor-pointer"
+                >
+                  <img
+                    src={src}
+                    alt="attachment"
+                    className="object-cover w-full h-full rounded-md transition-transform group-hover:scale-105"
+                  />
+                  <div
+                    onClick={() =>
+                      setAttachments((prev) =>
+                        prev.filter((_, idx) => idx !== i)
+                      )
+                    }
+                    className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-medium tracking-wide"
+                  >
+                    <X size={22} strokeWidth={2.5} className="opacity-80 mb-0.5" />
+                    REMOVE
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {isEmpty && (
+            <span className="absolute left-3 top-2 text-muted-foreground text-sm opacity-60 pointer-events-none select-none">
+              Type message...
+            </span>
+          )}
+
+          <button
+            onClick={handleSend}
+            className="absolute right-2 bottom-1 p-1.5 rounded-md text-accent hover:bg-accent/10 transition"
+            title="Send"
+          >
+            <SendHorizonal size={18} strokeWidth={2} />
+          </button>
+        </div>
       </div>
-    </div>
+    </OverlayPortal>
   );
 };
