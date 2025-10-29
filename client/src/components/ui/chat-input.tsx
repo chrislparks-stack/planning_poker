@@ -78,27 +78,29 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     const editor = editorRef.current;
     if (!editor) return;
 
-    // --- FIX: ensure images render in messages correctly ---
-    const plain = editor.innerText.trim();
+    const hasText = editor.innerText.trim().length > 0;
     const formatted = editor.innerHTML.trim();
 
-    const imgHtml =
-      attachments.length > 0
-        ? attachments
-          .map(
-            (src) =>
-              `<img src="${src}" alt="attachment" style="max-width:100%;border-radius:6px;margin:4px 0;display:block;object-fit:cover;" />`
-          )
-          .join("")
-        : "";
+    // Build full message HTML
+    let messageHtml = formatted;
 
-    // Wrap formatted + image HTML so <img> stays valid
-    const combined = `${formatted}${imgHtml}`;
-
-    if (plain || formatted || attachments.length > 0) {
-      onSend(plain, combined);
+    if (attachments.length > 0) {
+      const imgHtml = attachments
+        .map(
+          (src) =>
+            `<img src="${src}" alt="attachment" style="border-radius:6px;margin:4px 0;display:block;object-fit:cover;max-width:100%;" />`
+        )
+        .join("");
+      messageHtml += imgHtml;
     }
 
+    // If no content, do nothing
+    if (!hasText && attachments.length === 0) return;
+
+    // Send both a plain-text fallback and rich HTML
+    onSend(editor.innerText.trim(), messageHtml);
+
+    // Reset editor
     editor.innerHTML = "";
     setAttachments([]);
     setIsEmpty(true);

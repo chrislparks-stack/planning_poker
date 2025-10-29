@@ -1,49 +1,76 @@
-import React, { useEffect, useState } from "react";
+import React, { useLayoutEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
 interface ChatBubbleProps {
   message: string;
-  anchorRef?: React.RefObject<HTMLDivElement | null>;
+  playerId: string;
+  playerRef: HTMLDivElement | null;
+  tableRect: DOMRect | null;
   duration?: number;
   className?: string;
+  onExpire?: (playerId: string) => void;
 }
 
 /**
- * ChatBubble – centered above the visible card region,
- * with smooth float, responsive width, and scroll-safe overflow.
+ * Anchors bubble relative to the shared table, not viewport.
+ * This keeps all clients perfectly aligned, regardless of scaling or scroll.
  */
 export const ChatBubble: React.FC<ChatBubbleProps> = ({
                                                         message,
-                                                        anchorRef,
+                                                        playerId,
+                                                        playerRef,
+                                                        tableRect,
                                                         duration = 3,
                                                         className,
+                                                        onExpire,
                                                       }) => {
   const [visible, setVisible] = useState(true);
-  const [coords, setCoords] = useState<{ x: number; y: number } | null>(null);
+  const [coords, setCoords] = useState<{ x: number; y: number }>({
+    x: -9999,
+    y: -9999,
+  });
+  const bubbleRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!anchorRef?.current) return;
-    const rect = anchorRef.current.getBoundingClientRect();
+  useLayoutEffect(() => {
+    const el = bubbleRef.current;
+    if (!el || !playerRef || !tableRect) return;
 
-    setCoords({
-      x: rect.left + rect.width,
-      y:( rect.top * 1.1) - (rect.height / 2),
+    requestAnimationFrame(() => {
+      const playerRect = playerRef.getBoundingClientRect();
+      const bubbleRect = el.getBoundingClientRect();
+      const isLeft =
+        playerRect.left + playerRect.width / 2 < tableRect.left + tableRect.width / 2;
+
+      const horizontalGap = 12;
+      const x = isLeft
+        ? playerRect.left - tableRect.left - bubbleRect.width - horizontalGap
+        : playerRect.right - tableRect.left + horizontalGap;
+
+      const y =
+        playerRect.top - tableRect.top - bubbleRect.height * 0.35;
+
+      setCoords({ x, y });
     });
-  }, [anchorRef]);
+  }, [message, playerRef, tableRect]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setVisible(false), duration * 1000);
+  // --- Visibility timer -------------------------------------------------------
+  useLayoutEffect(() => {
+    const timer = setTimeout(() => {
+      setVisible(false);
+      setTimeout(() => onExpire?.(playerId), 300);
+    }, duration * 1000);
     return () => clearTimeout(timer);
-  }, [duration]);
+  }, [duration, playerId, onExpire]);
 
-  if (!coords) return null;
+  if (!visible) return null;
 
-  return createPortal(
+  const bubble = (
     <AnimatePresence>
       {visible && (
         <motion.div
+          ref={bubbleRef}
           key={message}
           initial={{ opacity: 0, y: 0, scale: 0.96 }}
           animate={{
@@ -51,6 +78,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
             y: [0, -35],
             scale: [0.96, 1],
           }}
+          exit={{ opacity: 0 }}
           transition={{
             duration,
             ease: "easeInOut",
@@ -58,34 +86,30 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
             y: { duration, ease: "easeInOut" },
           }}
           className={cn(
-            // Core layout
-            "fixed z-[9999] px-3.5 py-2 text-sm rounded-2xl font-medium tracking-tight select-none pointer-events-none",
+            "absolute z-[9999] px-3.5 py-2 text-sm rounded-2xl font-medium tracking-tight select-none pointer-events-none",
             "overflow-hidden break-words text-center backdrop-blur-[22px]",
-            // Glass gradient (matching player cards)
             "bg-gradient-to-br from-accent/25 via-background/30 to-accent/10 border border-white/15 shadow-[0_2px_18px_rgba(0,0,0,0.25)]",
-            "before:absolute before:inset-0 before:rounded-2xl before:bg-[linear-gradient(to_top_left,rgba(255,255,255,0.35),rgba(255,255,255,0)_55%)] before:mix-blend-screen before:opacity-70 before:pointer-events-none",
-            "after:absolute after:inset-0 after:rounded-2xl after:bg-[radial-gradient(circle_at_center,rgba(var(--accent-rgb),0.25),transparent_90%)] after:opacity-40 after:pointer-events-none",
-            // Text + media
-            "text-white/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]",
-            "[&_b]:font-semibold [&_i]:italic [&_u]:underline",
-            "[&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-1 [&_img]:shadow-md",
-            "[&_video]:max-w-full [&_video]:h-auto [&_video]:rounded-lg [&_video]:my-1",
             className
           )}
           style={{
             left: coords.x,
             top: coords.y,
-            transform: "translateX(-50%)",
+            transform: "translate(0, -100%)",
             maxWidth: "300px",
             maxHeight: "150px",
             overflowY: "auto",
-            scrollbarWidth: "thin",
-            overscrollBehavior: "contain",
           }}
           dangerouslySetInnerHTML={{ __html: message }}
         />
       )}
-    </AnimatePresence>,
-    document.body
+    </AnimatePresence>
   );
+
+  return createPortal(bubble, tableRefOrBody(tableRect));
 };
+
+// helper to ensure bubbles still render if tableRect missing
+function tableRefOrBody(tableRect: DOMRect | null) {
+  const el = document.querySelector(".relative"); // fallback: your table wrapper
+  return el ?? document.body;
+}

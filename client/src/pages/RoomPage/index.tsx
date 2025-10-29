@@ -418,8 +418,8 @@ export function RoomPage() {
               <div
                   className="absolute top-0 left-0 right-0 overflow-y-auto"
                   style={{
-                    height: `calc(100% - ${room.isGameOver ? 300 : 140}px)`, // limit to visible area
-                    paddingBottom: "1rem", // small visual buffer
+                    height: `calc(100% - ${room.isGameOver ? 300 : 140}px)`,
+                    paddingBottom: "1rem",
                   }}
               >
                 <Room room={room} />

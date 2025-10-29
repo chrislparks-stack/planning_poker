@@ -5,7 +5,8 @@ import {
   useGetRoomQuery,
   useRoomSubscription,
   useKickUserMutation,
-  useBanUserMutation, useSendChatMessageMutation, useRoomChatSubscription,
+  useBanUserMutation,
+  useSendChatMessageMutation,
 } from "@/api";
 import { Card } from "@/components/Card";
 import {
@@ -19,7 +20,6 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import {useTheme} from "@/components";
 import {Ban, Crown, DoorOpen, MessageSquareText} from "lucide-react";
 import {ChatInputWrapper} from "@/components/ui/chat-input-wrapper.tsx";
-import {ChatBubble} from "@/components/ui/chat-bubble.tsx";
 
 interface PlayerProps {
   user: User;
@@ -28,6 +28,8 @@ interface PlayerProps {
   card?: string | null | undefined;
   roomId: string;
   onMakeOwner?: (userId: string) => Promise<void> | void;
+  playerPositionMap?: Record<string, { x: number; y: number }>;
+  tableRect?: DOMRect | null;
 }
 
 type MenuPos = { x: number; y: number } | null;
@@ -38,7 +40,9 @@ export function Player({
   isGameOver,
   card,
   roomId,
-  onMakeOwner
+  onMakeOwner,
+  playerPositionMap,
+  tableRect
 }: PlayerProps) {
   const { toast } = useToast();
   const { theme } = useTheme();
@@ -58,12 +62,18 @@ export function Player({
   const [kickUser] = useKickUserMutation();
   const [banUser] = useBanUserMutation();
   const [showChatInput, setShowChatInput] = useState(false);
-  const [lastChat, setLastChat] = useState<string | null>(null);
 
   // --- Local state ---
   const [menuPos, setMenuPos] = useState<MenuPos>(null);
   const [menuTargetUser] = useState<User>(user);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const playerPos = playerPositionMap?.[user.id];
+  const tableCenterX = tableRect ? tableRect.left + tableRect.width / 2 : window.innerWidth / 2;
+  const isLeftSide = playerPos
+    ? tableRect
+      ? tableRect.left + playerPos.x < tableCenterX
+      : playerPos.x < window.innerWidth / 2
+    : false;
   const portalRootRef = useRef<Element | null>(
     typeof document !== "undefined" ? document.body : null
   );
@@ -283,18 +293,6 @@ export function Player({
     }
   };
 
-  useRoomChatSubscription({
-    variables: { roomId },
-    onData: ({ data }) => {
-      const msg = data?.data?.roomChat;
-      if (msg && msg.userId === user.id) {
-        setLastChat(msg.formattedContent || msg.content);
-        setTimeout(() => setLastChat(null), 3500);
-      }
-    },
-  });
-
-
   const handleSendChat = async (plain: string, formatted: string) => {
     if (!currentUserId || !roomId) return;
     try {
@@ -372,7 +370,6 @@ export function Player({
     <div className="flex flex-col items-center" data-testid="player">
       {room?.roomOwnerId === user.id ? (
         <div className="flex flex-col items-center" ref={cardRef}>
-          {lastChat && <ChatBubble key={lastChat + user.id} message={lastChat} anchorRef={cardRef} />}
           <Tooltip>
             <TooltipTrigger asChild>
               <div {...interactiveProps} style={{ cursor: "default" }}>
@@ -399,9 +396,12 @@ export function Player({
             <button
               onClick={() => setShowChatInput(!showChatInput)}
               title="Open chat"
-              className="absolute -right-7 p-1 rounded-full bg-background/80 hover:bg-accent/20 border border-border shadow-sm"
+              className="absolute p-1 rounded-full bg-background/80 hover:bg-accent/20 border border-border shadow-sm"
+              style={{ right: isLeftSide ? 55 : -28 }}
             >
-              <MessageSquareText className="w-4 h-4 text-accent" />
+              <MessageSquareText
+                className={`w-4 h-4 text-accent ${isLeftSide ? "scale-x-[-1]" : ""}`}
+              />
             </button>
           )}
           {isTargetSelf && (
@@ -409,14 +409,13 @@ export function Player({
               onSend={(plain: string, formatted: string) => handleSendChat(plain, formatted)}
               onClose={() => setShowChatInput(false)}
               isOpen={showChatInput}
-              className="-right-[275px] top-8"
+              className={`top-8 ${isLeftSide ? "right-[55px]" : "-right-[275px]"}`}
             />
           )}
 
         </div>
       ) : (
         <div className="relative flex flex-col items-center" style={{ cursor: "default" }} ref={cardRef}>
-          {lastChat && <ChatBubble key={lastChat + user.id} message={lastChat} anchorRef={cardRef} />}
           {/* Player card */}
           <div {...interactiveProps}>
             <Card className="hover:bg-transparent hover:shadow-none w-12 bg-gradient-to-br from-accent/20 via-transparent to-accent/5">
@@ -428,9 +427,12 @@ export function Player({
             <button
               onClick={() => setShowChatInput(!showChatInput)}
               title="Open chat"
-              className="absolute -right-7 p-1 rounded-full bg-background/80 hover:bg-accent/20 border border-border shadow-sm"
+              className="absolute p-1 rounded-full bg-background/80 hover:bg-accent/20 border border-border shadow-sm"
+              style={{ right: isLeftSide ? 55 : -28 }}
             >
-              <MessageSquareText className="w-4 h-4 text-accent" />
+              <MessageSquareText
+                className={`w-4 h-4 text-accent ${isLeftSide ? "scale-x-[-1]" : ""}`}
+              />
             </button>
           )}
           {isTargetSelf && (
@@ -438,7 +440,7 @@ export function Player({
               onSend={(plain: string, formatted: string) => handleSendChat(plain, formatted)}
               onClose={() => setShowChatInput(false)}
               isOpen={showChatInput}
-              className="-right-[275px] top-8"
+              className={`top-8 ${isLeftSide ? "right-[55px]" : "-right-[275px]"}`}
             />
           )}
         </div>
