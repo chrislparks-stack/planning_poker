@@ -95,11 +95,11 @@
 
   /* Small */
   .small .react-colorful {
-    width: 100px;
-    height: 100px;
+    width: 80px;
+    height: 80px;
   }
   .small .react-colorful__hue {
-    height: 20px;
+    height: 10px;
   }
 }
 

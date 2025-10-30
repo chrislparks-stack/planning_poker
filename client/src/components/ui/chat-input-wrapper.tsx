@@ -11,12 +11,14 @@ export const ChatInputWrapper = ({
   className,
   isOpen,
   isLeftSide = false,
+  isTopSide = false,
 }: {
   onSend: (plain: string, formatted: string, position?: { x: number; y: number; width: number; height: number } | null) => void;
   onClose: () => void;
   className?: string;
   isOpen: boolean;
   isLeftSide?: boolean;
+  isTopSide?: boolean;
 }) => {
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [phase, setPhase] = useState<Phase>("idle");
@@ -81,6 +83,7 @@ export const ChatInputWrapper = ({
         onClose={handleChildClose}
         className={animClasses}
         isLeftSide={isLeftSide}
+        isTopSide={isTopSide}
       />
     </div>
   );

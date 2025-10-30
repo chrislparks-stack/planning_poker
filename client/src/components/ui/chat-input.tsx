@@ -25,6 +25,7 @@ interface ChatInputProps {
   onClose?: () => void;
   className?: string;
   isLeftSide?: boolean;
+  isTopSide?: boolean;
 }
 
 
@@ -33,6 +34,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onClose,
   className,
   isLeftSide = false,
+  isTopSide = true,
 }) => {
   const [showPalette, setShowPalette] = useState(false);
   const [showCustomPicker, setShowCustomPicker] = useState(false);
@@ -60,13 +62,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   const colors = [
     { color: "auto",     name: "Auto" },
-    { color: "#000000",  name: "Black" },
-    { color: "#FFFFFF",  name: "White" },
-    { color: "#7C3AED",  name: "Electric Lilac" },
-    { color: "#0EA5E9",  name: "Arctic Aqua" },
-    { color: "#059669",  name: "Verdant Emerald" },
-    { color: "#E11D48",  name: "Crimson Rose" },
-    { color: "#F59E0B",  name: "Solar Amber" },
+    { color: "#000000",  name: "Charcoal" },
+    { color: "#FFFFFF",  name: "Opal" },
+    { color: "#7C3AED",  name: "Lilac" },
+    { color: "#0EA5E9",  name: "Aqua" },
+    { color: "#059669",  name: "Emerald" },
+    { color: "#E11D48",  name: "Rose" },
+    { color: "#F59E0B",  name: "Amber" },
   ];
 
   useEffect(() => {
@@ -264,7 +266,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       const src = event.target?.result as string;
       if (src) {
         setAttachments((prev) => [...prev, src]);
-        setIsEmpty(false);
       }
     };
     reader.readAsDataURL(file);
@@ -301,7 +302,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     e?.stopPropagation();
     if (url) {
       setAttachments((prev) => [...prev, url]);
-      setIsEmpty(false);
     }
     setShowGifPicker(false);
   };
@@ -312,7 +312,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       const rect = containerRef.current.getBoundingClientRect();
       setPickerPos({
         top: Math.max(8, rect.top - 210),
-        left: Math.max(8, rect.left + rect.width - 260),
+        left: Math.max(8, rect.left + rect.width - 220),
       });
     };
     updatePosition();
@@ -333,12 +333,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const customPicker = showCustomPicker ? (
     <div
       className={cn(
-        "absolute -top-[65px] bg-popover border border-border rounded-xl shadow-xl p-3 w-[120px]",
-        isLeftSide ? "right-[262px]" : "left-[262px]"
+        "absolute -top-[48px] bg-popover border border-border rounded-xl shadow-xl p-3 w-[105px] h-[125px]",
+        isLeftSide ? "right-[212px]" : "left-[212px]"
       )}
       onClick={(e) => e.stopPropagation()}
     >
-      <section className="small">
+      <section className="small -mt-1 mb-1">
         <HexColorPicker color={customColor} onChange={setCustomColor} />
       </section>
       <button
@@ -346,7 +346,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           applyColor(customColor);
           setShowCustomPicker(false);
         }}
-        className="mt-1 w-full py-1 text-sm font-medium rounded-md bg-accent text-background hover:opacity-90 transition"
+        className="mt-1 w-full py-1 text-xs font-medium rounded-md bg-accent text-background hover:opacity-90 transition"
       >
         Apply
       </button>
@@ -356,8 +356,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const gifPicker = showGifPicker ? (
     <div
       ref={gifPickerRef}
-      className="fixed w-[252px] max-h-[210px] overflow-y-auto border border-border rounded-xl shadow-xl bg-popover"
-      style={{ top: `${pickerPos.top}px`, left: `${pickerPos.left}px` }}
+      className="fixed w-[218px] border border-border rounded-xl shadow-xl bg-popover overflow-hidden"
+      style={{ top: `${isTopSide ?  pickerPos.top + 309 : pickerPos.top - 53}px`, left: `${pickerPos.left}px` }}
       onClick={(e) => e.stopPropagation()}
     >
       <div className="sticky top-0 bg-popover/90 backdrop-blur-md p-3 border-b border-border flex justify-between items-center">
@@ -380,19 +380,21 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-1 p-3 pt-2">
-        {gifs.map((g) => (
-          <img
-            key={g.id}
-            src={g.url}
-            alt=""
-            className="w-full rounded-md cursor-pointer hover:opacity-80 hover:scale-[1.02] transition-transform"
-            onClick={(e) => handleGifSelect(g.url, e)}
-          />
-        ))}
-      </div>
-      <div className="flex justify-center items-center py-1">
-        <img src={tenorLogo} alt="Tenor" className="w-[80px] opacity-60 mt-1" />
+      <div className="max-h-[210px] overflow-y-auto will-change-transform">
+        <div className="grid grid-cols-3 gap-1 p-3 pt-2">
+          {gifs.map((g) => (
+            <img
+              key={g.id}
+              src={g.url}
+              alt=""
+              className="w-full rounded-md cursor-pointer hover:opacity-80 hover:scale-[1.02] transition-transform"
+              onClick={(e) => handleGifSelect(g.url, e)}
+            />
+          ))}
+        </div>
+        <div className="sticky bottom-0 flex justify-center items-center bg-popover py-1">
+          <img src={tenorLogo} alt="Tenor" className="w-[80px] opacity-70 mt-1" />
+        </div>
       </div>
     </div>
   ) : null;
@@ -406,9 +408,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           "flex flex-col items-stretch justify-center px-2 pt-1 pb-2 space-y-2 relative",
           className
         )}
-        style={{ width: 270 }}
+        style={{width: 220}}
+        onClick={() => {
+          if (showGifPicker) setShowGifPicker(false);
+        }}
       >
-        <input
+      <input
           ref={fileInputRef}
           type="file"
           accept="image/*"
@@ -417,8 +422,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         />
 
         {/* Toolbar */}
-        <div className="flex justify-between px-1 items-center relative">
-          <div className="flex gap-1">
+        <div
+          className="flex justify-between px-1 items-center relative"
+          onMouseDown={(e) => e.preventDefault()}
+        >
+        <div className="flex gap-1">
             {[{ icon: <Bold size={14} />, key: "bold", cmd: "bold" },
               { icon: <Italic size={14} />, key: "italic", cmd: "italic" },
               { icon: <Underline size={14} />, key: "underline", cmd: "underline" }].map(({ icon, key, cmd }) => (
@@ -452,7 +460,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 e.stopPropagation();
                 setShowGifPicker((s) => !s);
               }}
-              className="p-[5px] rounded-md text-accent hover:bg-accent/10 transition"
+              className={cn(
+                "p-[5px] rounded-md text-accent hover:bg-accent/10 transition",
+                showGifPicker && "bg-accent/25 ring-1 ring-accent/50"
+              )}
               title="Insert GIF"
             >
               <ImagePlay size={15} />
@@ -470,52 +481,66 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         {/* Color palette */}
         <div
           className={cn(
-            "relative flex justify-center gap-2 transition-all duration-200 overflow-visible items-center",
+            "relative flex justify-center items-center gap-1 transition-all duration-200 overflow-visible",
             showPalette ? "max-h-12 opacity-100 mt-1" : "max-h-0 opacity-0 overflow-hidden"
           )}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Custom swatch FIRST when left side */}
           {isLeftSide && (
-            <button
-              onClick={() => setShowCustomPicker((v) => !v)}
-              className="relative w-5 h-5 rounded-full border border-border flex items-center justify-center hover:scale-110 transition-transform bg-gradient-to-r from-accent/40 to-background"
-              title="Custom color"
-              aria-label="Custom color"
-            >
-              <Droplet size={13} className="text-accent" />
-            </button>
+            <>
+              <button
+                onClick={() => setShowCustomPicker((v) => !v)}
+                className="relative w-5 h-5 rounded-full border border-border flex items-center justify-center hover:scale-110 transition-transform bg-gradient-to-r from-accent/40 to-background"
+                title="Custom Color"
+                aria-label="Custom color"
+              >
+                <Droplet size={13} className="text-accent" />
+              </button>
+              <div className="h-5 w-px bg-border mx-1" /> {/* ← Divider */}
+            </>
           )}
 
-          {colors.map(({ color, name }) => (
-            <button
-              key={color}
-              className="w-5 h-5 rounded-full border border-border hover:scale-110 hover:shadow-md transition-transform grid place-items-center"
-              style={color === "auto" ? undefined : { backgroundColor: color }}
-              title={name}
-              aria-label={name}
-              onClick={() => applyColor(color)}
-            >
-              {color === "auto" && (
-                <span className="text-[10px] font-semibold leading-none text-foreground">A</span>
+          {colors.map(({ color, name }, i) => (
+            <React.Fragment key={color}>
+              <button
+                className="w-5 h-5 rounded-full border border-border hover:scale-110 hover:shadow-md transition-transform grid place-items-center"
+                style={color === "auto" ? undefined : { backgroundColor: color }}
+                title={name}
+                aria-label={name}
+                onClick={() => applyColor(color)}
+              >
+                {color === "auto" && (
+                  <span className="text-[10px] font-semibold leading-none text-foreground">A</span>
+                )}
+              </button>
+
+              {/* Add divider only after Auto */}
+              {color === "auto" && i < colors.length - 1 && (
+                <div className="h-5 w-px bg-border mx-1" />
               )}
-            </button>
+            </React.Fragment>
           ))}
+
 
           {/* Custom swatch LAST when right side */}
           {!isLeftSide && (
-            <button
-              onClick={() => setShowCustomPicker((v) => !v)}
-              className="relative w-5 h-5 rounded-full border border-border flex items-center justify-center hover:scale-110 transition-transform bg-gradient-to-r from-accent/40 to-background"
-              title="Custom color"
-              aria-label="Custom color"
-            >
-              <Droplet size={13} className="text-accent" />
-            </button>
+            <>
+              <div className="h-5 w-px bg-border mx-1" /> {/* ← Divider */}
+              <button
+                onClick={() => setShowCustomPicker((v) => !v)}
+                className="relative w-5 h-5 rounded-full border border-border flex items-center justify-center hover:scale-110 transition-transform bg-gradient-to-r from-accent/40 to-background"
+                title="Custom Color"
+                aria-label="Custom color"
+              >
+                <Droplet size={13} className="text-accent" />
+              </button>
+            </>
           )}
 
           {customPicker}
         </div>
+
 
         {portalRoot && showGifPicker && createPortal(gifPicker, portalRoot)}
 
@@ -533,35 +558,38 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             onInput={(e) => {
               const el = e.currentTarget;
               const hasText = !!el.textContent?.trim();
-              setIsEmpty(!hasText && attachments.length === 0);
+              setIsEmpty(!hasText);
             }}
           />
 
           {attachments.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2 px-2">
-              {attachments.map((src, i) => (
-                <div
-                  key={i}
-                  className="relative w-[48px] h-[48px] rounded-md overflow-hidden border border-border flex-shrink-0 group cursor-pointer"
-                >
-                  <img
-                    src={src}
-                    alt="attachment"
-                    className="object-cover w-full h-full rounded-md transition-transform group-hover:scale-105"
-                  />
+            <div className="flex flex-wrap flex-col mt-1 text-xs text-accent">
+              Attachments:
+              <div className="flex flex-wrap flex-row gap-2 mt-2 px-2">
+                {attachments.map((src, i) => (
                   <div
-                    onClick={() =>
-                      setAttachments((prev) =>
-                        prev.filter((_, idx) => idx !== i)
-                      )
-                    }
-                    className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-medium tracking-wide"
+                    key={i}
+                    className="relative w-[48px] h-[48px] rounded-md overflow-hidden border border-border flex-shrink-0 group cursor-pointer"
                   >
-                    <X size={22} strokeWidth={2.5} className="opacity-80 mb-0.5" />
-                    REMOVE
+                    <img
+                      src={src}
+                      alt="attachment"
+                      className="object-cover w-full h-full rounded-md transition-transform group-hover:scale-105"
+                    />
+                    <div
+                      onClick={() =>
+                        setAttachments((prev) =>
+                          prev.filter((_, idx) => idx !== i)
+                        )
+                      }
+                      className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 text-[10px] font-medium tracking-wide"
+                    >
+                      <X size={22} strokeWidth={2.5} className="opacity-80 mb-0.5" />
+                      REMOVE
+                    </div>
                   </div>
-                </div>
-              ))}
+               ))}
+              </div>
             </div>
           )}
 

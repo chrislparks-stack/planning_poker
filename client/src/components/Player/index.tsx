@@ -68,12 +68,23 @@ export function Player({
   const [menuTargetUser] = useState<User>(user);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const playerPos = playerPositionMap?.[user.id];
-  const tableCenterX = tableRect ? tableRect.left + tableRect.width / 2 : window.innerWidth / 2;
+  const tableCenterX = tableRect
+    ? tableRect.left + tableRect.width / 2
+    : window.innerWidth / 2;
+  const tableCenterY = tableRect
+    ? tableRect.top + tableRect.height / 2
+    : window.innerHeight / 2;
   const isLeftSide = playerPos
     ? tableRect
       ? tableRect.left + playerPos.x < tableCenterX
       : playerPos.x < window.innerWidth / 2
     : false;
+  const isTopSide = playerPos
+    ? tableRect
+      ? tableRect.top + playerPos.y < tableCenterY
+      : playerPos.y < window.innerHeight / 2
+    : false;
+
   const portalRootRef = useRef<Element | null>(
     typeof document !== "undefined" ? document.body : null
   );
@@ -436,6 +447,7 @@ export function Player({
               isOpen={showChatInput}
               className={`top-8 ${isLeftSide ? "right-[55px]" : "-right-[275px]"}`}
               isLeftSide={isLeftSide}
+              isTopSide={isTopSide}
             />
           )}
 
@@ -470,6 +482,7 @@ export function Player({
               isOpen={showChatInput}
               className={`top-8 ${isLeftSide ? "right-[55px]" : "-right-[275px]"}`}
               isLeftSide={isLeftSide}
+              isTopSide={isTopSide}
             />
           )}
         </div>

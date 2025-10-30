@@ -143,9 +143,9 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
             left: coords.x,
             top: coords.y,
             transform: "translate(0, -100%)",
-            maxWidth: "300px",
+            maxWidth: "180px",
             maxHeight: "150px",
-            overflowY: "auto",
+            overflow: "ellipsis",
             zIndex: 9999,
           }}
           dangerouslySetInnerHTML={{ __html: message }}
