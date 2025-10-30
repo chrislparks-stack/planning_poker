@@ -293,9 +293,31 @@ export function Player({
     }
   };
 
-  const handleSendChat = async (plain: string, formatted: string) => {
+  // --- Actions ---
+  const handleSendChat = async (
+    plain: string,
+    formatted: string
+  ) => {
     if (!currentUserId || !roomId) return;
     try {
+      const rect = cardRef.current?.getBoundingClientRect();
+      let position: { x: number; y: number; width: number; height: number };
+      if (rect) {
+        position = {
+          x: rect.left / window.innerWidth,
+          y: rect.top / window.innerHeight,
+          width: rect.width / window.innerWidth,
+          height: rect.height / window.innerHeight,
+        };
+      } else {
+        position = {
+          x: 0.5,
+          y: 0.5,
+          width: 0.5,
+          height: 0.5,
+        };
+      }
+
       await sendChatMessage({
         variables: {
           roomId,
@@ -304,6 +326,7 @@ export function Player({
           content: plain,
           formattedContent: formatted,
           contentType: "html",
+          position,
         },
       });
     } catch (err) {
@@ -406,10 +429,13 @@ export function Player({
           )}
           {isTargetSelf && (
             <ChatInputWrapper
-              onSend={(plain: string, formatted: string) => handleSendChat(plain, formatted)}
+              onSend={(plain, formatted) =>
+                handleSendChat(plain, formatted)
+              }
               onClose={() => setShowChatInput(false)}
               isOpen={showChatInput}
               className={`top-8 ${isLeftSide ? "right-[55px]" : "-right-[275px]"}`}
+              isLeftSide={isLeftSide}
             />
           )}
 
@@ -437,10 +463,13 @@ export function Player({
           )}
           {isTargetSelf && (
             <ChatInputWrapper
-              onSend={(plain: string, formatted: string) => handleSendChat(plain, formatted)}
+              onSend={(plain, formatted) =>
+                handleSendChat(plain, formatted)
+              }
               onClose={() => setShowChatInput(false)}
               isOpen={showChatInput}
               className={`top-8 ${isLeftSide ? "right-[55px]" : "-right-[275px]"}`}
+              isLeftSide={isLeftSide}
             />
           )}
         </div>

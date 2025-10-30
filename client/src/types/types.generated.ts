@@ -26,10 +26,26 @@ export type ChatMessage = {
   /** Optional formatted (HTML or Markdown) version of the message */
   formattedContent?: Maybe<Scalars['String']['output']>;
   id: Scalars['UUID']['output'];
+  position?: Maybe<ChatPosition>;
   roomId: Scalars['UUID']['output'];
   timestamp: Scalars['DateTime']['output'];
   userId: Scalars['UUID']['output'];
   username: Scalars['String']['output'];
+};
+
+export type ChatPosition = {
+  __typename?: 'ChatPosition';
+  height: Scalars['Float']['output'];
+  width: Scalars['Float']['output'];
+  x: Scalars['Float']['output'];
+  y: Scalars['Float']['output'];
+};
+
+export type ChatPositionInput = {
+  height: Scalars['Float']['input'];
+  width: Scalars['Float']['input'];
+  x: Scalars['Float']['input'];
+  y: Scalars['Float']['input'];
 };
 
 export type Deck = {
@@ -224,6 +240,7 @@ export type SendChatInput = {
   content: Scalars['String']['input'];
   contentType: Scalars['String']['input'];
   formattedContent?: InputMaybe<Scalars['String']['input']>;
+  position?: InputMaybe<ChatPositionInput>;
   roomId: Scalars['UUID']['input'];
   userId: Scalars['UUID']['input'];
   username: Scalars['String']['input'];

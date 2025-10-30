@@ -1,14 +1,22 @@
 import { FieldPolicy, FieldReadFunction, TypePolicies, TypePolicy } from '@apollo/client/cache';
-export type ChatMessageKeySpecifier = ('content' | 'contentType' | 'formattedContent' | 'id' | 'roomId' | 'timestamp' | 'userId' | 'username' | ChatMessageKeySpecifier)[];
+export type ChatMessageKeySpecifier = ('content' | 'contentType' | 'formattedContent' | 'id' | 'position' | 'roomId' | 'timestamp' | 'userId' | 'username' | ChatMessageKeySpecifier)[];
 export type ChatMessageFieldPolicy = {
 	content?: FieldPolicy<any> | FieldReadFunction<any>,
 	contentType?: FieldPolicy<any> | FieldReadFunction<any>,
 	formattedContent?: FieldPolicy<any> | FieldReadFunction<any>,
 	id?: FieldPolicy<any> | FieldReadFunction<any>,
+	position?: FieldPolicy<any> | FieldReadFunction<any>,
 	roomId?: FieldPolicy<any> | FieldReadFunction<any>,
 	timestamp?: FieldPolicy<any> | FieldReadFunction<any>,
 	userId?: FieldPolicy<any> | FieldReadFunction<any>,
 	username?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type ChatPositionKeySpecifier = ('height' | 'width' | 'x' | 'y' | ChatPositionKeySpecifier)[];
+export type ChatPositionFieldPolicy = {
+	height?: FieldPolicy<any> | FieldReadFunction<any>,
+	width?: FieldPolicy<any> | FieldReadFunction<any>,
+	x?: FieldPolicy<any> | FieldReadFunction<any>,
+	y?: FieldPolicy<any> | FieldReadFunction<any>
 };
 export type DeckKeySpecifier = ('cards' | 'id' | DeckKeySpecifier)[];
 export type DeckFieldPolicy = {
@@ -93,6 +101,10 @@ export type StrictTypedTypePolicies = {
 	ChatMessage?: Omit<TypePolicy, "fields" | "keyFields"> & {
 		keyFields?: false | ChatMessageKeySpecifier | (() => undefined | ChatMessageKeySpecifier),
 		fields?: ChatMessageFieldPolicy,
+	},
+	ChatPosition?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | ChatPositionKeySpecifier | (() => undefined | ChatPositionKeySpecifier),
+		fields?: ChatPositionFieldPolicy,
 	},
 	Deck?: Omit<TypePolicy, "fields" | "keyFields"> & {
 		keyFields?: false | DeckKeySpecifier | (() => undefined | DeckKeySpecifier),

@@ -17,16 +17,23 @@ import { HexColorPicker } from "react-colorful";
 import {OverlayPortal} from "@/utils/overlayPortal.tsx";
 
 interface ChatInputProps {
-  onSend: (plain: string, formatted: string) => void;
+  onSend: (
+    plain: string,
+    formatted: string,
+    position?: { x: number; y: number; width: number; height: number } | null
+  ) => void;
   onClose?: () => void;
   className?: string;
+  isLeftSide?: boolean;
 }
 
+
 export const ChatInput: React.FC<ChatInputProps> = ({
-                                                      onSend,
-                                                      onClose,
-                                                      className,
-                                                    }) => {
+  onSend,
+  onClose,
+  className,
+  isLeftSide = false,
+}) => {
   const [showPalette, setShowPalette] = useState(false);
   const [showCustomPicker, setShowCustomPicker] = useState(false);
   const [customColor, setCustomColor] = useState("#7C3AED");
@@ -52,26 +59,40 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       : null;
 
   const colors = [
-    { color: "#000000", name: "Black" },
-    { color: "#FFFFFF", name: "White" },
-    { color: "#7C3AED", name: "Electric Lilac" },
-    { color: "#0EA5E9", name: "Arctic Aqua" },
-    { color: "#059669", name: "Verdant Emerald" },
-    { color: "#E11D48", name: "Crimson Rose" },
-    { color: "#F59E0B", name: "Solar Amber" },
+    { color: "auto",     name: "Auto" },
+    { color: "#000000",  name: "Black" },
+    { color: "#FFFFFF",  name: "White" },
+    { color: "#7C3AED",  name: "Electric Lilac" },
+    { color: "#0EA5E9",  name: "Arctic Aqua" },
+    { color: "#059669",  name: "Verdant Emerald" },
+    { color: "#E11D48",  name: "Crimson Rose" },
+    { color: "#F59E0B",  name: "Solar Amber" },
   ];
 
   useEffect(() => {
-    const editor = editorRef.current;
-    if (editor) {
+    let attempts = 0;
+    const tryFocus = () => {
+      const editor = editorRef.current;
+      if (!editor) return;
+
       editor.focus();
-      const range = document.createRange();
-      range.selectNodeContents(editor);
-      range.collapse(false);
       const sel = window.getSelection();
-      sel?.removeAllRanges();
-      sel?.addRange(range);
-    }
+      if (sel && sel.rangeCount === 0) {
+        const range = document.createRange();
+        range.selectNodeContents(editor);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+
+      // Sometimes portals need multiple ticks before becoming interactable.
+      if (document.activeElement !== editor && attempts < 10) {
+        attempts++;
+        setTimeout(tryFocus, 30);
+      }
+    };
+
+    requestAnimationFrame(tryFocus);
   }, []);
 
   const handleSend = () => {
@@ -81,9 +102,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     const hasText = editor.innerText.trim().length > 0;
     const formatted = editor.innerHTML.trim();
 
-    // Build full message HTML
+    // Build full message HTML (unchanged)
     let messageHtml = formatted;
-
     if (attachments.length > 0) {
       const imgHtml = attachments
         .map(
@@ -94,13 +114,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       messageHtml += imgHtml;
     }
 
-    // If no content, do nothing
     if (!hasText && attachments.length === 0) return;
 
-    // Send both a plain-text fallback and rich HTML
     onSend(editor.innerText.trim(), messageHtml);
 
-    // Reset editor
     editor.innerHTML = "";
     setAttachments([]);
     setIsEmpty(true);
@@ -112,15 +129,24 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     if (!editor) return;
     if (document.activeElement !== editor) editor.focus();
     document.execCommand(cmd, false, value);
+
+    // Update active button states after DOM updates
     updateActiveStates();
+    setTimeout(updateActiveStates, 10);
   };
 
   const applyColor = (color: string) => {
     const editor = editorRef.current;
     if (!editor) return;
     if (document.activeElement !== editor) editor.focus();
+
+    // use CSS spans so we set style="color: ..."
     document.execCommand("styleWithCSS", false, "true");
-    document.execCommand("foreColor", false, color);
+
+    // "auto" -> theme text color
+    const resolved = color === "auto" ? "currentColor" : color;
+    document.execCommand("foreColor", false, resolved);
+
     setShowPalette(false);
     setShowCustomPicker(false);
     editor.focus();
@@ -152,18 +178,64 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   }, [onClose]);
 
   useEffect(() => {
+    const handler = () => updateActiveStates();
+    document.addEventListener("mouseup", handler, true);
+    document.addEventListener("keyup", handler, true);
+    return () => {
+      document.removeEventListener("mouseup", handler, true);
+      document.removeEventListener("keyup", handler, true);
+    };
+  }, []);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        if (e.shiftKey) return; // Shift+Enter → newline
+        e.preventDefault(); // Stop normal behavior
+        handleSend(); // Send the message
+      }
+    };
+
+    const handleBeforeInput = (e: InputEvent) => {
+      const hasShift =
+        (e as any).shiftKey ||
+        (typeof (e as any).getModifierState === "function" &&
+          (e as any).getModifierState("Shift"));
+
+      if (e.inputType === "insertParagraph" && !hasShift) {
+        e.preventDefault();
+      }
+    };
+
+    editor.addEventListener("keydown", handleKeyDown);
+    editor.addEventListener("beforeinput", handleBeforeInput);
+
+    return () => {
+      editor.removeEventListener("keydown", handleKeyDown);
+      editor.removeEventListener("beforeinput", handleBeforeInput);
+    };
+  }, [handleSend]);
+
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey) {
         const key = e.key.toLowerCase();
-        if (key === "b") {
+        if (key === "b" || key === "i" || key === "u") {
           e.preventDefault();
-          applyCommand("bold");
-        } else if (key === "i") {
-          e.preventDefault();
-          applyCommand("italic");
-        } else if (key === "u") {
-          e.preventDefault();
-          applyCommand("underline");
+          const cmd =
+            key === "b"
+              ? "bold"
+              : key === "i"
+                ? "italic"
+                : "underline";
+          applyCommand(cmd);
+          requestAnimationFrame(() => {
+            updateActiveStates();
+            setTimeout(updateActiveStates, 0);
+          });
         }
       } else if (e.key === "Enter") {
         e.preventDefault();
@@ -172,14 +244,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         onClose?.();
       }
     };
+
     const editor = editorRef.current;
     editor?.addEventListener("keydown", onKey);
-    editor?.addEventListener("keyup", updateActiveStates);
-    editor?.addEventListener("mouseup", updateActiveStates);
+    document.addEventListener("selectionchange", updateActiveStates);
+
     return () => {
       editor?.removeEventListener("keydown", onKey);
-      editor?.removeEventListener("keyup", updateActiveStates);
-      editor?.removeEventListener("mouseup", updateActiveStates);
+      document.removeEventListener("selectionchange", updateActiveStates);
     };
   }, []);
 
@@ -258,10 +330,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     if (showGifPicker) fetchGifs();
   }, [showGifPicker]);
 
-  // --- FIX: increase stacking context for all overlays ---
   const customPicker = showCustomPicker ? (
     <div
-      className="absolute -top-[65px] left-[262px] bg-popover border border-border rounded-xl shadow-xl p-3 w-[120px]"
+      className={cn(
+        "absolute -top-[65px] bg-popover border border-border rounded-xl shadow-xl p-3 w-[120px]",
+        isLeftSide ? "right-[262px]" : "left-[262px]"
+      )}
       onClick={(e) => e.stopPropagation()}
     >
       <section className="small">
@@ -401,22 +475,45 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           )}
           onClick={(e) => e.stopPropagation()}
         >
+          {/* Custom swatch FIRST when left side */}
+          {isLeftSide && (
+            <button
+              onClick={() => setShowCustomPicker((v) => !v)}
+              className="relative w-5 h-5 rounded-full border border-border flex items-center justify-center hover:scale-110 transition-transform bg-gradient-to-r from-accent/40 to-background"
+              title="Custom color"
+              aria-label="Custom color"
+            >
+              <Droplet size={13} className="text-accent" />
+            </button>
+          )}
+
           {colors.map(({ color, name }) => (
             <button
               key={color}
-              className="w-5 h-5 rounded-full border border-border hover:scale-110 hover:shadow-md transition-transform"
-              style={{ backgroundColor: color }}
+              className="w-5 h-5 rounded-full border border-border hover:scale-110 hover:shadow-md transition-transform grid place-items-center"
+              style={color === "auto" ? undefined : { backgroundColor: color }}
               title={name}
+              aria-label={name}
               onClick={() => applyColor(color)}
-            />
+            >
+              {color === "auto" && (
+                <span className="text-[10px] font-semibold leading-none text-foreground">A</span>
+              )}
+            </button>
           ))}
-          <button
-            onClick={() => setShowCustomPicker((v) => !v)}
-            className="relative w-5 h-5 rounded-full border border-border flex items-center justify-center hover:scale-110 transition-transform bg-gradient-to-r from-accent/40 to-background"
-            title="Custom color"
-          >
-            <Droplet size={13} className="text-accent" />
-          </button>
+
+          {/* Custom swatch LAST when right side */}
+          {!isLeftSide && (
+            <button
+              onClick={() => setShowCustomPicker((v) => !v)}
+              className="relative w-5 h-5 rounded-full border border-border flex items-center justify-center hover:scale-110 transition-transform bg-gradient-to-r from-accent/40 to-background"
+              title="Custom color"
+              aria-label="Custom color"
+            >
+              <Droplet size={13} className="text-accent" />
+            </button>
+          )}
+
           {customPicker}
         </div>
 

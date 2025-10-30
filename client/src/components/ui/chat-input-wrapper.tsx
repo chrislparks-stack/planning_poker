@@ -1,53 +1,87 @@
-// @ts-ignore
-import React, { useEffect, useState } from "react";
+// @ts-expect-error TS6133: React is declared but its value is never read.
+import React, { useEffect, useRef, useState } from "react";
 import { ChatInput } from "@/components/ui/chat-input";
+import { cn } from "@/lib/utils";
+
+type Phase = "idle" | "enter-pre" | "enter" | "exit";
 
 export const ChatInputWrapper = ({
-   onSend,
-   onClose,
-   className,
-   isOpen,
- }: {
-  onSend: (plain: string, formatted: string) => void;
+  onSend,
+  onClose,
+  className,
+  isOpen,
+  isLeftSide = false,
+}: {
+  onSend: (plain: string, formatted: string, position?: { x: number; y: number; width: number; height: number } | null) => void;
   onClose: () => void;
   className?: string;
   isOpen: boolean;
+  isLeftSide?: boolean;
 }) => {
   const [shouldRender, setShouldRender] = useState(isOpen);
-  const [animClass, setAnimClass] = useState("");
+  const [phase, setPhase] = useState<Phase>("idle");
+  const skipExitRef = useRef(false); // mark “immediate close” (from send)
 
   useEffect(() => {
     if (isOpen) {
-      // keep it hidden for the first frame
       setShouldRender(true);
-      setAnimClass("opacity-0 translate-y-[-8px]");
-      const timer = setTimeout(() => {
-        setAnimClass("animate-fade-slide-down");
-      }, 20); // small delay lets the browser paint the hidden state first
-      return () => clearTimeout(timer);
+      setPhase("enter-pre");
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setPhase("enter"));
+      });
     } else {
-      setAnimClass("animate-fade-slide-up");
-      const timeout = setTimeout(() => setShouldRender(false), 400);
-      return () => clearTimeout(timeout);
+      setPhase("exit");
     }
   }, [isOpen]);
 
-  const handleInternalClose = () => {
-    setAnimClass("animate-fade-slide-up");
-    setTimeout(() => {
-      onClose();
+  const handleAnimEnd = () => {
+    if (phase === "exit") {
       setShouldRender(false);
-    }, 400);
+      setPhase("idle");
+      onClose();
+    } else if (phase === "enter") {
+      setPhase("idle");
+    }
+  };
+
+  // --- CLOSE BECAUSE OF SEND: skip exit animation entirely ---
+  const handleSend = (
+    plain: string,
+    formatted: string,
+    position?: { x: number; y: number; width: number; height: number } | null
+  ) => {
+    skipExitRef.current = true;
+    onSend(plain, formatted, position); // forward to parent
+    setShouldRender(false);             // unmount immediately (no exit)
+    setPhase("idle");
+    onClose();                          // notify parent state
+  };
+
+  // --- DISMISS/ESC/OUTSIDE: animate out ---
+  const handleChildClose = () => {
+    if (skipExitRef.current) {
+      skipExitRef.current = false;
+      return;
+    }
+    setPhase("exit");
   };
 
   if (!shouldRender) return null;
 
+  const animClasses = cn(
+    phase === "enter-pre" && "opacity-0 -translate-y-2",
+    phase === "enter"     && "animate-fade-slide-down [animation-fill-mode:forwards]",
+    phase === "exit"      && "animate-fade-slide-up   [animation-fill-mode:forwards]"
+  );
+
   return (
-    <div
-      className={`absolute ${className} z-50 transition-all duration-400 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; ${animClass}`}
-      style={{ opacity: 0, transform: "translateY(-8px)", animationFillMode: "forwards" }}
-    >
-      <ChatInput onSend={onSend} onClose={handleInternalClose} />
+    <div className={cn("absolute z-50", className)} onAnimationEnd={handleAnimEnd}>
+      <ChatInput
+        onSend={handleSend}
+        onClose={handleChildClose}
+        className={animClasses}
+        isLeftSide={isLeftSide}
+      />
     </div>
   );
 };

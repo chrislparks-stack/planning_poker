@@ -22,6 +22,13 @@ fragment GameFragment on Game {
     }
 }
 
+fragment ChatPositionFragment on ChatPosition {
+    x
+    y
+    width
+    height
+}
+
 fragment ChatMessageFragment on ChatMessage {
     id
     roomId
@@ -31,6 +38,9 @@ fragment ChatMessageFragment on ChatMessage {
     formattedContent
     contentType
     timestamp
+    position {
+        ...ChatPositionFragment
+    }
 }
 
 fragment RoomFragment on Room {
@@ -178,6 +188,7 @@ mutation SendChatMessage(
     $content: String!
     $formattedContent: String
     $contentType: String!
+    $position: ChatPositionInput
 ) {
     sendChatMessage(
         input: {
@@ -187,6 +198,7 @@ mutation SendChatMessage(
             content: $content
             formattedContent: $formattedContent
             contentType: $contentType
+            position: $position
         }
     ) {
         ...ChatMessageFragment
@@ -199,7 +211,7 @@ subscription RoomChat($roomId: UUID!) {
     }
 }
 
-# === Existing Subscriptions & Queries ===
+# === Subscriptions & Queries ===
 
 subscription Room($roomId: UUID!) {
     room(roomId: $roomId) {

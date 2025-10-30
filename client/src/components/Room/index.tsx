@@ -16,6 +16,8 @@ interface RoomProps {
 export interface Position {
   x: number;
   y: number;
+  width?: number;
+  height?: number;
 }
 
 export function Room({ room }: RoomProps) {
@@ -24,6 +26,9 @@ export function Room({ room }: RoomProps) {
   const [tableRect, setTableRect] = useState<DOMRect | null>(null);
   const [setRoomOwner] = useSetRoomOwnerMutation();
   const [lastChats, setLastChats] = useState<Record<string, string | null>>({});
+  const [chatPositionMap, setChatPositionMap] = useState<
+    Record<string, Position | null>
+  >({});
 
   // --- Chat Subscription ------------------------------------------------------
   useRoomChatSubscription({
@@ -32,13 +37,34 @@ export function Room({ room }: RoomProps) {
     onData: ({ data }) => {
       const msg = data?.data?.roomChat;
       if (!msg) return;
-      const { userId, formattedContent, content } = msg;
+
+      const {
+        userId,
+        formattedContent,
+        content,
+        position,
+      } = msg as any;
+
       const message = formattedContent || content;
+
       setLastChats((prev) => ({ ...prev, [userId]: message }));
+
+      if (position && typeof position === "object") {
+        const { x, y, width, height } = position;
+        const scaled = {
+          x: x * window.innerWidth,
+          y: y * window.innerHeight,
+          width: width * window.innerWidth,
+          height: height * window.innerHeight,
+        };
+        setChatPositionMap(prev => ({ ...prev, [userId]: scaled }));
+        return;
+      }
+
+      setChatPositionMap((prev) => ({ ...prev, [userId]: null }));
     },
   });
 
-  // --- Track Table Rect -------------------------------------------------------
   useEffect(() => {
     const updateTableRect = () => {
       if (tableRef.current)
@@ -49,7 +75,6 @@ export function Room({ room }: RoomProps) {
     return () => window.removeEventListener("resize", updateTableRect);
   }, []);
 
-  // --- Player Positioning -----------------------------------------------------
   const playerPositions = useMemo(() => {
     if (!tableRect || !room) return [];
     const totalPlayers = room.users.length;
@@ -159,7 +184,6 @@ export function Room({ room }: RoomProps) {
     return positions;
   }, [tableRect, room]);
 
-  // --- Map Players to Positions -----------------------------------------------
   const playerPositionMap = useMemo(() => {
     if (!room || playerPositions.length === 0) return {};
     const map: Record<string, { x: number; y: number }> = {};
@@ -170,7 +194,6 @@ export function Room({ room }: RoomProps) {
     return map;
   }, [room, playerPositions]);
 
-  // --- Early Exit -------------------------------------------------------------
   if (!room) {
     return (
       <div className="flex items-center justify-center w-full h-[calc(100vh-120px)]">
@@ -179,12 +202,10 @@ export function Room({ room }: RoomProps) {
     );
   }
 
-  // --- Promote Helper ---------------------------------------------------------
   function handlePromote(userId: string) {
     setRoomOwner({ variables: { roomId: room?.id || "", userId } });
   }
 
-  // --- Render -----------------------------------------------------------------
   return (
     <div
       className="relative flex flex-col items-center justify-center w-full min-h-[450px]"
@@ -213,7 +234,9 @@ export function Room({ room }: RoomProps) {
           return (
             <div
               key={user.id}
-              ref={(el) => (playerRefs.current[user.id] = el)}
+              ref={(el) => {
+                playerRefs.current[user.id] = el;
+              }}
               data-player-id={user.id}
               className="absolute transform -translate-x-1/2 -translate-y-1/2"
               style={{
@@ -236,20 +259,22 @@ export function Room({ room }: RoomProps) {
           );
         })}
 
-        {Object.entries(lastChats).map(([senderId, message]) =>
-          message ? (
+        {/* Chat Bubbles */}
+        {Object.entries(lastChats).map(([senderId, message]) => {
+          if (!message) return null;
+          const pos = chatPositionMap[senderId];
+          return (
             <ChatBubble
               key={senderId + message}
               message={message}
               playerId={senderId}
-              playerRef={playerRefs.current[senderId]}
-              tableRect={tableRect}
+              absolutePosition={pos ?? undefined}
               onExpire={(pid) =>
                 setLastChats((prev) => ({ ...prev, [pid]: null }))
               }
             />
-          ) : null
-        )}
+          );
+        })}
       </div>
     </div>
   );

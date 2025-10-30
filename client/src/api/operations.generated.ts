@@ -11,7 +11,9 @@ export type UserCardFragmentFragment = { __typename?: 'UserCard', userId: string
 
 export type GameFragmentFragment = { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> };
 
-export type ChatMessageFragmentFragment = { __typename?: 'ChatMessage', id: string, roomId: string, userId: string, username: string, content: string, formattedContent?: string | null, contentType: string, timestamp: string };
+export type ChatPositionFragmentFragment = { __typename?: 'ChatPosition', x: number, y: number, width: number, height: number };
+
+export type ChatMessageFragmentFragment = { __typename?: 'ChatMessage', id: string, roomId: string, userId: string, username: string, content: string, formattedContent?: string | null, contentType: string, timestamp: string, position?: { __typename?: 'ChatPosition', x: number, y: number, width: number, height: number } | null };
 
 export type RoomFragmentFragment = { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } };
 
@@ -167,17 +169,18 @@ export type SendChatMessageMutationVariables = Types.Exact<{
   content: Types.Scalars['String']['input'];
   formattedContent?: Types.InputMaybe<Types.Scalars['String']['input']>;
   contentType: Types.Scalars['String']['input'];
+  position?: Types.InputMaybe<Types.ChatPositionInput>;
 }>;
 
 
-export type SendChatMessageMutation = { __typename?: 'MutationRoot', sendChatMessage: { __typename?: 'ChatMessage', id: string, roomId: string, userId: string, username: string, content: string, formattedContent?: string | null, contentType: string, timestamp: string } };
+export type SendChatMessageMutation = { __typename?: 'MutationRoot', sendChatMessage: { __typename?: 'ChatMessage', id: string, roomId: string, userId: string, username: string, content: string, formattedContent?: string | null, contentType: string, timestamp: string, position?: { __typename?: 'ChatPosition', x: number, y: number, width: number, height: number } | null } };
 
 export type RoomChatSubscriptionVariables = Types.Exact<{
   roomId: Types.Scalars['UUID']['input'];
 }>;
 
 
-export type RoomChatSubscription = { __typename?: 'SubscriptionRoot', roomChat: { __typename?: 'ChatMessage', id: string, roomId: string, userId: string, username: string, content: string, formattedContent?: string | null, contentType: string, timestamp: string } };
+export type RoomChatSubscription = { __typename?: 'SubscriptionRoot', roomChat: { __typename?: 'ChatMessage', id: string, roomId: string, userId: string, username: string, content: string, formattedContent?: string | null, contentType: string, timestamp: string, position?: { __typename?: 'ChatPosition', x: number, y: number, width: number, height: number } | null } };
 
 export type RoomSubscriptionVariables = Types.Exact<{
   roomId: Types.Scalars['UUID']['input'];
@@ -200,6 +203,14 @@ export type GetRoomQueryVariables = Types.Exact<{
 
 export type GetRoomQuery = { __typename?: 'QueryRoot', roomById?: { __typename?: 'Room', id: string, name?: string | null, isGameOver: boolean, roomOwnerId?: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage?: string | null, countdownValue?: number | null, confirmNewGame: boolean, users: Array<{ __typename?: 'User', id: string, username: string, lastCardPicked?: string | null, lastCardValue?: number | null }>, deck: { __typename?: 'Deck', id: string, cards: Array<string> }, game: { __typename?: 'Game', id: string, table: Array<{ __typename?: 'UserCard', userId: string, card?: string | null }> } } | null };
 
+export const ChatPositionFragmentFragmentDoc = gql`
+    fragment ChatPositionFragment on ChatPosition {
+  x
+  y
+  width
+  height
+}
+    `;
 export const ChatMessageFragmentFragmentDoc = gql`
     fragment ChatMessageFragment on ChatMessage {
   id
@@ -210,8 +221,11 @@ export const ChatMessageFragmentFragmentDoc = gql`
   formattedContent
   contentType
   timestamp
+  position {
+    ...ChatPositionFragment
+  }
 }
-    `;
+    ${ChatPositionFragmentFragmentDoc}`;
 export const UserFragmentFragmentDoc = gql`
     fragment UserFragment on User {
   id
@@ -884,9 +898,9 @@ export type ToggleConfirmNewGameMutationHookResult = ReturnType<typeof useToggle
 export type ToggleConfirmNewGameMutationResult = Apollo.MutationResult<ToggleConfirmNewGameMutation>;
 export type ToggleConfirmNewGameMutationOptions = Apollo.BaseMutationOptions<ToggleConfirmNewGameMutation, ToggleConfirmNewGameMutationVariables>;
 export const SendChatMessageDocument = gql`
-    mutation SendChatMessage($roomId: UUID!, $userId: UUID!, $username: String!, $content: String!, $formattedContent: String, $contentType: String!) {
+    mutation SendChatMessage($roomId: UUID!, $userId: UUID!, $username: String!, $content: String!, $formattedContent: String, $contentType: String!, $position: ChatPositionInput) {
   sendChatMessage(
-    input: {roomId: $roomId, userId: $userId, username: $username, content: $content, formattedContent: $formattedContent, contentType: $contentType}
+    input: {roomId: $roomId, userId: $userId, username: $username, content: $content, formattedContent: $formattedContent, contentType: $contentType, position: $position}
   ) {
     ...ChatMessageFragment
   }
@@ -913,6 +927,7 @@ export type SendChatMessageMutationFn = Apollo.MutationFunction<SendChatMessageM
  *      content: // value for 'content'
  *      formattedContent: // value for 'formattedContent'
  *      contentType: // value for 'contentType'
+ *      position: // value for 'position'
  *   },
  * });
  */
