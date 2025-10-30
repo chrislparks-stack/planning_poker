@@ -19,9 +19,10 @@ import SummitIcon from "@/assets/SummitIcon.png";
 interface HeaderProps {
   room?: Room;
   users?: User[];
+  onMenuOpenChange?: (open: boolean) => void;
 }
 
-export const Header: FC<HeaderProps> = ({ room, users }) => {
+export const Header: FC<HeaderProps> = ({ room, users, onMenuOpenChange }) => {
   const { user } = useAuth();
   const { copyRoomUrlToClipboard } = useCopyRoomUrlToClipboard();
 
@@ -30,6 +31,10 @@ export const Header: FC<HeaderProps> = ({ room, users }) => {
       await copyRoomUrlToClipboard(room.id);
     }
   };
+
+  function handleOpenChange(open: boolean) {
+    onMenuOpenChange?.(open);
+  }
 
   return (
     <header className="flex justify-between items-center h-14 px-4 border-b">
@@ -99,7 +104,7 @@ export const Header: FC<HeaderProps> = ({ room, users }) => {
               <Separator orientation="vertical" className="h-6" />
             </div>
           )}
-          <AccountMenu room={room} />
+          <AccountMenu room={room} onOpenChange={handleOpenChange} />
         </div>
       )}
     </header>
