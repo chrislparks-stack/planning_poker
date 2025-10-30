@@ -44,23 +44,28 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({ onClick, men
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            // Make the whole gradient clickable
+            transition={{ duration: 0.4, ease: "easeInOut" }}
             onClick={onClick}
             className="absolute right-0 bottom-0 w-[160px] z-40 cursor-pointer"
             style={{
               top: HEADER_HEIGHT,
-              background:
-                "linear-gradient(to left, rgba(180,180,180,0.08), transparent)",
+              background: `
+                linear-gradient(
+                  to left,
+                  hsl(var(--accent) / 0.08),
+                  hsl(var(--accent) / 0.05),
+                  transparent
+                )
+              `,
             }}
           >
-            {/* Inner vertical text stays centered inside the gradient */}
+          {/* Inner vertical text stays centered inside the gradient */}
             <motion.div
               key="chat-text"
               initial={{ opacity: 0, x: 60 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 60 }}
-              transition={{ type: "spring", stiffness: 240, damping: 18 }}
+              transition={{ type: "spring", stiffness: 100, damping: 18 }}
               className="absolute top-[45%] right-3 z-50 -translate-y-1/2 select-none will-change-transform group"
               style={{
                 display: "flex",
