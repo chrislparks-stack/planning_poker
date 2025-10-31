@@ -62,6 +62,7 @@ fragment RoomFragment on Room {
     revealStage
     countdownValue
     confirmNewGame
+    chatHistory { ...ChatMessageFragment }
 }
 
 fragment RoomEventFragment on RoomEvent {

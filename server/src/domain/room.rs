@@ -25,13 +25,13 @@ pub struct Room {
     pub reveal_stage: Option<String>,
     pub countdown_value: Option<i32>,
     pub confirm_new_game: bool,
+    pub chat_history: Vec<crate::domain::chat::ChatMessage>,
 
     #[graphql(skip)]
     pub last_active: DateTime<Utc>,
 
     #[graphql(skip)]
-    pub last_active_instant: Instant,
-    pub chat_history: Vec<crate::domain::chat::ChatMessage>
+    pub last_active_instant: Instant
 }
 
 impl Room {

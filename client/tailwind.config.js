@@ -119,6 +119,18 @@ module.exports = {
 				"fade-slide-up": {
 					"0%": { opacity: "1", transform: "translateY(0)" },
 					"100%": { opacity: "0", transform: "translateY(-8px)" }
+				},
+				sheen: {
+					"0%": { transform: "translateX(-100%)" },
+					"100%": { transform: "translateX(100%)" }
+				},
+				"mask-fade-y": {
+					"0%": {
+						"-webkit-mask-image":
+							"linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)",
+						maskImage:
+							"linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)",
+					}
 				}
 			},
 			animation: {
@@ -126,9 +138,23 @@ module.exports = {
 				"accordion-up": "accordion-up 0.7s ease-out",
 				"color-cycle": "color-cycle 3s linear infinite",
 				"fade-slide-down": "fade-slide-down 0.4s ease-out",
-				"fade-slide-up": "fade-slide-up 0.4s ease-in forwards"
+				"fade-slide-up": "fade-slide-up 0.4s ease-in forwards",
+				sheen: "sheen 6s linear infinite",
+				"mask-fade-y": "mask-fade-y 1s ease forwards"
 			}
 		}
 	},
-	plugins: [require("tailwindcss-animate")]
+	plugins: [
+		require("tailwindcss-animate"),
+		function ({ addUtilities }) {
+			addUtilities({
+				".mask-fade-y": {
+					"-webkit-mask-image":
+						"linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)",
+					"mask-image":
+						"linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)",
+				},
+			});
+		},
+	]
 };

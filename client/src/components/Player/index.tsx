@@ -20,6 +20,7 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import {useTheme} from "@/components";
 import {Ban, Crown, DoorOpen, MessageSquareText} from "lucide-react";
 import {ChatInputWrapper} from "@/components/ui/chat-input-wrapper.tsx";
+import {useCardPosition} from "@/utils/cardPositionContext.tsx";
 
 interface PlayerProps {
   user: User;
@@ -46,7 +47,10 @@ export function Player({
 }: PlayerProps) {
   const { toast } = useToast();
   const { theme } = useTheme();
+
+  const { registerCardRef } = useCardPosition();
   const cardRef = useRef<HTMLDivElement>(null);
+
   const systemPrefersDark = typeof window !== "undefined" && window.matchMedia ?
     window.matchMedia("(prefers-color-scheme: dark)").matches : false;
 
@@ -305,6 +309,10 @@ export function Player({
   };
 
   // --- Actions ---
+  useEffect(() => {
+    registerCardRef(user.id, cardRef);
+  }, [user.id, registerCardRef, cardRef]);
+
   const handleSendChat = async (
     plain: string,
     formatted: string

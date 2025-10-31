@@ -45,19 +45,18 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({ onClick, men
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
-            // Keep gradient visual full-width, but restrict clickable area
             className="absolute right-0 bottom-0 w-[160px] z-40"
             style={{
               top: HEADER_HEIGHT,
               background: `
-      linear-gradient(
-        to left,
-        hsl(var(--accent) / 0.08),
-        hsl(var(--accent) / 0.05),
-        transparent
-      )
-    `,
-              pointerEvents: "none", // gradient visuals only, not clickable
+                linear-gradient(
+                  to left,
+                  hsl(var(--accent) / 0.08),
+                  hsl(var(--accent) / 0.05),
+                  transparent
+                )
+              `,
+              pointerEvents: "none",
             }}
           >
             {/* Clickable inner layer — inset a bit from the right to avoid scrollbar overlap */}
@@ -81,7 +80,7 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({ onClick, men
                   writingMode: "vertical-rl",
                   textOrientation: "mixed",
                   transformOrigin: "center right",
-                  pointerEvents: "none", // text itself doesn’t block clicks
+                  pointerEvents: "none",
                 }}
               >
                 <div
