@@ -35,6 +35,12 @@ export function RoomPage() {
   const [openCreateUserDialog, setOpenCreateUserDialog] = useState(false);
   const [openRoomOptionsDialog, setOpenRoomOptionsDialog] = useState(false);
 
+  const [chatVisible, setChatVisible] = useState(false);
+
+  const handleShowInChat = () => {
+    setChatVisible(true);
+  };
+
   const { data: subscriptionData, error: roomSubscriptionError } =
     useRoomSubscription({
       variables: { roomId }
@@ -412,7 +418,12 @@ export function RoomPage() {
         </div>
       ) : (
         <>
-          <PageLayout room={room} users={room.users}>
+          <PageLayout
+            room={room}
+            users={room.users}
+            showChat={chatVisible}
+            setShowChat={() => setChatVisible(true)}
+          >
             <div className="relative h-[calc(100vh-80px)] overflow-hidden">
               {/* Scrollable Room container */}
               <div
@@ -422,7 +433,7 @@ export function RoomPage() {
                     paddingBottom: "1rem",
                   }}
               >
-                <Room room={room} />
+                <Room room={room} onShowInChat={handleShowInChat}/>
               </div>
 
 

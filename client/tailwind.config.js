@@ -131,6 +131,11 @@ module.exports = {
 						maskImage:
 							"linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)",
 					}
+				},
+				gradientFlow: {
+					"0%": { backgroundPosition: "0% 50%" },
+					"50%": { backgroundPosition: "100% 50%" },
+					"100%": { backgroundPosition: "0% 50%" },
 				}
 			},
 			animation: {
@@ -140,7 +145,8 @@ module.exports = {
 				"fade-slide-down": "fade-slide-down 0.4s ease-out",
 				"fade-slide-up": "fade-slide-up 0.4s ease-in forwards",
 				sheen: "sheen 6s linear infinite",
-				"mask-fade-y": "mask-fade-y 1s ease forwards"
+				"mask-fade-y": "mask-fade-y 1s ease forwards",
+				"gradient-flow": "gradientFlow 6s ease infinite"
 			}
 		}
 	},

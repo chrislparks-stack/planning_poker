@@ -1,4 +1,4 @@
-import {RefObject, useRef, useState} from "react";
+import {RefObject, useEffect, useRef, useState} from "react";
 import { Header } from "@/components/Header";
 import { ChatRevealPrompt } from "@/components/ui/chat-reveal";
 import { Room, User } from "@/types";
@@ -6,19 +6,26 @@ import {ChatPanel} from "@/components/ui/chat-panel.tsx";
 import {CardPositionProvider} from "@/utils/cardPositionContext.tsx";
 
 
-export function PageLayout({ children, room, users }: {
+export function PageLayout({ children, room, users, showChat }: {
   children: React.ReactNode;
   room?: Room;
   users?: User[];
+  showChat?: boolean;
+  setShowChat?: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [chatVisible, setChatVisible] = useState(false);
 
+  useEffect(() => {
+    if (showChat) {
+      setChatVisible(true);
+    }
+  }, [showChat])
   // this ref map will be filled by the room view
   const cardRefs = useRef<Record<string, RefObject<HTMLDivElement>>>({});
 
   return (
-    <CardPositionProvider cardRefs={cardRefs.current}>
+    <CardPositionProvider cardRefs={cardRefs}>
       <Header room={room} users={users} onMenuOpenChange={setMenuOpen} />
       <ChatRevealPrompt onClick={() => setChatVisible(true)} menuOpen={menuOpen} />
 

@@ -58,7 +58,7 @@ fn spawn_room_cleanup_task(
 
             {
                 debug!("cleanup: acquiring storage lock for snapshot");
-                let guard = storage.lock().await;
+                let mut guard = storage.lock().await;
                 total_seen = guard.len();
                 rooms_current.set(total_seen as i64);
                 rooms_scanned.inc_by(total_seen as u64);
@@ -67,7 +67,12 @@ fn spawn_room_cleanup_task(
                 const PER_USER_BYTES: usize = 180;
                 const PER_DECK_CARD_BYTES: usize = 16;
 
-                for (id, room) in guard.iter() {
+                for (id, room) in guard.iter_mut() {
+                    let removed = room.prune_chat_history(chrono::Duration::hours(48));
+                    if removed > 0 {
+                        info!("Pruned {} old chat messages from room {}", removed, id);
+                    }
+
                     let est = BASE_PER_ROOM
                         + room.users.len().saturating_mul(PER_USER_BYTES)
                         + room.deck.cards.len().saturating_mul(PER_DECK_CARD_BYTES);
@@ -84,7 +89,7 @@ fn spawn_room_cleanup_task(
                 } else {
                     0
                 });
-            } // guard drops here
+            }
 
             if stale_ids.is_empty() {
                 info!("Room cleanup: no inactive rooms to clean up this tick ({} rooms total).", total_seen);

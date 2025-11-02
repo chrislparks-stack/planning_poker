@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, {useState, useRef, useEffect, startTransition} from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import {
@@ -15,6 +15,7 @@ import {
 import tenorLogo from "@/assets/PB_tenor_logo_grey_vertical.svg";
 import { HexColorPicker } from "react-colorful";
 import { OverlayPortal } from "@/utils/overlayPortal.tsx";
+import { motion } from "framer-motion";
 
 interface ChatInputProps {
   onSend: (
@@ -31,13 +32,13 @@ interface ChatInputProps {
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
-                                                      onSend,
-                                                      onClose,
-                                                      className,
-                                                      isLeftSide = false,
-                                                      isTopSide = true,
-                                                      inPanel = false,
-                                                    }) => {
+  onSend,
+  onClose,
+  className,
+  isLeftSide = false,
+  isTopSide = true,
+  inPanel = false,
+}) => {
   const [showPalette, setShowPalette] = useState(false);
   const [showCustomPicker, setShowCustomPicker] = useState(false);
   const [customColor, setCustomColor] = useState("#7C3AED");
@@ -50,11 +51,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     underline: false,
   });
   const [isEmpty, setIsEmpty] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   const editorRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const gifPickerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
   const [pickerPos, setPickerPos] = useState({ top: 0, left: 0 });
 
   const portalRoot =
@@ -230,6 +234,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   // === Attachments & GIFs ===
   const handleImageUpload = () => fileInputRef.current?.click();
+
   const onFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -243,14 +248,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   const fetchGifs = async (query?: string) => {
-    const searchTerm = query?.trim() || "trending";
+    const term = query?.trim() || "trending";
     const apiKey = import.meta.env.VITE_TENOR_KEY || process.env.TENOR_KEY;
     const url = `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(
-      searchTerm
+      term
     )}&key=${apiKey}&client_key=SummitPoker&limit=12`;
+
     try {
+      setIsLoading(true);
       const res = await fetch(url);
       const data = await res.json();
+
       const normalized = (data.results || []).map((g: any) => {
         const fm = g.media_formats || {};
         const url =
@@ -262,9 +270,28 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           "";
         return { id: g.id, url };
       });
-      setGifs(normalized.filter((g: { url: any }) => !!g.url));
-    } catch {
-      setGifs([]);
+
+      const filtered = normalized.filter((g: { url: string }) => !!g.url);
+
+      // Preload all images before updating DOM
+      const preloadAll = filtered.map(
+        (g: { url: any }) =>
+          new Promise((resolve) => {
+            const img = new Image();
+            img.src = g.url;
+            img.onload = img.onerror = () => resolve(g);
+          })
+      );
+
+      const loaded = await Promise.all(preloadAll);
+
+      requestAnimationFrame(() => {
+        setGifs(loaded);
+        setIsLoading(false);
+      });
+    } catch (e) {
+      console.error(e);
+      setIsLoading(false);
     }
   };
 
@@ -273,6 +300,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     if (url) setAttachments((prev) => [...prev, url]);
     setShowGifPicker(false);
   };
+
+  const handleGifSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const term = e.target.value.trim();
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      startTransition(() => fetchGifs(term));
+    }, 300);
+  };
+
+  useEffect(() => {
+    if (showGifPicker) fetchGifs();
+  }, [showGifPicker]);
 
   useEffect(() => {
     const updatePosition = () => {
@@ -292,10 +331,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       window.removeEventListener("scroll", updatePosition, true);
       window.removeEventListener("resize", updatePosition);
     };
-  }, [showGifPicker]);
-
-  useEffect(() => {
-    if (showGifPicker) fetchGifs();
   }, [showGifPicker]);
 
   // === Shared Render sections ===
@@ -442,7 +477,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               type="text"
               placeholder="Search Tenor GIFs..."
               className="w-full text-xs rounded-md px-2 py-[3px] bg-background/70 border border-border focus:ring-1 focus:ring-accent outline-none"
-              onChange={(e) => fetchGifs(e.target.value)}
+              onChange={handleGifSearch}
               onClick={(e) => e.stopPropagation()}
             />
             <button
@@ -457,16 +492,29 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-3 gap-1 max-h-[160px] overflow-y-auto">
-            {gifs.map((g) => (
-              <img
-                key={g.id}
-                src={g.url}
-                alt=""
-                className="rounded-md cursor-pointer hover:opacity-80 hover:scale-[1.02] transition-transform"
-                onClick={(e) => handleGifSelect(g.url, e)}
-              />
-            ))}
+          <div className="relative max-h-[160px] overflow-y-auto overflow-x-hidden">
+            <div className="grid grid-cols-3 gap-1">
+              {gifs.map((g) => (
+                <motion.img
+                  key={g.id}
+                  src={g.url}
+                  alt=""
+                  layout
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  className="rounded-md cursor-pointer hover:opacity-80 hover:scale-[1.02] transition-transform"
+                  onClick={(e) => handleGifSelect(g.url, e)}
+                />
+              ))}
+            </div>
+
+            {isLoading && (
+              <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground/70 backdrop-blur-[1px] bg-background/40">
+                Loading GIFs…
+              </div>
+            )}
           </div>
 
           <div className="flex justify-center py-1">
@@ -494,7 +542,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             type="text"
             placeholder="Search Tenor GIFs..."
             className="w-full text-sm rounded-md px-2 py-[2px] bg-background/70 border border-border focus:ring-1 focus:ring-accent outline-none"
-            onChange={(e) => fetchGifs(e.target.value)}
+            onChange={handleGifSearch}
             onClick={(e) => e.stopPropagation()}
           />
           <button
@@ -509,14 +557,19 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           </button>
         </div>
 
-        <div className="max-h-[210px] overflow-y-auto">
+        <div className="max-h-[210px] overflow-y-auto overflow-x-hidden">
           <div className="grid grid-cols-3 gap-1 p-3 pt-2">
             {gifs.map((g) => (
-              <img
+              <motion.img
                 key={g.id}
                 src={g.url}
                 alt=""
-                className="w-full rounded-md cursor-pointer hover:opacity-80 hover:scale-[1.02] transition-transform"
+                layout
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                className="rounded-md cursor-pointer hover:opacity-80 hover:scale-[1.02] transition-transform"
                 onClick={(e) => handleGifSelect(g.url, e)}
               />
             ))}

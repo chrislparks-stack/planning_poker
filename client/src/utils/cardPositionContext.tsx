@@ -1,7 +1,6 @@
 import React, {
   createContext,
   useContext,
-  useRef,
   useCallback,
   RefObject,
 } from "react";
@@ -23,9 +22,8 @@ export const useCardPosition = () => useContext(CardPositionContext);
 
 export const CardPositionProvider: React.FC<{
   children: React.ReactNode;
-}> = ({ children }) => {
-  const cardRefs = useRef<Record<string, RefObject<HTMLDivElement>>>({});
-
+  cardRefs: React.MutableRefObject<Record<string, React.RefObject<HTMLDivElement>>>;
+}> = ({ children, cardRefs }) => {
   const registerCardRef = useCallback((userId: string, ref: RefObject<HTMLDivElement>) => {
     cardRefs.current[userId] = ref;
   }, []);

@@ -11,6 +11,7 @@ import { getPickedUserCard } from "@/utils";
 
 interface RoomProps {
   room?: RoomType;
+  onShowInChat?: () => void;
 }
 
 export interface Position {
@@ -20,7 +21,7 @@ export interface Position {
   height?: number;
 }
 
-export function Room({ room }: RoomProps) {
+export function Room({ room, onShowInChat }: RoomProps) {
   const tableRef = useRef<HTMLDivElement | null>(null);
   const playerRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [tableRect, setTableRect] = useState<DOMRect | null>(null);
@@ -221,7 +222,7 @@ export function Room({ room }: RoomProps) {
         <Table
           room={room}
           innerRef={tableRef}
-          isCardsPicked={room.game.table.length > 0}
+          isCardsPicked={room.game.table.some((entry) => !!entry.card)}
           isGameOver={room.isGameOver}
         />
 
@@ -272,6 +273,7 @@ export function Room({ room }: RoomProps) {
               onExpire={(pid) =>
                 setLastChats((prev) => ({ ...prev, [pid]: null }))
               }
+              onShowInChat={onShowInChat}
             />
           );
         })}

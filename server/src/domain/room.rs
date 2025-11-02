@@ -1,6 +1,6 @@
 use async_graphql::SimpleObject;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use std::time::Instant;
 
 use crate::types::{Card, EntityId};
@@ -191,5 +191,12 @@ impl Room {
         if self.chat_history.len() > 100 {
             self.chat_history.drain(0..self.chat_history.len() - 100);
         }
+    }
+
+    pub fn prune_chat_history(&mut self, max_age: Duration) -> usize {
+        let now = Utc::now();
+        let before = self.chat_history.len();
+        self.chat_history.retain(|msg| (now - msg.timestamp) < max_age);
+        before - self.chat_history.len()
     }
 }

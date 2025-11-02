@@ -453,7 +453,7 @@ export function Player({
               }
               onClose={() => setShowChatInput(false)}
               isOpen={showChatInput}
-              className={`top-8 ${isLeftSide ? "right-[55px]" : "-right-[275px]"}`}
+              className={`top-8 ${isLeftSide ? "right-[8px]" : "-right-[275px]"}`}
               isLeftSide={isLeftSide}
               isTopSide={isTopSide}
             />
@@ -488,7 +488,7 @@ export function Player({
               }
               onClose={() => setShowChatInput(false)}
               isOpen={showChatInput}
-              className={`top-8 ${isLeftSide ? "right-[55px]" : "-right-[275px]"}`}
+              className={`top-8 ${isLeftSide ? "right-[8px]" : "-right-[275px]"}`}
               isLeftSide={isLeftSide}
               isTopSide={isTopSide}
             />

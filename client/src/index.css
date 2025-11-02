@@ -6,6 +6,7 @@
   :root {
     --background: 0 0% 100%;
     --foreground: 224 71.4% 4.1%;
+    --foreground-soft: 220 10% 32%;
     --card: 0 0% 100%;
     --card-foreground: 224 71.4% 4.1%;
     --popover: 0 0% 100%;
@@ -17,23 +18,47 @@
     --muted: 263.4 70% 50.4%;
     --muted-foreground: 220 8.9% 46.1%;
     --accent-start: #fafafa;
+    /* Lilac Theme (Default) */
     --accent-lilac: 263.4 70% 50.4%;
+    --accent-lilac-hue: 263;
+    --accent-lilac-rgb: 186, 147, 255;
+
+    /* Aqua Theme */
+    --accent-aqua: 225 65% 50%;
+    --accent-aqua-hue: 225;
+    --accent-aqua-rgb: 90, 155, 255;
+
+    /* Emerald Theme */
+    --accent-emerald: 150 50% 40%;
+    --accent-emerald-hue: 150;
+    --accent-emerald-rgb: 60, 170, 120;
+
+    /* Rose Theme */
+    --accent-rose: 350 70% 55%;
+    --accent-rose-hue: 350;
+    --accent-rose-rgb: 255, 120, 150;
+
+    /* Amber Theme */
+    --accent-amber: 45 95% 50%;
+    --accent-amber-hue: 45;
+    --accent-amber-rgb: 255, 200, 90;
+
+    /* Defaults: start with lilac */
+    --accent-hue: var(--accent-lilac-hue);
+    --accent-rgb: var(--accent-lilac-rgb);
+
     --accent-lilac-foreground: 210 20% 98%;
     --accent-lilac-hover: 256 72% 46%;
 
-    --accent-aqua: 225 65% 50%;
     --accent-aqua-foreground: 210 20% 98%;
     --accent-aqua-hover: 220 65% 45%;
 
-    --accent-emerald: 150 50% 40%;
     --accent-emerald-foreground: 210 20% 98%;
     --accent-emerald-hover: 150 54% 36%;
 
-    --accent-rose: 350 70% 55%;
     --accent-rose-foreground: 210 20% 98%;
     --accent-rose-hover: 350 72% 50%;
 
-    --accent-amber: 45 95% 50%;
     --accent-amber-foreground: 220.9 39.3% 11%;
     --accent-amber-hover: 45 90% 45%;
 
@@ -59,6 +84,7 @@
   .dark {
     --background: 224 71.4% 4.1%;
     --foreground: 210 20% 98%;
+    --foreground-soft: 220 10% 80%;
     --card: 224 71.4% 4.1%;
     --card-foreground: 210 20% 98%;
     --popover: 224 71.4% 4.1%;
@@ -203,4 +229,32 @@
 }
 .animate-zoom-in {
   animation: zoom-in 0.8s ease-in-out;
+}
+
+/* ---------- Chat Panel ---------- */
+@keyframes sheen {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Theme overrides */
+[data-theme="aqua"] {
+  --accent-hue: var(--accent-aqua-hue);
+  --accent-rgb: var(--accent-aqua-rgb);
+}
+[data-theme="emerald"] {
+  --accent-hue: var(--accent-emerald-hue);
+  --accent-rgb: var(--accent-emerald-rgb);
+}
+[data-theme="rose"] {
+  --accent-hue: var(--accent-rose-hue);
+  --accent-rgb: var(--accent-rose-rgb);
+}
+[data-theme="amber"] {
+  --accent-hue: var(--accent-amber-hue);
+  --accent-rgb: var(--accent-amber-rgb);
 }
