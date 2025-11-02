@@ -7,6 +7,7 @@ import { ChatInput } from "@/components/ui/chat-input";
 import { useToast } from "@/hooks/use-toast";
 import { useCardPosition } from "@/utils/cardPositionContext";
 import {Info} from "lucide-react";
+import {decompressMessage} from "@/utils/messageUtils.ts";
 
 export const ChatPanel: React.FC<{
   room?: Room;
@@ -69,19 +70,37 @@ export const ChatPanel: React.FC<{
       const msg = data?.data?.roomChat;
       if (!msg) return;
 
-      setMessages(prev => {
+      // Safely try to decompress (in case older messages are uncompressed)
+      let decompressed = msg.formattedContent || msg.content;
+      try {
+        // Detect base64-like strings (heuristic)
+        if (/^[A-Za-z0-9+/=]+$/.test(decompressed) && decompressed.length > 40) {
+          decompressed = decompressMessage(decompressed);
+        }
+      } catch (err) {
+        console.warn("Decompression failed, using raw content:", err);
+      }
+
+      // Store decompressed HTML back into the message object
+      const message = { ...msg, formattedContent: decompressed };
+
+      setMessages((prev) => {
         const exists = prev.some(
-          m => m.id === msg.id ||
-            (m.userId === msg.userId &&
-              Math.abs(new Date(m.timestamp).getTime() - new Date(msg.timestamp).getTime()) < 2000 &&
-              m.content === msg.content)
+          (m) =>
+            m.id === message.id ||
+            (m.userId === message.userId &&
+              Math.abs(
+                new Date(m.timestamp).getTime() - new Date(message.timestamp).getTime()
+              ) < 2000 &&
+              m.content === message.content)
         );
+
         if (exists) return prev;
 
         if (!autoScroll) setHasNewMessages(true);
-        return [...prev, msg];
+        return [...prev, message];
       });
-    }
+    },
   });
 
   // Auto-scroll on new message

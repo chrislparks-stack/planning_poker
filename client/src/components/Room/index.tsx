@@ -8,6 +8,7 @@ import { Table } from "@/components/Table";
 import { ChatBubble } from "@/components/ui/chat-bubble";
 import { Room as RoomType } from "@/types";
 import { getPickedUserCard } from "@/utils";
+import {decompressMessage} from "@/utils/messageUtils.ts";
 
 interface RoomProps {
   room?: RoomType;
@@ -31,7 +32,6 @@ export function Room({ room, onShowInChat }: RoomProps) {
     Record<string, Position | null>
   >({});
 
-  // --- Chat Subscription ------------------------------------------------------
   useRoomChatSubscription({
     variables: { roomId: room?.id ?? "" },
     skip: !room?.id,
@@ -39,17 +39,23 @@ export function Room({ room, onShowInChat }: RoomProps) {
       const msg = data?.data?.roomChat;
       if (!msg) return;
 
-      const {
-        userId,
-        formattedContent,
-        content,
-        position,
-      } = msg as any;
+      const { userId, formattedContent, content, position } = msg as any;
 
-      const message = formattedContent || content;
+      // --- Decompression step ---
+      let message = formattedContent || content;
+      try {
+        // Detect base64-ish compressed payloads (long strings with mostly base64 chars)
+        if (/^[A-Za-z0-9+/=]+$/.test(message) && message.length > 40) {
+          message = decompressMessage(message);
+        }
+      } catch (err) {
+        console.warn("Decompression failed for chat message:", err);
+      }
 
+      // --- Update recent chat text for that user ---
       setLastChats((prev) => ({ ...prev, [userId]: message }));
 
+      // --- Handle positional chat bubble ---
       if (position && typeof position === "object") {
         const { x, y, width, height } = position;
         const scaled = {
@@ -58,10 +64,11 @@ export function Room({ room, onShowInChat }: RoomProps) {
           width: width * window.innerWidth,
           height: height * window.innerHeight,
         };
-        setChatPositionMap(prev => ({ ...prev, [userId]: scaled }));
+        setChatPositionMap((prev) => ({ ...prev, [userId]: scaled }));
         return;
       }
 
+      // --- Fallback if no position (clears bubble) ---
       setChatPositionMap((prev) => ({ ...prev, [userId]: null }));
     },
   });
@@ -222,7 +229,6 @@ export function Room({ room, onShowInChat }: RoomProps) {
         <Table
           room={room}
           innerRef={tableRef}
-          isCardsPicked={room.game.table.some((entry) => !!entry.card)}
           isGameOver={room.isGameOver}
         />
 

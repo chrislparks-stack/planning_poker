@@ -1,21 +1,12 @@
-import React, {useState, useRef, useEffect, startTransition} from "react";
-import { createPortal } from "react-dom";
-import { cn } from "@/lib/utils";
-import {
-  SendHorizonal,
-  Underline,
-  Palette,
-  ImagePlay,
-  Bold,
-  Italic,
-  Camera,
-  X,
-  Droplet,
-} from "lucide-react";
+import React, {startTransition, useEffect, useRef, useState} from "react";
+import {createPortal} from "react-dom";
+import {cn} from "@/lib/utils";
+import {Bold, Camera, Droplet, ImagePlay, Italic, Palette, SendHorizonal, Underline, X,} from "lucide-react";
 import tenorLogo from "@/assets/PB_tenor_logo_grey_vertical.svg";
-import { HexColorPicker } from "react-colorful";
-import { OverlayPortal } from "@/utils/overlayPortal.tsx";
-import { motion } from "framer-motion";
+import {HexColorPicker} from "react-colorful";
+import {OverlayPortal} from "@/utils/overlayPortal.tsx";
+import {motion} from "framer-motion";
+import {compressMessage} from "@/utils/messageUtils.ts";
 
 interface ChatInputProps {
   onSend: (
@@ -106,8 +97,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     const editor = editorRef.current;
     if (!editor) return;
     const hasText = editor.innerText.trim().length > 0;
-    const formatted = editor.innerHTML.trim();
-    let messageHtml = formatted;
+    let messageHtml = editor.innerHTML.trim();
     if (attachments.length > 0) {
       const imgHtml = attachments
         .map(
@@ -118,7 +108,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       messageHtml += imgHtml;
     }
     if (!hasText && attachments.length === 0) return;
-    onSend(editor.innerText.trim(), messageHtml);
+    const shouldCompress = messageHtml.length > 3000;
+    const payload = shouldCompress ? compressMessage(messageHtml) : messageHtml;
+    onSend(editor.innerText.trim(), payload);
     editor.innerHTML = "";
     setAttachments([]);
     setIsEmpty(true);
