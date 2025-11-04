@@ -35,6 +35,12 @@ export function RoomPage() {
   const [openCreateUserDialog, setOpenCreateUserDialog] = useState(false);
   const [openRoomOptionsDialog, setOpenRoomOptionsDialog] = useState(false);
 
+  const [chatVisible, setChatVisible] = useState(false);
+
+  const handleShowInChat = () => {
+    setChatVisible(true);
+  };
+
   const { data: subscriptionData, error: roomSubscriptionError } =
     useRoomSubscription({
       variables: { roomId }
@@ -412,22 +418,25 @@ export function RoomPage() {
         </div>
       ) : (
         <>
-          <PageLayout room={room} users={room.users}>
+          <PageLayout
+            room={room}
+            users={room.users}
+            showChat={chatVisible}
+            setShowChat={() => setChatVisible(true)}
+          >
             <div className="relative h-[calc(100vh-80px)] overflow-hidden">
               {/* Scrollable Room container */}
               <div
                   className="absolute top-0 left-0 right-0 overflow-y-auto"
                   style={{
-                    height: `calc(100% - ${room.isGameOver ? 300 : 140}px)`, // limit to visible area
-                    paddingBottom: "1rem", // small visual buffer
+                    height: `calc(100% - ${room.isGameOver ? 220 : 140}px)`,
+                    paddingBottom: "1rem",
                   }}
               >
-                <Room room={room} />
+                <Room room={room} onShowInChat={handleShowInChat}/>
               </div>
 
-
-              {/* Deck + Chart remain absolute at bottom, untouched */}
-              <div className="absolute bottom-10 left-0 right-0 mx-auto w-full max-w-4xl">
+              <div className="absolute bottom-3 left-0 right-0 mx-auto w-full max-w-4xl">
                 <div
                     className={`flex gap-4 ${
                         room.isGameOver

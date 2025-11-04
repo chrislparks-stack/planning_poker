@@ -5,9 +5,10 @@ import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
-  DialogFooter,
+  DialogContent, DialogDescription,
+  DialogFooter, DialogTitle,
 } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { useToast } from "@/hooks/use-toast";
 import { applyAccent } from "@/lib/theme-accent";
 
@@ -398,7 +399,6 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
       }}
     >
       <DialogContent
-        aria-label="Adjustment of theme and accents"
         className="
           flex flex-col w-[90vw] max-w-[480px] max-h-[90vh]
           rounded-2xl backdrop-blur-md bg-background/80
@@ -406,6 +406,14 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
           p-0 animate-in fade-in-0 zoom-in-95
         "
       >
+
+        <VisuallyHidden>
+          <DialogTitle>Theme and Color Settings</DialogTitle>
+          <DialogDescription>
+            Adjust your appearance mode and accent color preferences
+          </DialogDescription>
+        </VisuallyHidden>
+
         {/* Accent bar */}
         <div className="h-1.5 w-full bg-gradient-to-r from-accent to-accent/60 shrink-0" />
 

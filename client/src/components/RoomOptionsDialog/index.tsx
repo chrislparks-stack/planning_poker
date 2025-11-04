@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
+  DialogContent, DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle
@@ -19,6 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Room } from "@/types";
 import { CardFan } from "@/components/ui/card-fan.tsx";
+import {VisuallyHidden} from "@radix-ui/react-visually-hidden";
 
 interface RoomOptionsDialogProps {
   open: boolean;
@@ -190,7 +191,6 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
         }}
       >
         <DialogContent
-          aria-label="Room Options configuration"
           className="
             flex flex-col w-[90vw] max-w-[700px] max-h-[90vh] sm:max-h-[92vh]
             rounded-2xl backdrop-blur-md bg-background/80
@@ -200,6 +200,14 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
           onInteractOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
+
+          <VisuallyHidden>
+            <DialogTitle> Room Options </DialogTitle>
+            <DialogDescription>
+              Adjust the room options such as name, card selection or reveal type
+            </DialogDescription>
+          </VisuallyHidden>
+
           {/* Accent bar */}
           <div className="h-1.5 w-full bg-gradient-to-r from-accent to-accent/60" />
 

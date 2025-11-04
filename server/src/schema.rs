@@ -6,6 +6,7 @@ use crate::{
         game::{Game, UserCard},
         room::Room,
         user::{User, UserInput},
+        chat::{ChatMessage, ChatPosition, ChatPositionInput}
     },
     simple_broker::SimpleBroker,
     types::{Card, EntityId, Storage},
@@ -35,7 +36,6 @@ pub struct QueryRoot;
 impl QueryRoot {
     async fn rooms(&self, ctx: &Context<'_>) -> Result<Vec<Room>> {
         let storage = get_storage(ctx).await;
-
         Ok(storage.clone().into_values().collect())
     }
 
@@ -69,7 +69,18 @@ impl QueryRoot {
 #[derive(InputObject)]
 pub struct UpdateDeckInput {
     pub room_id: Uuid,
-    pub cards: Vec<String>,
+    pub cards: Vec<String>
+}
+
+#[derive(InputObject)]
+pub struct SendChatInput {
+    pub room_id: Uuid,
+    pub user_id: Uuid,
+    pub username: String,
+    pub content: String,
+    pub formatted_content: Option<String>,
+    pub content_type: String,
+    pub position: Option<ChatPositionInput>
 }
 
 pub struct MutationRoot;
@@ -84,8 +95,6 @@ impl MutationRoot {
         cards: Vec<Card>,
     ) -> Result<Room> {
         let mut storage = get_storage(ctx).await;
-
-        // Create room using provided UUID or generate new one
         let mut room = Room::new_with_id(room_id, name, cards);
 
         room.touch();
@@ -550,6 +559,38 @@ impl MutationRoot {
             None => Err(Error::new("Room not found")),
         }
     }
+
+     async fn send_chat_message(
+            &self,
+            ctx: &Context<'_>,
+            input: SendChatInput,
+        ) -> Result<ChatMessage> {
+            let mut storage = get_storage(ctx).await;
+            let room = storage
+                .get_mut(&input.room_id)
+                .ok_or(Error::new("Room not found"))?;
+
+            let msg = ChatMessage::new(
+                input.room_id,
+                input.user_id,
+                input.username.clone(),
+                input.content.clone(),
+                input.formatted_content.clone(),
+                input.content_type.clone(),
+                input.position.clone().map(|p| ChatPosition {
+                    x: p.x,
+                    y: p.y,
+                    width: p.width,
+                    height: p.height,
+                }),
+            );
+
+            room.push_chat(msg.clone());
+            room.touch();
+
+            SimpleBroker::publish(msg.clone());
+            Ok(msg)
+        }
 }
 
 pub struct SubscriptionRoot;
@@ -569,5 +610,13 @@ impl SubscriptionRoot {
             let is_current_room = room_id == event.room_id;
             async move { is_current_room }
         })
+    }
+
+    async fn room_chat(&self, room_id: Uuid) -> impl Stream<Item = ChatMessage> {
+        SimpleBroker::<ChatMessage>::subscribe()
+            .filter(move |msg| {
+                let same_room = msg.room_id == room_id;
+                async move { same_room }
+            })
     }
 }

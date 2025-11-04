@@ -1,51 +1,101 @@
 import { useRef, useEffect, useState, useMemo } from "react";
-
-import { useSetRoomOwnerMutation } from "@/api";
+import {
+  useSetRoomOwnerMutation,
+  useRoomChatSubscription,
+} from "@/api";
 import { Player } from "@/components/Player";
 import { Table } from "@/components/Table";
+import { ChatBubble } from "@/components/ui/chat-bubble";
 import { Room as RoomType } from "@/types";
 import { getPickedUserCard } from "@/utils";
+import {decompressMessage} from "@/utils/messageUtils.ts";
 
 interface RoomProps {
   room?: RoomType;
+  onShowInChat?: () => void;
 }
 
-interface Position {
+export interface Position {
   x: number;
   y: number;
+  width?: number;
+  height?: number;
 }
 
-export function Room({ room }: RoomProps) {
+export function Room({ room, onShowInChat }: RoomProps) {
   const tableRef = useRef<HTMLDivElement | null>(null);
+  const playerRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [tableRect, setTableRect] = useState<DOMRect | null>(null);
   const [setRoomOwner] = useSetRoomOwnerMutation();
+  const [senderName, setSenderName] = useState<string | null>(null);
+  const [lastChats, setLastChats] = useState<Record<string, string | null>>({});
+  const [chatPositionMap, setChatPositionMap] = useState<
+    Record<string, Position | null>
+  >({});
 
-  // Update the table's bounding rectangle on mount and when the window is resized.
+  useRoomChatSubscription({
+    variables: { roomId: room?.id ?? "" },
+    skip: !room?.id,
+    onData: ({ data }) => {
+      const msg = data?.data?.roomChat;
+      if (!msg) return;
+
+      const { userId, formattedContent, content, position } = msg as any;
+
+      // --- Decompression step ---
+      let message = formattedContent || content;
+
+      if (msg.username) {
+        setSenderName(msg.username);
+      }
+
+      try {
+        // Detect base64-ish compressed payloads (long strings with mostly base64 chars)
+        if (/^[A-Za-z0-9+/=]+$/.test(message) && message.length > 40) {
+          message = decompressMessage(message);
+        }
+      } catch (err) {
+        console.warn("Decompression failed for chat message:", err);
+      }
+
+      // --- Update recent chat text for that user ---
+      setLastChats((prev) => ({ ...prev, [userId]: message }));
+
+      // --- Handle positional chat bubble ---
+      if (position && typeof position === "object") {
+        const { x, y, width, height } = position;
+        const scaled = {
+          x: x * window.innerWidth,
+          y: y * window.innerHeight,
+          width: width * window.innerWidth,
+          height: height * window.innerHeight,
+        };
+        setChatPositionMap((prev) => ({ ...prev, [userId]: scaled }));
+        return;
+      }
+
+      // --- Fallback if no position (clears bubble) ---
+      setChatPositionMap((prev) => ({ ...prev, [userId]: null }));
+    },
+  });
+
   useEffect(() => {
     const updateTableRect = () => {
-      if (tableRef.current) {
+      if (tableRef.current)
         setTableRect(tableRef.current.getBoundingClientRect());
-      }
     };
-
     updateTableRect();
     window.addEventListener("resize", updateTableRect);
     return () => window.removeEventListener("resize", updateTableRect);
   }, []);
 
-  /**
-   * Compute player positions along the table edges while avoiding overlaps.
-   * Each side’s available length and a minimum gap (based on card dimensions)
-   * are used to determine the optimal placement.
-   */
-  const playerPositions: Position[] = useMemo(() => {
+  const playerPositions = useMemo(() => {
     if (!tableRect || !room) return [];
-
     const totalPlayers = room.users.length;
     const { width, height } = tableRect;
-    const padding = 80; // Offset from the table edge
-    const CARD_WIDTH = 52;
-    const CARD_HEIGHT = 80;
+    const padding = 80;
+    const CARD_WIDTH = 60;
+    const CARD_HEIGHT = 110;
     const CARD_MARGIN = 20;
 
     const computeSidePositions = (
@@ -63,23 +113,17 @@ export function Room({ room }: RoomProps) {
       const coordinates: number[] = [];
       if (count === 0) return [];
 
-      // Default even spacing along the side.
       const defaultSpacing = availableLength / (count + 1);
       if (defaultSpacing < minGap) {
-        // Not enough space – use fixed spacing with the minimum gap, then center.
         const totalRequired = minGap * (count - 1);
         const start = (availableLength - totalRequired) / 2;
-        for (let j = 0; j < count; j++) {
+        for (let j = 0; j < count; j++)
           coordinates.push(start + j * minGap);
-        }
       } else {
-        // Use default fractional positioning.
-        for (let j = 0; j < count; j++) {
+        for (let j = 0; j < count; j++)
           coordinates.push((j + 1) * defaultSpacing);
-        }
       }
 
-      // Convert the computed coordinate to a (x,y) position based on the side.
       for (const coord of coordinates) {
         let x = 0,
           y = 0;
@@ -107,17 +151,15 @@ export function Room({ room }: RoomProps) {
     };
 
     const positions: Position[] = [];
-
-    // For fewer than 4 players, assign one per side.
     if (totalPlayers < 4) {
-      const availableSides: ("top" | "right" | "bottom" | "left")[] = [
+      const sides: ("top" | "right" | "bottom" | "left")[] = [
         "top",
         "right",
         "bottom",
-        "left"
+        "left",
       ];
       for (let i = 0; i < totalPlayers; i++) {
-        const side = availableSides[i];
+        const side = sides[i];
         let pos: Position;
         switch (side) {
           case "top":
@@ -138,25 +180,15 @@ export function Room({ room }: RoomProps) {
       return positions;
     }
 
-    // For 4 or more players, distribute them evenly across the four sides.
     const base = Math.floor(totalPlayers / 4);
     const remainder = totalPlayers % 4;
-    const sideCounts: { [key in "top" | "right" | "bottom" | "left"]: number } =
-      {
-        top: base,
-        right: base,
-        bottom: base,
-        left: base
-      };
-
-    // Favor extra seats based on table orientation.
+    const sideCounts = { top: base, right: base, bottom: base, left: base };
     const extraOrder: ("top" | "right" | "bottom" | "left")[] =
       width >= height
         ? ["top", "bottom", "right", "left"]
         : ["right", "left", "top", "bottom"];
-    for (let i = 0; i < remainder; i++) {
+    for (let i = 0; i < remainder; i++)
       sideCounts[extraOrder[i]] += 1;
-    }
 
     positions.push(...computeSidePositions("top", sideCounts.top));
     positions.push(...computeSidePositions("right", sideCounts.right));
@@ -165,6 +197,16 @@ export function Room({ room }: RoomProps) {
 
     return positions;
   }, [tableRect, room]);
+
+  const playerPositionMap = useMemo(() => {
+    if (!room || playerPositions.length === 0) return {};
+    const map: Record<string, { x: number; y: number }> = {};
+    room.users.forEach((user, i) => {
+      const pos = playerPositions[i];
+      if (pos) map[user.id] = pos;
+    });
+    return map;
+  }, [room, playerPositions]);
 
   if (!room) {
     return (
@@ -175,14 +217,7 @@ export function Room({ room }: RoomProps) {
   }
 
   function handlePromote(userId: string) {
-    if (room) {
-      setRoomOwner({
-        variables: {
-          roomId: room.id,
-          userId: userId
-        }
-      });
-    }
+    setRoomOwner({ variables: { roomId: room?.id || "", userId } });
   }
 
   return (
@@ -192,28 +227,35 @@ export function Room({ room }: RoomProps) {
         height: "calc(50vh)",
         overflow: "hidden",
         position: "relative",
-        transform: "translateY(calc(25% - 1vh))"
+        transform: "translateY(calc(25% - 1vh))",
       }}
     >
       <div className="relative">
+        {/* Table */}
         <Table
           room={room}
           innerRef={tableRef}
-          isCardsPicked={room.game.table.length > 0}
           isGameOver={room.isGameOver}
         />
+
+        {/* Player Cards */}
         {room.users.map((user, index) => {
           const position = playerPositions[index];
           if (!position) return null;
           const pickedCard = getPickedUserCard(user.id, room.game.table);
+
           return (
             <div
               key={user.id}
+              ref={(el) => {
+                playerRefs.current[user.id] = el;
+              }}
+              data-player-id={user.id}
               className="absolute transform -translate-x-1/2 -translate-y-1/2"
               style={{
                 left: `${position.x}px`,
                 top: `${position.y}px`,
-                zIndex: 10
+                zIndex: 10,
               }}
             >
               <Player
@@ -222,9 +264,30 @@ export function Room({ room }: RoomProps) {
                 isGameOver={room.isGameOver}
                 card={pickedCard?.card}
                 roomId={room.id}
-                onMakeOwner={(userId) => handlePromote(userId)}
+                onMakeOwner={handlePromote}
+                playerPositionMap={playerPositionMap}
+                tableRect={tableRect}
               />
             </div>
+          );
+        })}
+
+        {/* Chat Bubbles */}
+        {Object.entries(lastChats).map(([senderId, message]) => {
+          if (!message) return null;
+          const pos = chatPositionMap[senderId];
+          return (
+            <ChatBubble
+              key={senderId + message}
+              message={message}
+              playerId={senderId}
+              senderName={senderName ?? ""}
+              absolutePosition={pos ?? undefined}
+              onExpire={(pid) =>
+                setLastChats((prev) => ({ ...prev, [pid]: null }))
+              }
+              onShowInChat={onShowInChat}
+            />
           );
         })}
       </div>

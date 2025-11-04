@@ -5,19 +5,16 @@ import {
   useGetRoomQuery,
   useRoomSubscription,
   useKickUserMutation,
-  useBanUserMutation
+  useBanUserMutation,
+  useSendChatMessageMutation,
 } from "@/api";
-import { Card } from "@/components/Card";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger
-} from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "@/types";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import {useTheme} from "@/components";
-import {Ban, Crown, DoorOpen} from "lucide-react";
+import {Ban, Crown, DoorOpen, MessageSquareText} from "lucide-react";
+import {ChatInputWrapper} from "@/components/ui/chat-input-wrapper.tsx";
+import {useCardPosition} from "@/utils/cardPositionContext.tsx";
 
 interface PlayerProps {
   user: User;
@@ -26,6 +23,8 @@ interface PlayerProps {
   card?: string | null | undefined;
   roomId: string;
   onMakeOwner?: (userId: string) => Promise<void> | void;
+  playerPositionMap?: Record<string, { x: number; y: number }>;
+  tableRect?: DOMRect | null;
 }
 
 type MenuPos = { x: number; y: number } | null;
@@ -36,10 +35,16 @@ export function Player({
   isGameOver,
   card,
   roomId,
-  onMakeOwner
+  onMakeOwner,
+  playerPositionMap,
+  tableRect
 }: PlayerProps) {
   const { toast } = useToast();
   const { theme } = useTheme();
+
+  const { registerCardRef } = useCardPosition();
+  const cardRef = useRef<HTMLDivElement>(null);
+
   const systemPrefersDark = typeof window !== "undefined" && window.matchMedia ?
     window.matchMedia("(prefers-color-scheme: dark)").matches : false;
 
@@ -48,16 +53,36 @@ export function Player({
   const { data: subscriptionData } = useRoomSubscription({
     variables: { roomId }
   });
+  const [sendChatMessage] = useSendChatMessageMutation();
 
   const room = subscriptionData?.room ?? roomData?.roomById;
   const roomName = room?.name ?? "this room";
   const [kickUser] = useKickUserMutation();
   const [banUser] = useBanUserMutation();
+  const [showChatInput, setShowChatInput] = useState(false);
 
   // --- Local state ---
   const [menuPos, setMenuPos] = useState<MenuPos>(null);
   const [menuTargetUser] = useState<User>(user);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const playerPos = playerPositionMap?.[user.id];
+  const tableCenterX = tableRect
+    ? tableRect.left + tableRect.width / 2
+    : window.innerWidth / 2;
+  const tableCenterY = tableRect
+    ? tableRect.top + tableRect.height / 2
+    : window.innerHeight / 2;
+  const isLeftSide = playerPos
+    ? tableRect
+      ? tableRect.left + playerPos.x < tableCenterX
+      : playerPos.x < window.innerWidth / 2
+    : false;
+  const isTopSide = playerPos
+    ? tableRect
+      ? tableRect.top + playerPos.y < tableCenterY
+      : playerPos.y < window.innerHeight / 2
+    : false;
+
   const portalRootRef = useRef<Element | null>(
     typeof document !== "undefined" ? document.body : null
   );
@@ -277,6 +302,56 @@ export function Player({
     }
   };
 
+  // --- Actions ---
+  useEffect(() => {
+    registerCardRef(user.id, cardRef);
+  }, [user.id, registerCardRef, cardRef]);
+
+  const handleSendChat = async (
+    plain: string,
+    formatted: string
+  ) => {
+    if (!currentUserId || !roomId) return;
+    try {
+      const rect = cardRef.current?.getBoundingClientRect();
+      let position: { x: number; y: number; width: number; height: number };
+      if (rect) {
+        position = {
+          x: rect.left / window.innerWidth,
+          y: rect.top / window.innerHeight,
+          width: rect.width / window.innerWidth,
+          height: rect.height / window.innerHeight,
+        };
+      } else {
+        position = {
+          x: 0.5,
+          y: 0.5,
+          width: 0.5,
+          height: 0.5,
+        };
+      }
+
+      await sendChatMessage({
+        variables: {
+          roomId,
+          userId: currentUserId,
+          username: user.username,
+          content: plain,
+          formattedContent: formatted,
+          contentType: "html",
+          position,
+        },
+      });
+    } catch (err) {
+      console.error("Failed to send chat:", err);
+      toast({
+        title: "Message failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
+  };
+
   // --- Context menu UI ---
   const menu = menuPos ? (
     <div
@@ -330,38 +405,154 @@ export function Player({
   return (
     <div className="flex flex-col items-center" data-testid="player">
       {room?.roomOwnerId === user.id ? (
-        <div className="flex flex-col items-center">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div {...interactiveProps} style={{ cursor: "default" }}>
-                <Card
-                  className={`hover:bg-transparent hover:shadow-none w-12 bg-gradient-to-br from-accent/20 via-transparent to-accent/5`}
-                >
-                  <>
-                    <Crown
-                      className="absolute top-1 left-1 w-3 h-3 text-accent/70 fill-accent/70"
-                      strokeWidth={2}
-                    />
-                    <Crown
-                      className="absolute bottom-[27px] right-1 w-3 h-3 text-accent/70 fill-accent/70 rotate-180"
-                      strokeWidth={2}
-                    />
-                  </>
-                  {cardIcon}
-                </Card>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="right">Room Owner</TooltipContent>
-          </Tooltip>
+        <div className="flex flex-col items-center" ref={cardRef} title={"Room Owner"}>
+          <div
+            {...interactiveProps}
+            className="relative flex flex-col items-center cursor-default z-20 hover:z-50 focus-within:z-50 transition-[z-index]"
+          >
+            {/* --- Continuous accent glow behind card --- */}
+            <div
+              className="absolute top-0 left-[3px] rounded-t-xl blur-sm"
+              style={{
+                width: "3.5rem",
+                height: "5.5rem",
+                zIndex: 0,
+                boxShadow: `
+                    0 0 4px 3px hsl(var(--accent) / 0.55),
+                    0 0 4px 3px hsl(var(--accent) / 0.35)
+                  `,
+                background: `
+                  radial-gradient(
+                    circle at 50% 40%,
+                    hsl(var(--accent) / 0.35) 0%,
+                    transparent 75%
+                  )
+                `,
+              }}
+            />
+
+            {/* --- Card --- */}
+            <div className="relative w-[4rem] h-[5rem] flex items-center justify-center bg-gradient-to-br from-accent/30 via-transparent to-accent/10 rounded-t-xl shadow-[inset_0_0_2px_rgba(0,0,0,0.2)] z-0 isolate">
+              <Crown
+                className="absolute top-1 left-1 w-3 h-3 text-accent/70 fill-accent/70"
+                strokeWidth={2}
+              />
+              <Crown
+                className="absolute bottom-0.5 right-1 w-3 h-3 text-accent/70 fill-accent/70 rotate-180"
+                strokeWidth={2}
+              />
+              {cardIcon}
+            </div>
+
+            {/* --- Nameplate --- */}
+            <div
+              className="relative w-[4rem] bg-gray-100/90 dark:bg-background/60
+               text-[10px] font-semibold text-center text-gray-800 dark:text-gray-200
+               border border-gray-300 dark:border-none rounded-b-xl px-1 py-[2px]
+               shadow-sm truncate"
+              title={user.username}
+            >
+              {user.username}
+            </div>
+          </div>
+
+          {isTargetSelf && (
+            <button
+              onClick={() => setShowChatInput(!showChatInput)}
+              title="Open chat"
+              className="absolute p-1 rounded-full bg-background/80 hover:bg-accent/20 border border-border shadow-sm"
+              style={{ right: isLeftSide ? 70 : -28 }}
+            >
+              <MessageSquareText
+                className={`w-4 h-4 text-accent ${isLeftSide ? "scale-x-[-1]" : ""}`}
+              />
+            </button>
+          )}
+          {isTargetSelf && (
+            <ChatInputWrapper
+              onSend={(plain, formatted) =>
+                handleSendChat(plain, formatted)
+              }
+              onClose={() => setShowChatInput(false)}
+              isOpen={showChatInput}
+              className={`top-8 ${isLeftSide ? "right-[18px]" : "-right-[275px]"}`}
+              isLeftSide={isLeftSide}
+              isTopSide={isTopSide}
+            />
+          )}
         </div>
       ) : (
-        <div {...interactiveProps} style={{ cursor: "default" }}>
-          <Card className="hover:bg-transparent hover:shadow-none w-12 bg-gradient-to-br from-accent/20 via-transparent to-accent/5">
-            {cardIcon}
-          </Card>
+        <div className="relative flex flex-col items-center" style={{ cursor: "default" }} ref={cardRef}>
+          <div className="flex flex-col items-center">
+            <div
+              {...interactiveProps}
+              className="relative flex flex-col items-center cursor-default z-0"
+            >
+              <div
+                className="absolute top-0 left-[3px] rounded-t-xl blur-sm"
+                style={{
+                  width: "3.5rem",
+                  height: "5.5rem",
+                  zIndex: 0,
+                  boxShadow: `
+                    0 0 4px 3px hsl(var(--accent) / 0.55),
+                    0 0 4px 3px hsl(var(--accent) / 0.35)
+                  `,
+                  background: `
+                    radial-gradient(
+                      circle at 50% 40%,
+                      hsl(var(--accent) / 0.35) 0%,
+                      transparent 75%
+                    )
+                  `,
+                }}
+              />
+
+              {/* --- Card --- */}
+              <div className="relative w-[4rem] h-[5rem] flex items-center justify-center bg-gradient-to-br from-accent/30 via-transparent to-accent/10 rounded-t-xl shadow-[inset_0_0_2px_rgba(0,0,0,0.2)] z-0 isolate">
+                {cardIcon}
+              </div>
+
+              {/* --- Nameplate --- */}
+              <div
+                className="relative z-10 w-[4rem] bg-gray-100/90 dark:bg-background/60
+                 text-[10px] font-semibold text-center text-gray-800 dark:text-gray-200
+                 border border-gray-300 dark:border-none rounded-b-xl
+                 shadow-sm truncate"
+                title={user.username}
+              >
+                {user.username}
+              </div>
+            </div>
+          </div>
+
+          {isTargetSelf && (
+            <button
+              onClick={() => setShowChatInput(!showChatInput)}
+              title="Open chat"
+              className="absolute p-1 rounded-full bg-background/80 hover:bg-accent/20 border border-border shadow-sm"
+              style={{ right: isLeftSide ? 65 : -28 }}
+            >
+              <MessageSquareText
+                className={`w-4 h-4 text-accent ${isLeftSide ? "scale-x-[-1]" : ""}`}
+              />
+            </button>
+          )}
+          {isTargetSelf && (
+            <ChatInputWrapper
+              onSend={(plain, formatted) =>
+                handleSendChat(plain, formatted)
+              }
+              onClose={() => setShowChatInput(false)}
+              isOpen={showChatInput}
+              className={`top-8 ${isLeftSide ? "right-[18px]" : "-right-[275px]"}`}
+              isLeftSide={isLeftSide}
+              isTopSide={isTopSide}
+            />
+          )}
         </div>
       )}
-      <span className="text-sm mb-1 text-center">{user.username}</span>
+
       {portalRootRef.current && menu
         ? createPortal(menu, portalRootRef.current)
         : menu}

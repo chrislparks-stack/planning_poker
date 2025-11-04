@@ -1,7 +1,7 @@
 import { FC, useMemo } from "react";
-import { Bar, BarChart, LabelList, Rectangle, XAxis } from "recharts";
+import {Bar, BarChart, Cell, LabelList, XAxis} from "recharts";
 
-import { CardFooter, CardTitle } from "@/components/ui/card";
+import { CardTitle } from "@/components/ui/card";
 import {
   ChartContainer,
   ChartTooltip,
@@ -23,6 +23,15 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
         voteCount[userCard.card] = (voteCount[userCard.card] || 0) + 1;
       }
     });
+
+    // const testVotes: Record<string, number> = {
+    //   2: 3,
+    //   3: 1,
+    //   5: 4,
+    //   8: 1,
+    // };
+    //
+    // Object.assign(voteCount, testVotes);
 
     return voteCount;
   }, [room.game.table]);
@@ -58,7 +67,7 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
       data-testid="vote-distribution-chart"
     >
       <ChartContainer
-        className="w-[14vw]"
+        className="w-[14vw] -mb-5"
         config={{
           card: {
             label: "Votes",
@@ -69,6 +78,7 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
         <BarChart
           accessibilityLayer
           margin={{
+            top: 8,
             left: -4,
             right: -4
           }}
@@ -76,11 +86,25 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
         >
           <Bar
             dataKey="Votes"
-            fill="hsl(var(--accent))"
             radius={5}
-            fillOpacity={0.8}
-            activeBar={<Rectangle fillOpacity={0.8} />}
+            fillOpacity={0.9}
           >
+            {chartData.map((entry, index) => {
+              const isMajority = entry.Votes === maxCardCount;
+              return (
+                <Cell
+                  key={`cell-${index}`}
+                  fill="hsl(var(--accent))"
+                  style={{
+                    filter: isMajority
+                      ? "drop-shadow(0 0 10px hsl(var(--accent))) drop-shadow(0 0 24px rgba(var(--accent-rgb),0.4))"
+                      : "drop-shadow(0 0 10px rgba(var(--accent-rgb),0.3))",
+                    animation: isMajority ? "pulseGlow 3s ease-in-out infinite" : undefined,
+                    transformOrigin: "center",
+                  }}
+                />
+              );
+            })}
             <LabelList
               dataKey="Votes"
               content={({
@@ -110,21 +134,13 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
                   return null;
                 }
 
+                console.log(nwidth);
+
                 const isMajority = nvalue === maxCardCount;
-                const paddingAbove = 6; // px above the bar
-                const labelFontSize = 12;
+                const labelFontSize = nwidth < 80 ? nwidth / 5 : 14;
 
-                const canPlaceAbove = ny - paddingAbove - labelFontSize > 0;
-                let labelY: number;
+                let labelY = ny + nheight / 2;
                 let fillColor = "white";
-
-                if (canPlaceAbove) {
-                  labelY = ny - paddingAbove;
-                  fillColor = "#111827";
-                } else {
-                  labelY = ny + nheight / 2;
-                  fillColor = "white";
-                }
 
                 const centerX = nx + nwidth / 2;
 
@@ -142,14 +158,8 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
                       Votes: {nvalue}
                     </tspan>
 
-                    {isMajority && canPlaceAbove && (
-                      <tspan x={centerX} dy="1.2em" fontSize={10} className="text-white font-bold">
-                        MAJORITY
-                      </tspan>
-                    )}
-
-                    {isMajority && !canPlaceAbove && (
-                      <tspan x={centerX} dy="1.6em" fontSize={9} className="text-white font-bold">
+                    {isMajority && (
+                      <tspan x={centerX} dy="1.6em" fontSize={ nwidth < 80 ? nwidth / 7 : 12} className="text-white font-semibold">
                         MAJORITY
                       </tspan>
                     )}
@@ -175,49 +185,41 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
         </BarChart>
       </ChartContainer>
 
-      {/* Heat bar for agreement */}
-      <div className="w-full px-4 mt-3">
-        <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-          <span>Agreement</span>
-          <span className="tabular-nums">
-            {agreement.toFixed(0)}%
-            {agreement === 100
-              ? " 🎉"
-              : agreement >= 80
-              ? " 👍"
-              : agreement >= 50
-              ? " 😐"
-              : " 👎"}
+      {/* --- Gauge --- */}
+      <div className="relative w-[150px] h-[90px] flex items-end justify-center">
+        <svg viewBox="0 0 100 50" className="absolute top-0 left-0 w-full h-full">
+          <path
+            d="M10,50 A40,40 0 0,1 90,50"
+            fill="none"
+            stroke="hsl(var(--border))"
+            strokeWidth="6"
+            strokeLinecap="round"
+            opacity="0.25"
+          />
+          <path
+            d="M10,50 A40,40 0 0,1 90,50"
+            fill="none"
+            stroke="hsl(var(--accent))"
+            strokeWidth="6"
+            strokeLinecap="round"
+            strokeDasharray="126"
+            strokeDashoffset={126 - (agreement / 100) * 126}
+            style={{
+              filter: "drop-shadow(0 0 2px rgba(var(--accent-rgb),0.6))",
+              transition: "stroke-dashoffset 0.6s ease",
+            }}
+          />
+        </svg>
+
+        <div className="absolute bottom-0 flex flex-col items-center justify-center text-center">
+          <CardTitle className="text-3xl tabular-nums text-foreground dark:text-accent-foreground drop-shadow-[0_0_6px_rgba(var(--accent-rgb),0.4)]">
+            {averageVote.toFixed(1)}
+          </CardTitle>
+          <span className="text-[11px] text-muted-foreground tracking-tight">
+            avg • {agreement.toFixed(0)}% agree
           </span>
-        </div>
-
-        {/* Static gradient always spans full width */}
-        <div className="relative w-full h-5 rounded-full overflow-hidden">
-          <div
-            className="absolute inset-0"
-            style={{
-              background: "linear-gradient(to right, #EF4444, #FACC15, #22C55E)"
-            }}
-          />
-
-          {/* This overlay masks the right side beyond agreement */}
-          <div
-            className="absolute right-0 top-0 h-full bg-zinc-700 transition-all duration-500"
-            style={{
-              width: `${100 - agreement}%`
-            }}
-          />
         </div>
       </div>
-
-      <CardFooter className="flex flex-row items-center justify-center pb-0">
-        <CardTitle className="text-2xl tabular-nums mr-4">
-          {averageVote.toFixed(1)}{" "}
-          <span className="font-sans text-sm font-normal tracking-normal text-muted-foreground">
-            average
-          </span>
-        </CardTitle>
-      </CardFooter>
     </div>
   );
 };
