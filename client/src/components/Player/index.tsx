@@ -412,14 +412,14 @@ export function Player({
           >
             {/* --- Continuous accent glow behind card --- */}
             <div
-              className="absolute top-0 left-1/2 -translate-x-1/2 rounded-t-xl blur-sm"
+              className="absolute top-0 left-[3px] rounded-t-xl blur-sm"
               style={{
                 width: "3.5rem",
                 height: "5.5rem",
                 zIndex: 0,
                 boxShadow: `
-                    0 0 5px 4px hsl(var(--accent) / 0.55),
-                    0 0 5px 6px hsl(var(--accent) / 0.35)
+                    0 0 4px 3px hsl(var(--accent) / 0.55),
+                    0 0 4px 3px hsl(var(--accent) / 0.35)
                   `,
                 background: `
                   radial-gradient(
@@ -446,7 +446,7 @@ export function Player({
 
             {/* --- Nameplate --- */}
             <div
-              className="relative w-full max-w-[4rem] bg-gray-100/90 dark:bg-background/60
+              className="relative w-[4rem] bg-gray-100/90 dark:bg-background/60
                text-[10px] font-semibold text-center text-gray-800 dark:text-gray-200
                border border-gray-300 dark:border-none rounded-b-xl px-1 py-[2px]
                shadow-sm truncate"
@@ -488,16 +488,15 @@ export function Player({
               {...interactiveProps}
               className="relative flex flex-col items-center cursor-default z-0"
             >
-              {/* --- Continuous accent glow behind card --- */}
               <div
-                className="absolute top-0 left-1/2 -translate-x-1/2 rounded-t-xl blur-sm"
+                className="absolute top-0 left-[3px] rounded-t-xl blur-sm"
                 style={{
                   width: "3.5rem",
                   height: "5.5rem",
                   zIndex: 0,
                   boxShadow: `
-                    0 0 5px 5px hsl(var(--accent) / 0.55),
-                    0 0 5px 6px hsl(var(--accent) / 0.35)
+                    0 0 4px 3px hsl(var(--accent) / 0.55),
+                    0 0 4px 3px hsl(var(--accent) / 0.35)
                   `,
                   background: `
                     radial-gradient(
@@ -516,9 +515,9 @@ export function Player({
 
               {/* --- Nameplate --- */}
               <div
-                className="relative z-10 w-full max-w-[4rem] bg-gray-100/90 dark:bg-background/60
+                className="relative z-10 w-[4rem] bg-gray-100/90 dark:bg-background/60
                  text-[10px] font-semibold text-center text-gray-800 dark:text-gray-200
-                 border border-gray-300 dark:border-none rounded-b-xl px-1 py-[2px]
+                 border border-gray-300 dark:border-none rounded-b-xl
                  shadow-sm truncate"
                 title={user.username}
               >

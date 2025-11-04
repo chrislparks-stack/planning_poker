@@ -78,7 +78,7 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
         <BarChart
           accessibilityLayer
           margin={{
-            top: 5,
+            top: 8,
             left: -4,
             right: -4
           }}
@@ -186,7 +186,7 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
       </ChartContainer>
 
       {/* --- Gauge --- */}
-      <div className="relative w-[160px] h-[110px] flex items-end justify-center">
+      <div className="relative w-[150px] h-[90px] flex items-end justify-center">
         <svg viewBox="0 0 100 50" className="absolute top-0 left-0 w-full h-full">
           <path
             d="M10,50 A40,40 0 0,1 90,50"
