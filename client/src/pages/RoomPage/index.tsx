@@ -429,7 +429,7 @@ export function RoomPage() {
               <div
                   className="absolute top-0 left-0 right-0 overflow-y-auto"
                   style={{
-                    height: `calc(100% - ${room.isGameOver ? 200 : 140}px)`,
+                    height: `calc(100% - ${room.isGameOver ? 220 : 140}px)`,
                     paddingBottom: "1rem",
                   }}
               >

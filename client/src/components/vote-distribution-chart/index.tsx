@@ -67,7 +67,7 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
       data-testid="vote-distribution-chart"
     >
       <ChartContainer
-        className="w-[14vw] h-[10vh] -mb-5"
+        className="w-[14vw] -mb-5"
         config={{
           card: {
             label: "Votes",
@@ -78,6 +78,7 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
         <BarChart
           accessibilityLayer
           margin={{
+            top: 5,
             left: -4,
             right: -4
           }}
@@ -136,7 +137,7 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
                 console.log(nwidth);
 
                 const isMajority = nvalue === maxCardCount;
-                const labelFontSize = nwidth < 80 ? nwidth / 5 : 16;
+                const labelFontSize = nwidth < 80 ? nwidth / 5 : 14;
 
                 let labelY = ny + nheight / 2;
                 let fillColor = "white";
@@ -158,7 +159,7 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
                     </tspan>
 
                     {isMajority && (
-                      <tspan x={centerX} dy="1.6em" fontSize={ nwidth < 80 ? nwidth / 6 : 14} className="text-white font-bold">
+                      <tspan x={centerX} dy="1.6em" fontSize={ nwidth < 80 ? nwidth / 7 : 12} className="text-white font-semibold">
                         MAJORITY
                       </tspan>
                     )}
