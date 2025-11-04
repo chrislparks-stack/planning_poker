@@ -27,6 +27,7 @@ export function Room({ room, onShowInChat }: RoomProps) {
   const playerRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [tableRect, setTableRect] = useState<DOMRect | null>(null);
   const [setRoomOwner] = useSetRoomOwnerMutation();
+  const [senderName, setSenderName] = useState<string | null>(null);
   const [lastChats, setLastChats] = useState<Record<string, string | null>>({});
   const [chatPositionMap, setChatPositionMap] = useState<
     Record<string, Position | null>
@@ -43,6 +44,11 @@ export function Room({ room, onShowInChat }: RoomProps) {
 
       // --- Decompression step ---
       let message = formattedContent || content;
+
+      if (msg.username) {
+        setSenderName(msg.username);
+      }
+
       try {
         // Detect base64-ish compressed payloads (long strings with mostly base64 chars)
         if (/^[A-Za-z0-9+/=]+$/.test(message) && message.length > 40) {
@@ -88,8 +94,8 @@ export function Room({ room, onShowInChat }: RoomProps) {
     const totalPlayers = room.users.length;
     const { width, height } = tableRect;
     const padding = 80;
-    const CARD_WIDTH = 52;
-    const CARD_HEIGHT = 80;
+    const CARD_WIDTH = 60;
+    const CARD_HEIGHT = 110;
     const CARD_MARGIN = 20;
 
     const computeSidePositions = (
@@ -275,6 +281,7 @@ export function Room({ room, onShowInChat }: RoomProps) {
               key={senderId + message}
               message={message}
               playerId={senderId}
+              senderName={senderName ?? ""}
               absolutePosition={pos ?? undefined}
               onExpire={(pid) =>
                 setLastChats((prev) => ({ ...prev, [pid]: null }))

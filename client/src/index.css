@@ -241,6 +241,11 @@
   }
 }
 
+.scroll-anchoring-fix {
+  overflow-anchor: none;
+}
+
+
 /* Theme overrides */
 [data-theme="aqua"] {
   --accent-hue: var(--accent-aqua-hue);
@@ -257,4 +262,15 @@
 [data-theme="amber"] {
   --accent-hue: var(--accent-amber-hue);
   --accent-rgb: var(--accent-amber-rgb);
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px hsl(var(--accent))) drop-shadow(0 0 4px rgba(var(--accent-rgb),0.35));
+    transform: scale(1);
+  }
+  60% {
+    filter: drop-shadow(0 0 5px hsl(var(--accent))) drop-shadow(0 0 8px rgba(var(--accent-rgb),0.55));
+    transform: scale(1.015);
+  }
 }

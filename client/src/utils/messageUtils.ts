@@ -1,4 +1,5 @@
 import { compress, decompress } from "lz4js";
+import {ChatMessage} from "@/types";
 
 export function compressMessage(html: string): string {
   const utf8 = new TextEncoder().encode(html);
@@ -23,4 +24,26 @@ export function decompressMessage(base64: string): string {
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   const decompressed = decompress(bytes);
   return new TextDecoder().decode(decompressed);
+}
+
+export function safeDecompressMessage(msg: ChatMessage): ChatMessage {
+  let decompressed = msg.formattedContent || msg.content;
+  try {
+    const likelyBase64 =
+      /^[A-Za-z0-9+/=]+$/.test(decompressed) &&
+      decompressed.length % 4 === 0 &&
+      /[A-Za-z0-9+/]{10,}/.test(decompressed) &&
+      !/\s/.test(decompressed);
+
+    if (likelyBase64 && decompressed.length > 64) {
+      const result = decompressMessage(decompressed);
+      if (result && /[ -~]/.test(result.slice(0, 10))) {
+        decompressed = result;
+      }
+    }
+  } catch (err) {
+    console.warn("Decompression failed:", err);
+  }
+
+  return { ...msg, formattedContent: decompressed };
 }

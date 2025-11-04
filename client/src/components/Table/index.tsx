@@ -228,7 +228,6 @@ export const Table: FC<TableProps> = ({
   }
 
   // ===== Render =====
-  // ===== Render =====
   return (
     <div
       ref={innerRef}

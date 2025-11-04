@@ -429,16 +429,14 @@ export function RoomPage() {
               <div
                   className="absolute top-0 left-0 right-0 overflow-y-auto"
                   style={{
-                    height: `calc(100% - ${room.isGameOver ? 300 : 140}px)`,
+                    height: `calc(100% - ${room.isGameOver ? 200 : 140}px)`,
                     paddingBottom: "1rem",
                   }}
               >
                 <Room room={room} onShowInChat={handleShowInChat}/>
               </div>
 
-
-              {/* Deck + Chart remain absolute at bottom, untouched */}
-              <div className="absolute bottom-10 left-0 right-0 mx-auto w-full max-w-4xl">
+              <div className="absolute bottom-3 left-0 right-0 mx-auto w-full max-w-4xl">
                 <div
                     className={`flex gap-4 ${
                         room.isGameOver

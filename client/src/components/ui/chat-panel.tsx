@@ -6,8 +6,10 @@ import { useRoomChatSubscription, useSendChatMessageMutation } from "@/api";
 import { ChatInput } from "@/components/ui/chat-input";
 import { useToast } from "@/hooks/use-toast";
 import { useCardPosition } from "@/utils/cardPositionContext";
-import {Info} from "lucide-react";
-import {decompressMessage} from "@/utils/messageUtils.ts";
+import { Info } from "lucide-react";
+import { safeDecompressMessage } from "@/utils/messageUtils.ts";
+import {ToggleGif} from "@/components/ui/toggle-gif.tsx";
+import parse from "html-react-parser";
 
 export const ChatPanel: React.FC<{
   room?: Room;
@@ -29,7 +31,8 @@ export const ChatPanel: React.FC<{
 
   useEffect(() => {
     if (!roomId || messages.length) return;
-    setMessages(room?.chatHistory ?? []);
+
+    setMessages((room?.chatHistory ?? []).map(safeDecompressMessage));
   }, [roomId]);
 
   useEffect(() => {
@@ -71,18 +74,7 @@ export const ChatPanel: React.FC<{
       if (!msg) return;
 
       // Safely try to decompress (in case older messages are uncompressed)
-      let decompressed = msg.formattedContent || msg.content;
-      try {
-        // Detect base64-like strings (heuristic)
-        if (/^[A-Za-z0-9+/=]+$/.test(decompressed) && decompressed.length > 40) {
-          decompressed = decompressMessage(decompressed);
-        }
-      } catch (err) {
-        console.warn("Decompression failed, using raw content:", err);
-      }
-
-      // Store decompressed HTML back into the message object
-      const message = { ...msg, formattedContent: decompressed };
+      const message = safeDecompressMessage(msg);
 
       setMessages((prev) => {
         const exists = prev.some(
@@ -102,6 +94,24 @@ export const ChatPanel: React.FC<{
       });
     },
   });
+
+
+  const renderMessage = (html: string) => {
+    return parse(html, {
+      replace: (domNode: any) => {
+        if (domNode.name === "img" && domNode.attribs?.src?.endsWith(".gif")) {
+          return (
+            <ToggleGif
+              key={domNode.attribs.src}
+              src={domNode.attribs.src}
+              alt={domNode.attribs.alt || ""}
+            />
+          );
+        }
+        return undefined; // keep normal rendering
+      },
+    });
+  };
 
   // Auto-scroll on new message
   useEffect(() => {
@@ -147,6 +157,45 @@ export const ChatPanel: React.FC<{
     if (!el) return;
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   };
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const inputArea = el.parentElement?.querySelector(".chat-input-container");
+    if (!inputArea) return;
+
+    let lastKnownHeight = el.scrollHeight;
+
+    const observer = new ResizeObserver(() => {
+      const newHeight = el.scrollHeight;
+      const delta = newHeight - lastKnownHeight;
+
+      // Check how far the user is from the bottom (in pixels)
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+
+      // When resizing, if user is within ~100px of bottom, treat as "anchored"
+      const shouldStayAtBottom = distanceFromBottom < 100;
+
+      // If user is near bottom and chat input grew (delta < 0 => visible area shrank),
+      // move scrollTop downward to keep bottom messages in view.
+      if (shouldStayAtBottom) {
+        requestAnimationFrame(() => {
+          el.scrollTop = el.scrollHeight - el.clientHeight;
+        });
+      } else if (delta !== 0) {
+        // For non-bottom users, maintain their relative view position
+        el.scrollTop += delta;
+      }
+
+      lastKnownHeight = newHeight;
+    });
+
+    observer.observe(el);
+    lastKnownHeight = el.scrollHeight;
+
+    return () => observer.disconnect();
+  }, []);
+
 
   // Send chat (with optional position)
   const handleSendChat = async (plain: string, formatted: string) => {
@@ -208,7 +257,7 @@ export const ChatPanel: React.FC<{
         exit={{ x: "100%", opacity: 0 }}
         transition={{ type: "spring", stiffness: 180, damping: 22 }}
         className={cn(
-          "absolute right-0 h-[calc(100vh-56px)] w-[340px] flex flex-col z-50 overflow-hidden border-l border-border/70 backdrop-blur-2xl",
+          "absolute right-0 h-[calc(100%)] w-[340px] flex flex-col z-50 overflow-hidden border-l border-border/70 backdrop-blur-2xl scroll-anchoring-fix",
 
           // --- Light mode: subtle warm tint for contrast ---
           "bg-[color-mix(in_oklab,hsl(var(--background))_85%,hsl(var(--accent))_15%)] shadow-[0_0_25px_-6px_rgba(0,0,0,0.25)]",
@@ -227,17 +276,17 @@ export const ChatPanel: React.FC<{
           {/* Title + Info */}
           <div className="flex items-center gap-2">
             <h2 className="relative text-lg font-semibold tracking-wide overflow-hidden">
-      <span className="bg-clip-text text-transparent bg-gradient-to-r from-accent/80 via-accent/60 to-foreground/90 drop-shadow-[0_0_6px_rgba(0,0,0,0.4)]">
-        ✦ Live Chat
-      </span>
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-accent/80 via-accent/60 to-foreground/90 drop-shadow-[0_0_6px_rgba(0,0,0,0.4)]">
+                ✦ Live Chat
+              </span>
 
               <span
                 className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent bg-[length:200%_100%]
-          animate-[sheen_6s_linear_infinite] bg-clip-text text-transparent mix-blend-screen pointer-events-none"
+                  animate-[sheen_6s_linear_infinite] bg-clip-text text-transparent mix-blend-screen pointer-events-none"
                 aria-hidden="true"
               >
-        ✦ Live Chat
-      </span>
+                ✦ Live Chat
+              </span>
             </h2>
 
             {/* Info tooltip icon */}
@@ -278,7 +327,7 @@ export const ChatPanel: React.FC<{
           ref={scrollRef}
           onScroll={handleScroll}
           className={cn(
-            "flex-1 overflow-y-auto relative px-4 py-5 space-y-4 text-sm",
+            "flex-1 overflow-y-auto overflow-x-hidden relative px-4 py-5 space-y-4 text-sm scroll-anchoring-fix",
             "scrollbar-thin scrollbar-thumb-accent/40 scrollbar-track-transparent",
             "bg-gradient-to-b from-background/70 via-background/55 to-background/75 backdrop-blur-md border-t border-border/50",
             "shadow-[inset_0_2px_8px_rgba(0,0,0,0.15)]",
@@ -295,7 +344,6 @@ export const ChatPanel: React.FC<{
           <div className="pointer-events-none absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-accent/5 to-transparent dark:from-accent/20" />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-background/85 to-transparent dark:from-background/95" />
 
-          {/* message list as before */}
           {messages.length ? (
             messages.map((msg) => {
               const isSelf = msg.userId === currentUserId;
@@ -309,6 +357,29 @@ export const ChatPanel: React.FC<{
                 .join("")
                 .slice(0, 2)
                 .toUpperCase();
+
+              const isEmojiOnly = (() => {
+                const html = msg.formattedContent || msg.content || ""
+
+                // Normalize HTML: remove tags, entities, and invisible chars
+                const text = html
+                  .replace(/<[^>]+>/g, "")
+                  .replace(/&nbsp;|<br\s*\/?>|\n|\r/g, "")
+                  .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(dec))
+                  .replace(/&#x([0-9A-Fa-f]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+                  .replace(/[\u200D\uFE0F]/g, "")
+                  .trim()
+
+                // if the text is just one or a few emoji, no letters or numbers
+                const emojiRegex =
+                  /[\p{Emoji_Presentation}\p{Emoji}\u2190-\u21FF\u2300-\u27BF\u2B00-\u2BFF\u2600-\u26FF]/u;
+                return (
+                  text.length > 0 &&
+                  text.length <= 6 &&
+                  !/[A-Za-z0-9!@#$%^&*(),.?":{}|<>\-_+=]/.test(text) &&
+                  emojiRegex.test(text)
+                );
+              })()
 
               return (
                 <motion.div
@@ -337,19 +408,34 @@ export const ChatPanel: React.FC<{
                   <div className={cn("flex flex-col", isSelf && "items-end")}>
                     <div
                       className={cn(
-                        "px-4 py-2.5 rounded-2xl leading-relaxed backdrop-blur-[3px] border",
-                        "max-w-[100%]",
+                        "px-4 py-2.5 rounded-2xl leading-relaxed backdrop-blur-[3px] border transition-all duration-200",
                         isSelf
                           ? "bg-accent/35 dark:bg-accent/25 border-accent/40 text-[color:hsl(var(--foreground-soft))] dark:text-[color:hsl(var(--accent-foreground))]"
-                          : "bg-muted/35 dark:bg-muted/25 border-border text-[color:hsl(var(--foreground-soft))] dark:text-[color:hsl(var(--foreground))]"
+                          : "bg-muted/35 dark:bg-muted/25 border-border text-[color:hsl(var(--foreground-soft))] dark:text-[color:hsl(var(--foreground))]",
+                        isEmojiOnly &&
+                        "bg-transparent border-none shadow-none p-0 leading-none text-[3rem] sm:text-[3.5rem] md:text-[4rem]"
                       )}
                     >
                       <div
-                        className="chat-bubble-content leading-snug"
-                        dangerouslySetInnerHTML={{
-                          __html: msg.formattedContent || msg.content,
-                        }}
-                      />
+                        className={cn(
+                          "chat-bubble-content leading-snug break-words break-all whitespace-pre-wrap overflow-hidden",
+                          isEmojiOnly &&
+                          "flex justify-center items-center text-center select-none p-3 leading-none"
+                        )}
+                        style={
+                          isEmojiOnly
+                            ? {
+                              fontSize: "3rem",
+                              lineHeight: "1",
+                              textAlign: "center",
+                              fontFamily:
+                                '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',
+                            }
+                            : undefined
+                        }
+                      >
+                        {renderMessage(msg.formattedContent || msg.content)}
+                      </div>
                     </div>
 
                     <div
@@ -386,45 +472,58 @@ export const ChatPanel: React.FC<{
               No messages yet. Start the conversation.
             </div>
           )}
+
+          {/* Jump to Bottom button inside message scroll area */}
+          {visible && (
+            <motion.button
+              onClick={() => {
+                scrollToBottom();
+                setHasNewMessages(false);
+              }}
+              initial={false}
+              animate={{
+                opacity: showScrollButton ? 0.70 : 0,
+                y: showScrollButton ? 0 : 10,
+              }}
+              transition={{
+                type: "spring",
+                stiffness: 160,
+                damping: 22,
+                opacity: { duration: 0.3 },
+              }}
+              className={cn(
+                "ml-auto mr-3 mt-2 flex items-center gap-1 px-3 py-1.5 rounded-full",
+                "text-xs font-semibold tracking-wide backdrop-blur-md border shadow-md transition-all duration-300",
+                hasNewMessages
+                  ? "border-accent bg-accent/70 text-[color:hsl(var(--accent-foreground))] shadow-[0_0_12px_rgba(var(--accent-rgb),0.6)]"
+                  : "border-accent/40 bg-[color-mix(in_oklab,hsl(var(--accent))_35%,hsl(var(--background))_65%)] text-[color:hsl(var(--accent-foreground))]",
+                showScrollButton
+                  ? "sticky bottom-0 -mr-3 pointer-events-auto"
+                  : "absolute -mr-3 [right:200vw] pointer-events-none"
+              )}
+              style={{
+                zIndex: 10,
+                alignSelf: "flex-end",
+              }}
+            >
+              <span
+                className={cn(
+                  "drop-shadow-[0_0_6px_rgba(var(--accent-rgb),0.4)]",
+                  hasNewMessages && "animate-pulse"
+                )}
+              >
+                {hasNewMessages ? "↓ New Messages" : "▼ Jump to Bottom"}
+              </span>
+            </motion.button>
+          )}
         </div>
 
         {/* Input area */}
-        <div className="relative border-t border-border/60 bg-gradient-to-t from-background/95 via-background/85 to-background/90 backdrop-blur-2xl p-2 shadow-[0_-4px_14px_rgba(0,0,0,0.25)] dark:shadow-[0_-4px_10px_rgba(255,255,255,0.05)]">
+        <div className="relative border-t border-border/60 bg-gradient-to-t from-background/95 via-background/85 to-background/90 backdrop-blur-2xl p-2 shadow-[0_-4px_14px_rgba(0,0,0,0.25)] dark:shadow-[0_-4px_10px_rgba(255,255,255,0.05)] chat-input-container">
           <div className="absolute -top-px left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-accent/40 to-transparent blur-[1px]" />
           <ChatInput onSend={handleSendChat} inPanel />
         </div>
       </motion.aside>
-
-      {visible && (
-        <button
-          onClick={() => {
-            scrollToBottom();
-            setHasNewMessages(false);
-          }}
-          className={cn(
-            "fixed bottom-[150px] right-3 z-50 flex items-center gap-1 px-3 py-1.5 rounded-full",
-            "text-xs font-semibold tracking-wide backdrop-blur-md border transition-all duration-300",
-            hasNewMessages
-              ? "border-accent bg-accent/70 text-[color:hsl(var(--accent-foreground))] shadow-[0_0_12px_rgba(var(--accent-rgb),0.6)]"
-              : "border-accent/40 bg-[color-mix(in_oklab,hsl(var(--accent))_35%,hsl(var(--background))_65%)] text-[color:hsl(var(--accent-foreground))]"
-          )}
-          style={{
-            transform: showScrollButton ? "translateY(0)" : "translateY(20px)",
-            opacity: showScrollButton ? 0.7 : 0,
-            transition:
-              "transform 0.8s cubic-bezier(0.45, 0, 0.25, 1), opacity 0.6s cubic-bezier(0.45, 0, 0.25, 1)",
-          }}
-        >
-          <span
-            className={cn(
-              "drop-shadow-[0_0_6px_rgba(var(--accent-rgb),0.4)]",
-              hasNewMessages && "animate-pulse"
-            )}
-          >
-            {hasNewMessages ? "↓ New Messages" : "▼ Jump to Bottom"}
-          </span>
-        </button>
-      )}
     </>
   );
 };

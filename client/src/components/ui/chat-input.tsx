@@ -1,9 +1,11 @@
 import React, {startTransition, useEffect, useRef, useState} from "react";
 import {createPortal} from "react-dom";
 import {cn} from "@/lib/utils";
-import {Bold, Camera, Droplet, ImagePlay, Italic, Palette, SendHorizonal, Underline, X,} from "lucide-react";
+import {Bold, Camera, Droplet, ImagePlay, Italic, Palette, SendHorizonal, Smile, Underline, X,} from "lucide-react";
 import tenorLogo from "@/assets/PB_tenor_logo_grey_vertical.svg";
 import {HexColorPicker} from "react-colorful";
+import data from "@emoji-mart/data";
+import Picker from "@emoji-mart/react";
 import {OverlayPortal} from "@/utils/overlayPortal.tsx";
 import {motion} from "framer-motion";
 import {compressMessage} from "@/utils/messageUtils.ts";
@@ -33,8 +35,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [showPalette, setShowPalette] = useState(false);
   const [showCustomPicker, setShowCustomPicker] = useState(false);
   const [customColor, setCustomColor] = useState("#7C3AED");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showGifPicker, setShowGifPicker] = useState(false);
   const [gifs, setGifs] = useState<any[]>([]);
+  const [hoveredGif, setHoveredGif] = useState<string | null>(null);
+  const [hoverPos, setHoverPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const hoverTimer = useRef<NodeJS.Timeout | null>(null);
   const [attachments, setAttachments] = useState<string[]>([]);
   const [activeFormats, setActiveFormats] = useState({
     bold: false,
@@ -46,11 +52,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   const editorRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const gifPickerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const selectionRef = useRef<Range | null>(null)
 
-  const [pickerPos, setPickerPos] = useState({ top: 0, left: 0 });
+  const [pickerPos, setPickerPos] = useState({ top: 0, left: 0, width: 0, height: 0 });
 
   const portalRoot =
     typeof document !== "undefined"
@@ -117,6 +126,22 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     onClose?.();
   };
 
+  const saveSelection = () => {
+    const selection = window.getSelection()
+    if (selection && selection.rangeCount > 0) {
+      selectionRef.current = selection.getRangeAt(0)
+    }
+  }
+
+  const restoreSelection = () => {
+    const selection = window.getSelection()
+    const range = selectionRef.current
+    if (range && selection) {
+      selection.removeAllRanges()
+      selection.addRange(range)
+    }
+  }
+
   const applyCommand = (cmd: string, value?: string) => {
     const editor = editorRef.current;
     if (!editor) return;
@@ -152,13 +177,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       const target = e.target as Node;
       if (
         containerRef.current?.contains(target) ||
-        gifPickerRef.current?.contains(target)
+        gifPickerRef.current?.contains(target) ||
+        emojiPickerRef.current?.contains(target)
       )
         return;
       if (!inPanel) onClose?.();
       setShowPalette(false);
       setShowGifPicker(false);
       setShowCustomPicker(false);
+      setShowEmojiPicker(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -301,6 +328,40 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }, 300);
   };
 
+  const handleGifHover = (url: string, e: React.MouseEvent) => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    const rect = (e.target as HTMLElement).getBoundingClientRect()
+    hoverTimer.current = setTimeout(() => {
+      setHoveredGif(url)
+      setHoverPos({
+        x: rect.left + rect.width / 2,
+        y: rect.top - 8,
+      })
+    }, 1000);
+  }
+
+  const handleGifLeave = () => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    setHoveredGif(null);
+  }
+
+  useEffect(() => {
+    if (!showEmojiPicker) return
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(e.target as Node) &&
+        !emojiButtonRef.current?.contains(e.target as Node)
+      ) {
+        setShowEmojiPicker(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [showEmojiPicker])
+
   useEffect(() => {
     if (showGifPicker) fetchGifs();
   }, [showGifPicker]);
@@ -310,25 +371,27 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
       setPickerPos({
-        top: Math.max(8, rect.top - 210),
-        left: Math.max(8, rect.left + rect.width - 220),
+        top: rect.top + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+        height: rect.height,
       });
     };
+
     updatePosition();
-    if (showGifPicker) {
-      window.addEventListener("scroll", updatePosition, true);
-      window.addEventListener("resize", updatePosition);
-    }
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
     return () => {
-      window.removeEventListener("scroll", updatePosition, true);
       window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [showGifPicker]);
+  }, [showEmojiPicker, showGifPicker]);
 
   // === Shared Render sections ===
   const renderToolbar = () => {
     const iconSize = inPanel ? 17 : 14;        // slightly larger icons in panel
-    const pad = inPanel ? "p-1.5" : "p-[5px]"; // and looser button padding
+    const pad = inPanel ? "p-1.5" : "p-[2px]"; // and looser button padding
 
     return (
       <div
@@ -353,6 +416,20 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               </button>
             )
           )}
+          <button
+            ref={emojiButtonRef}
+            onClick={(e) => {
+              e.stopPropagation()
+              setShowEmojiPicker((prev) => !prev)
+            }}
+            className={cn(
+              `${pad} rounded-md text-accent hover:bg-accent/10 transition`,
+              showEmojiPicker && "bg-accent/25 ring-1 ring-accent/50"
+            )}
+            title="Insert Emoji"
+          >
+            <Smile size={iconSize} />
+          </button>
           <button
             onClick={() => setShowPalette((s) => !s)}
             className={cn(
@@ -407,6 +484,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           const hasText = !!el.textContent?.trim();
           setIsEmpty(!hasText);
         }}
+        onBlur={saveSelection}
+        onKeyUp={saveSelection}
+        onMouseUp={saveSelection}
       />
       {isEmpty && (
         <span className="absolute left-3 top-2 text-muted-foreground text-sm opacity-60 pointer-events-none select-none">
@@ -453,6 +533,148 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       </div>
     );
 
+  const renderEmojiPicker = () => {
+    if (!showEmojiPicker) return null;
+
+    // INLINE MODE (chat panel)
+    if (inPanel) {
+      return (
+        <div
+          ref={emojiPickerRef}
+          className="relative border border-border rounded-xl bg-popover shadow-xl overflow-hidden z-[60] w-fit -ml-1.5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => setShowEmojiPicker(false)}
+            className="absolute top-1 right-0.5 text-muted-foreground hover:text-foreground transition z-10"
+            title="Close"
+          >
+            <X size={12} />
+          </button>
+
+          <div className="relative w-fit h-[260px] overflow-hidden">
+            <Picker
+              data={data}
+              onEmojiSelect={(emoji: any) => {
+                const editor = editorRef.current;
+                if (!editor) return;
+
+                editor.focus();
+                restoreSelection();
+
+                const selection = window.getSelection();
+                if (!selection || !selection.rangeCount) return;
+
+                if (isEmpty) {
+                  setIsEmpty(false);
+                }
+
+                const range = selection.getRangeAt(0);
+                const textNode = document.createTextNode(emoji.native);
+                range.insertNode(textNode);
+
+                // Move caret after emoji
+                range.setStartAfter(textNode);
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+
+                saveSelection();
+              }}
+              theme={
+                document.documentElement.classList.contains("dark")
+                  ? "dark"
+                  : "light"
+              }
+              previewPosition="none"
+              skinTonePosition="none"
+              perLine={8}
+              dynamicWidth={false}
+              navPosition="none"
+            />
+          </div>
+        </div>
+      );
+    }
+
+    // FLOATING / OVERLAY MODE (popup composer)
+    // ✅ Ensure a default portalRoot if it doesn’t exist
+    const targetRoot =
+      portalRoot ??
+      (typeof document !== "undefined"
+        ? document.getElementById("portal-root") || document.body
+        : null);
+
+    if (!targetRoot) return null;
+
+    return createPortal(
+      <div
+        ref={emojiPickerRef}
+        className="fixed w-[210px] h-[220px] border border-border rounded-xl shadow-xl bg-popover overflow-hidden z-[60]"
+        style={{
+          top: `${isTopSide
+            ? pickerPos.top + pickerPos.height 
+            : pickerPos.top - 220}px`,
+          left: `${isLeftSide
+            ? pickerPos.left + 5
+            : pickerPos.left + pickerPos.width - 215}px`,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={() => setShowEmojiPicker(false)}
+          className="absolute top-1 right-1 text-muted-foreground hover:text-foreground transition z-10"
+          title="Close"
+        >
+          <X size={12} />
+        </button>
+
+        <div className="relative w-full h-full overflow-hidden">
+          <Picker
+            data={data}
+            onEmojiSelect={(emoji: any) => {
+              const editor = editorRef.current;
+              if (!editor) return;
+
+              editor.focus();
+              restoreSelection();
+
+              const selection = window.getSelection();
+              if (!selection || !selection.rangeCount) return;
+
+              if (isEmpty) {
+                setIsEmpty(false);
+              }
+
+              const range = selection.getRangeAt(0);
+              const textNode = document.createTextNode(emoji.native);
+              range.insertNode(textNode);
+
+              // Move caret after emoji
+              range.setStartAfter(textNode);
+              range.collapse(true);
+              selection.removeAllRanges();
+              selection.addRange(range);
+
+              saveSelection();
+            }}
+            theme={
+              document.documentElement.classList.contains("dark")
+                ? "dark"
+                : "light"
+            }
+            previewPosition="none"
+            skinTonePosition="none"
+            perLine={5}
+            dynamicWidth={false}
+            navPosition="none"
+          />
+        </div>
+      </div>,
+      targetRoot
+    );
+  };
+
   const renderGifPicker = () => {
     if (!showGifPicker) return null;
 
@@ -484,30 +706,66 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             </button>
           </div>
 
-          <div className="relative max-h-[160px] overflow-y-auto overflow-x-hidden">
-            <div className="grid grid-cols-3 gap-1">
-              {gifs.map((g) => (
-                <motion.img
-                  key={g.id}
-                  src={g.url}
-                  alt=""
-                  layout
-                  initial={{ opacity: 0, scale: 0.96 }}
+          <div className="relative">
+            {/* Scrollable grid area */}
+            <div className="max-h-[160px] overflow-y-auto overflow-x-hidden relative">
+              <div className="grid grid-cols-3 gap-1">
+                {gifs.map((g) => (
+                  <motion.div
+                    key={g.id}
+                    className="relative"
+                    onMouseEnter={(e) => handleGifHover(g.url, e)}
+                    onMouseLeave={handleGifLeave}
+                  >
+                    <motion.img
+                      key={g.id}
+                      src={g.url}
+                      alt=""
+                      layout
+                      initial={{ opacity: 0, scale: 0.96 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.25, ease: "easeOut" }}
+                      className="rounded-md cursor-pointer hover:opacity-80 hover:scale-[1.02] transition-transform"
+                      onClick={(e) => handleGifSelect(g.url, e)}
+                    />
+                  </motion.div>
+                ))}
+              </div>
+
+              {isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground/70 backdrop-blur-[1px] bg-background/40">
+                  Loading GIFs…
+                </div>
+              )}
+            </div>
+
+            {hoveredGif &&
+              createPortal(
+                <motion.div
+                  key="gif-preview"
+                  initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.25, ease: "easeOut" }}
-                  className="rounded-md cursor-pointer hover:opacity-80 hover:scale-[1.02] transition-transform"
-                  onClick={(e) => handleGifSelect(g.url, e)}
-                />
-              ))}
-            </div>
-
-            {isLoading && (
-              <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground/70 backdrop-blur-[1px] bg-background/40">
-                Loading GIFs…
-              </div>
-            )}
+                  className="fixed pointer-events-none z-[9999] rounded-lg overflow-hidden border border-border shadow-2xl backdrop-blur-sm"
+                  style={{
+                    top: `${hoverPos.y - 100}px`,
+                    left: `${hoverPos.x - 90}px`,
+                    width: "200px",
+                    backgroundColor: "hsl(var(--popover))",
+                  }}
+                >
+                  <img
+                    src={hoveredGif}
+                    alt="Preview"
+                    className="w-full h-auto object-contain rounded-lg"
+                  />
+                </motion.div>,
+                document.body
+              )}
           </div>
+
 
           <div className="flex justify-center py-1">
             <img src={tenorLogo} alt="Tenor" className="w-[60px] opacity-60" />
@@ -524,8 +782,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         ref={gifPickerRef}
         className="fixed w-[218px] border border-border rounded-xl shadow-xl bg-popover overflow-hidden z-[60]"
         style={{
-          top: `${isTopSide ? pickerPos.top + 309 : pickerPos.top - 53}px`,
-          left: `${pickerPos.left}px`,
+          top: `${isTopSide
+            ? pickerPos.top + pickerPos.height
+            : pickerPos.top - 263}px`,
+          left: `${isLeftSide
+            ? pickerPos.left
+            : pickerPos.left + pickerPos.width - 220}px`,
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -552,19 +814,51 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         <div className="max-h-[210px] overflow-y-auto overflow-x-hidden">
           <div className="grid grid-cols-3 gap-1 p-3 pt-2">
             {gifs.map((g) => (
-              <motion.img
+              <motion.div
                 key={g.id}
-                src={g.url}
-                alt=""
-                layout
-                initial={{ opacity: 0, scale: 0.96 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.25, ease: "easeOut" }}
-                className="rounded-md cursor-pointer hover:opacity-80 hover:scale-[1.02] transition-transform"
-                onClick={(e) => handleGifSelect(g.url, e)}
-              />
+                className="relative"
+                onMouseEnter={(e) => handleGifHover(g.url, e)}
+                onMouseLeave={handleGifLeave}
+              >
+                <motion.img
+                  key={g.id}
+                  src={g.url}
+                  alt=""
+                  layout
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  className="rounded-md cursor-pointer hover:opacity-80 hover:scale-[1.02] transition-transform"
+                  onClick={(e) => handleGifSelect(g.url, e)}
+                />
+              </motion.div>
             ))}
+
+            {hoveredGif &&
+              createPortal(
+                <motion.div
+                  key="gif-preview"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  className="fixed pointer-events-none z-[99999] rounded-lg overflow-hidden border border-border shadow-2xl backdrop-blur-sm"
+                  style={{
+                    top: `${hoverPos.y - 120}px`,
+                    left: `${hoverPos.x - 90}px`,
+                    width: "200px",
+                    backgroundColor: "hsl(var(--popover))",
+                  }}
+                >
+                  <img
+                    src={hoveredGif}
+                    alt="Preview"
+                    className="w-full h-auto object-contain rounded-lg"
+                  />
+                </motion.div>,
+                document.body
+              )}
           </div>
           <div className="sticky bottom-0 flex justify-center items-center bg-popover py-1">
             <img src={tenorLogo} alt="Tenor" className="w-[80px] opacity-70 mt-1" />
@@ -665,12 +959,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             // FLOATING / OVERLAY MODE (popup composer)
             <div
               className={cn(
-                "absolute -top-[48px] bg-popover border border-border rounded-xl shadow-xl p-3 w-[105px] h-[125px]",
+                "absolute -top-[42px] bg-popover border border-border rounded-xl shadow-xl p-3 w-[105px] h-[120px]",
                 isLeftSide ? "right-[212px]" : "left-[212px]"
               )}
               onClick={(e) => e.stopPropagation()}
             >
-              <section className="small -mt-1 mb-1">
+              <section className="small -mt-2 mb-1">
                 <HexColorPicker color={customColor} onChange={setCustomColor} />
               </section>
               <button
@@ -711,6 +1005,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         className="hidden"
       />
       {renderToolbar()}
+      {renderEmojiPicker()}
       {renderColorPalette()}
       {renderGifPicker()}
       {renderInput()}

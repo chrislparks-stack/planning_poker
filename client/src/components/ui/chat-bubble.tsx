@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 interface ChatBubbleProps {
   message: string;
   playerId: string;
+  senderName?: string;
   absolutePosition?: { x: number; y: number; width?: number; height?: number };
   duration?: number; // seconds bubble is alive/animating
   className?: string;
@@ -16,8 +17,9 @@ interface ChatBubbleProps {
 export const ChatBubble: React.FC<ChatBubbleProps> = ({
   message,
   playerId,
+  senderName,
   absolutePosition,
-  duration = 5, // was 3 → now ~2s longer
+  duration = 5,
   className,
   onExpire,
   onShowInChat,
@@ -36,18 +38,15 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
     const el = bubbleRef.current;
     if (!el) return;
 
-    const { x, y, width = 0, height = 80 } = absolutePosition;
+    const { x, y, width = 0} = absolutePosition;
     const bubbleRect = el.getBoundingClientRect();
 
     const bubbleWidth = Math.max(1, bubbleRect.width || 160);
     const bubbleHeight = Math.max(1, bubbleRect.height || 60);
-    const gap = 12;
-    const hasSpaceRight = x + width + bubbleWidth + gap < window.innerWidth;
-    const hasSpaceLeft = x - bubbleWidth - gap > 0;
-    const isLeftSide = hasSpaceRight ? false : hasSpaceLeft;
 
-    const baseY = y - height * 0.45;
-    const baseX = isLeftSide ? x - bubbleWidth - gap : x + width + gap;
+    // center horizontally, position bubble bottom at card top
+    const baseX = x + width / 2 - bubbleWidth / 2;
+    const baseY = y - bubbleHeight;
 
     // clamp so we don't go off-screen
     const margin = 8;
@@ -127,7 +126,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
           initial={{ opacity: 0, y: 0, scale: 0.96 }}
           animate={{
             opacity: [0, 1, 1, 0],
-            y: [0, -35], // float up over time
+            y: [0, -35],
             scale: [0.96, 1],
           }}
           exit={{ opacity: 0 }}
@@ -139,7 +138,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
           }}
           className={cn(
             // IMPORTANT: keep this fixed so computeAndSetCoords math applies to viewport
-            "fixed z-[9999] select-none pointer-events-auto group", // <-- group for hover overlay
+            "fixed z-[9999] select-none pointer-events-auto group",
             "px-3.5 py-2 text-sm rounded-2xl font-medium tracking-tight",
             "overflow-hidden break-words text-center",
             "backdrop-blur-[22px] border shadow-[0_2px_18px_rgba(0,0,0,0.25)]",
@@ -161,6 +160,11 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
             overflow: "hidden",
           }}
         >
+          {senderName && (
+            <div className="text-[11px] font-semibold text-foreground/90 dark:text-accent-foreground/90 underline decoration-foreground/40 decoration-1">
+              {senderName}
+            </div>
+          )}
           {/* message content */}
           <div
             className={cn(
