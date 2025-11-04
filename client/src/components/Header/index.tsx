@@ -58,7 +58,7 @@ export const Header: FC<HeaderProps> = ({ room, users, onMenuOpenChange }) => {
                 className="h-8 w-auto transition-transform duration-300 group-hover:scale-[1.03] mr-2 mt-1"
               />
               <span className="hidden md:block">
-                {room?.name ?? storedRoom?.RoomName ?? "Planning Poker"}
+                {room?.name || storedRoom?.RoomName || "Planning Poker"}
               </span>
             </Link>
           </TooltipTrigger>
