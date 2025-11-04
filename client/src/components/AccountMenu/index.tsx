@@ -33,9 +33,10 @@ import {SupportDialog} from "@/components/SupportDialog";
 
 interface AccountMenuProps {
   room?: Room;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
+export const AccountMenu: FC<AccountMenuProps> = ({ room, onOpenChange }) => {
   const { user, logout } = useAuth();
   const { toast } = useToast();
   const [roomId, setRoomId] = useState("");
@@ -99,7 +100,7 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room }) => {
   return (
     <>
       {user && (
-        <DropdownMenu>
+        <DropdownMenu onOpenChange={onOpenChange}>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"

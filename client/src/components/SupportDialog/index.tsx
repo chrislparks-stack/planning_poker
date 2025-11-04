@@ -1,7 +1,7 @@
 import { FC, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   Dialog,
-  DialogContent,
+  DialogContent, DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle
@@ -12,6 +12,7 @@ import {
   AccordionItem,
   AccordionTrigger
 } from "@/components/ui/accordion";
+import {VisuallyHidden} from "@radix-ui/react-visually-hidden";
 
 interface SupportDialogProps {
   open: boolean;
@@ -24,6 +25,14 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
   const [descHeight, setDescHeight] = useState(120);
   const descRef = useRef<HTMLDivElement>(null);
   const isOpen = accordionValue === "donate";
+
+  if (import.meta.env.DEV) {
+    const originalError = console.error;
+    console.error = (...args) => {
+      if (args[0]?.toString().includes("ko-fi.com")) return;
+      originalError(...args);
+    };
+  }
 
   // Measure true full height of description
   useLayoutEffect(() => {
@@ -60,7 +69,6 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
-        aria-label="Kofi Support Page"
         className="
           flex flex-col w-[90vw] max-w-[620px] max-h-[88vh]
           rounded-2xl backdrop-blur-md bg-background/85
@@ -71,6 +79,12 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <div className="h-1.5 w-full bg-gradient-to-r from-accent to-accent/60" />
+
+        <VisuallyHidden>
+          <DialogDescription>
+            Ko-fi support page for anyone who like to contribute
+          </DialogDescription>
+        </VisuallyHidden>
 
         <DialogHeader className="px-6 pt-5 pb-3 border-b shrink-0">
           <DialogTitle className="text-lg font-semibold tracking-tight">
@@ -162,6 +176,7 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
                 >
                   <iframe
                     src="https://ko-fi.com/crispyasian/?hidefeed=true&widget=true"
+                    loading="lazy"
                     title="Ko-fi Donation Widget"
                     width="100%"
                     height="550"

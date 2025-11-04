@@ -8,6 +8,10 @@ generates:
   src/types/types.generated.ts:
     plugins:
       - 'typescript'
+    config:
+      scalars:
+        DateTime: string
+        UUID: string
   src/api/:
     preset: near-operation-file
     presetConfig:
@@ -16,6 +20,10 @@ generates:
     plugins:
       - typescript-operations
       - typescript-react-apollo
+    config:
+      scalars:
+        DateTime: string
+        UUID: string
   src/api/apollo-helpers.generated.ts:
     plugins:
       - typescript-apollo-client-helpers

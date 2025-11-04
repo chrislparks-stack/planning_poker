@@ -99,18 +99,68 @@ module.exports = {
 			keyframes: {
 				"accordion-down": {
 					from: { height: "0" },
-					to: { height: "var(--radix-accordion-content-height)" }
+					to: { height: "var(--radix-accordion-content-height)" },
 				},
 				"accordion-up": {
 					from: { height: "var(--radix-accordion-content-height)" },
 					to: { height: "0" }
+				},
+				"color-cycle": {
+					"0%": { backgroundColor: "hsl(var(--accent-lilac))" },
+					"25%": { backgroundColor: "hsl(var(--accent-aqua))" },
+					"50%": { backgroundColor: "hsl(var(--accent-emerald))" },
+					"75%": { backgroundColor: "hsl(var(--accent-amber))" },
+					"100%": { backgroundColor: "hsl(var(--accent-lilac))" }
+				},
+				"fade-slide-down": {
+					"0%": { opacity: "0", transform: "translateY(-8px)" },
+					"100%": { opacity: "1", transform: "translateY(0)" }
+				},
+				"fade-slide-up": {
+					"0%": { opacity: "1", transform: "translateY(0)" },
+					"100%": { opacity: "0", transform: "translateY(-8px)" }
+				},
+				sheen: {
+					"0%": { transform: "translateX(-100%)" },
+					"100%": { transform: "translateX(100%)" }
+				},
+				"mask-fade-y": {
+					"0%": {
+						"-webkit-mask-image":
+							"linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)",
+						maskImage:
+							"linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)",
+					}
+				},
+				gradientFlow: {
+					"0%": { backgroundPosition: "0% 50%" },
+					"50%": { backgroundPosition: "100% 50%" },
+					"100%": { backgroundPosition: "0% 50%" },
 				}
 			},
 			animation: {
 				"accordion-down": "accordion-down 0.7s ease-out",
 				"accordion-up": "accordion-up 0.7s ease-out",
+				"color-cycle": "color-cycle 3s linear infinite",
+				"fade-slide-down": "fade-slide-down 0.4s ease-out",
+				"fade-slide-up": "fade-slide-up 0.4s ease-in forwards",
+				sheen: "sheen 6s linear infinite",
+				"mask-fade-y": "mask-fade-y 1s ease forwards",
+				"gradient-flow": "gradientFlow 6s ease infinite"
 			}
 		}
 	},
-	plugins: [require("tailwindcss-animate")]
+	plugins: [
+		require("tailwindcss-animate"),
+		function ({ addUtilities }) {
+			addUtilities({
+				".mask-fade-y": {
+					"-webkit-mask-image":
+						"linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)",
+					"mask-image":
+						"linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)",
+				},
+			});
+		},
+	]
 };
