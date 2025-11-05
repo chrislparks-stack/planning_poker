@@ -30,7 +30,8 @@ try {
 
 const router = createRouter({
   routeTree,
-  defaultNotFoundComponent: NotFoundPage
+  defaultNotFoundComponent: NotFoundPage,
+  defaultPreload: "intent"
 });
 
 declare module "@tanstack/react-router" {
