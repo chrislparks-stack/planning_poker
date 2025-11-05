@@ -86,7 +86,7 @@ export type CancelRevealCountdownMutation = { __typename?: 'MutationRoot', cance
 
 export type SetRoomOwnerMutationVariables = Types.Exact<{
   roomId: Types.Scalars['UUID']['input'];
-  userId: Types.Scalars['UUID']['input'];
+  userId?: Types.InputMaybe<Types.Scalars['UUID']['input']>;
 }>;
 
 
@@ -566,7 +566,7 @@ export type CancelRevealCountdownMutationHookResult = ReturnType<typeof useCance
 export type CancelRevealCountdownMutationResult = Apollo.MutationResult<CancelRevealCountdownMutation>;
 export type CancelRevealCountdownMutationOptions = Apollo.BaseMutationOptions<CancelRevealCountdownMutation, CancelRevealCountdownMutationVariables>;
 export const SetRoomOwnerDocument = gql`
-    mutation SetRoomOwner($roomId: UUID!, $userId: UUID!) {
+    mutation SetRoomOwner($roomId: UUID!, $userId: UUID) {
   setRoomOwner(roomId: $roomId, userId: $userId) {
     ...RoomFragment
   }

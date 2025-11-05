@@ -1,6 +1,6 @@
 {
   "name": "summit-poker-planning",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "engines": {
     "node": ">=20"
@@ -55,13 +55,15 @@
     "react-colorful": "5.6.1",
     "react-dom": "19.0.0",
     "recharts": "2.15.1",
+    "rollup-plugin-visualizer": "6.0.5",
     "tailwind-merge": "3.0.2",
     "tailwindcss-animate": "1.0.7",
+    "terser": "5.44.1",
     "uuid": "13.0.0",
     "web-vitals": "5.1.0"
   },
   "devDependencies": {
-    "@graphql-codegen/cli": "4.0.1",
+    "@graphql-codegen/cli": "6.0.1",
     "@graphql-codegen/introspection": "4.0.0",
     "@graphql-codegen/near-operation-file-preset": "2.5.0",
     "@graphql-codegen/typescript": "4.0.1",
@@ -81,6 +83,7 @@
     "@types/react-dom": "19.0.3",
     "@typescript-eslint/eslint-plugin": "6.1.0",
     "@typescript-eslint/parser": "6.1.0",
+    "@vitejs/plugin-legacy": "6.1.1",
     "@vitejs/plugin-react": "4.3.4",
     "@vitest/coverage-v8": "3.0.8",
     "autoprefixer": "10.4.20",
@@ -100,6 +103,7 @@
     "tailwindcss": "3.4.17",
     "typescript": "5.7.3",
     "vite": "6.4.1",
+    "vite-plugin-compression": "0.5.1",
     "vitest": "3.0.8"
   },
   "browserslist": {
