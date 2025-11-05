@@ -3,10 +3,9 @@ import { defineConfig, loadEnv, Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { tanstackRouter } from "@tanstack/router-vite-plugin";
 import { visualizer } from "rollup-plugin-visualizer";
-import legacy from "@vitejs/plugin-legacy";
 import viteCompression from "vite-plugin-compression";
 
-// --- Optional: Google Analytics injector ---
+// --- Google Analytics injector ---
 const injectGoogleAnalytics = ({
                                  mode,
                                  GOOGLE_ANALYTICS_ID,
@@ -36,9 +35,6 @@ const injectGoogleAnalytics = ({
   },
 });
 
-// --- React compiler config ---
-const ReactCompilerConfig = {};
-
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const GRAPHQL_ENDPOINT = env.VITE_GRAPHQL_ENDPOINT;
@@ -49,9 +45,12 @@ export default defineConfig(({ mode }) => {
     plugins: [
       tanstackRouter(),
       react({
+        jsxRuntime: "automatic",
         babel: {
-          plugins: [["babel-plugin-react-compiler", ReactCompilerConfig]],
-        },
+          parserOpts: {
+            plugins: ["jsx", "typescript"],
+          }
+        }
       }),
       injectGoogleAnalytics({ mode, GOOGLE_ANALYTICS_ID }),
       visualizer({
@@ -60,11 +59,10 @@ export default defineConfig(({ mode }) => {
         gzipSize: true,
         brotliSize: true,
       }),
-      legacy({ targets: ["defaults", "not IE 11"] }),
       viteCompression({
         algorithm: "brotliCompress",
-        ext: ".br"
-      })
+        ext: ".br",
+      }),
     ],
     resolve: {
       alias: {
@@ -74,8 +72,11 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: "dist",
       emptyOutDir: true,
+      target: "esnext",
+      modulePreload: true,
+      cssCodeSplit: true,
       rollupOptions: {
-        input: "index.html"
+        input: "index.html",
       },
       chunkSizeWarningLimit: 1000,
     },
