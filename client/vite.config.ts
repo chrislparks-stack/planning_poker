@@ -75,29 +75,9 @@ export default defineConfig(({ mode }) => {
       outDir: "dist",
       emptyOutDir: true,
       rollupOptions: {
-        input: "index.html",
-        output: {
-          manualChunks(id) {
-            if (!id.includes("node_modules")) return;
-
-            if (
-              id.includes("react") ||
-              id.includes("@apollo") ||
-              id.includes("graphql") ||
-              id.includes("@tanstack")
-            ) {
-              return "vendor_core";
-            }
-
-            if (id.includes("@radix-ui") || id.includes("@astrouxds") || id.includes("lucide-react")) {
-              return "vendor_ui";
-            }
-
-            return "vendor_misc";
-          }
-        }
+        input: "index.html"
       },
-      chunkSizeWarningLimit: 800, // optional
+      chunkSizeWarningLimit: 1000,
     },
     server: {
       proxy: {
