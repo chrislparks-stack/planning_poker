@@ -20,19 +20,39 @@ interface SupportDialogProps {
 }
 
 export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
-  const [accordionValue, setAccordionValue] = useState<string | undefined>();
+  const [accordionValue, setAccordionValue] = useState<string>("");
   const [delayedFade, setDelayedFade] = useState(true);
   const [descHeight, setDescHeight] = useState(120);
   const descRef = useRef<HTMLDivElement>(null);
   const isOpen = accordionValue === "donate";
 
-  if (import.meta.env.DEV) {
-    const originalError = console.error;
-    console.error = (...args) => {
-      if (args[0]?.toString().includes("ko-fi.com")) return;
-      originalError(...args);
+  useEffect(() => {
+    const origError = console.error;
+    const origWarn = console.warn;
+
+    const ignorePatterns = [
+      "ko-fi.com",
+      "crispyasian/?hidefeed",
+      "preloaded using link preload"
+    ];
+
+    const shouldIgnore = (args: any[]): boolean => {
+      const joined = args.map(a => (typeof a === "string" ? a : JSON.stringify(a))).join(" ");
+      return ignorePatterns.some(p => joined.includes(p));
     };
-  }
+
+    console.error = (...args) => {
+      if (!shouldIgnore(args)) origError(...args);
+    };
+    console.warn = (...args) => {
+      if (!shouldIgnore(args)) origWarn(...args);
+    };
+
+    return () => {
+      console.error = origError;
+      console.warn = origWarn;
+    };
+  }, []);
 
   // Measure true full height of description
   useLayoutEffect(() => {
@@ -50,7 +70,7 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
   // Reset state when dialog opens
   useEffect(() => {
     if (open) {
-      setAccordionValue(undefined);
+      setAccordionValue("");
       setDelayedFade(true);
     }
   }, [open]);
@@ -144,7 +164,7 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
             type="single"
             collapsible
             value={accordionValue}
-            onValueChange={setAccordionValue}
+            onValueChange={(val) => setAccordionValue(val ?? "")}
             className="w-full"
           >
             <AccordionItem

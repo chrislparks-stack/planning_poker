@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle
@@ -13,6 +14,7 @@ import { CardFan } from "@/components/ui/card-fan";
 import { useAuth } from "@/contexts";
 import { useToast } from "@/hooks/use-toast";
 import { Room, User } from "@/types";
+import {VisuallyHidden} from "@radix-ui/react-visually-hidden";
 
 interface CreateUserDialogProps {
   roomData: Room;
@@ -150,6 +152,13 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
             {users.length > 0 ? "Join Room" : "Setup Room"}
           </DialogTitle>
         </DialogHeader>
+
+        <VisuallyHidden>
+          <DialogTitle>Create User</DialogTitle>
+          <DialogDescription>
+            Allows creating new rooms or adding user to room
+          </DialogDescription>
+        </VisuallyHidden>
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">

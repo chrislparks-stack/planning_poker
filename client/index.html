@@ -1,53 +1,92 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en-US" class="h-full">
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/png" href="/SummitLogo.png" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 
-  <title>Summit Planning Poker – Real-Time Agile Estimation</title>
+  <title>Summit Planning Poker – Real-Time Agile Team Estimation</title>
 
-  <!-- Primary Meta Tags -->
-  <meta
-          name="description"
-          content="Summit Planning Poker helps Agile teams estimate story points collaboratively in real time. Create rooms instantly, vote with cards, and reveal results smoothly—no logins, no clutter, just fast and modern team estimation."
-  />
-  <meta
-          name="keywords"
-          content="Summit Planning Poker, planning poker, scrum poker, agile estimation, story points, sprint planning, summitplanningpoker.com, collaboration tool"
-  />
-  <meta name="author" content="SummitPlanningPoker.com" />
-  <meta name="robots" content="index, follow" />
-
-  <!-- Open Graph / Facebook -->
-  <meta property="og:type" content="website" />
-  <meta property="og:title" content="Summit Planning Poker – Real-Time Agile Estimation" />
-  <meta
-          property="og:description"
-          content="Estimate story points collaboratively in real time. Modern, minimal, and free—built for Agile teams who want frictionless planning poker sessions."
-  />
-  <meta property="og:url" content="https://www.summitplanningpoker.com/" />
-  <meta property="og:site_name" content="Summit Planning Poker" />
-
-  <!-- Twitter -->
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Summit Planning Poker – Real-Time Agile Estimation" />
-  <meta
-          name="twitter:description"
-          content="Collaborate on story point estimation with speed and style. Summit Planning Poker brings agile estimation into the modern era."
-  />
-  <meta name="twitter:image" content="https://www.summitplanningpoker.com/preview.png" />
+  <!-- Primary Meta -->
+  <meta name="description"
+        content="Summit Planning Poker helps Agile and Scrum teams estimate story points collaboratively in real time. Create rooms instantly, vote with cards, and reveal results together—no logins, no clutter, just modern, frictionless estimation." />
+  <meta name="keywords"
+        content="Summit Planning Poker, agile estimation, scrum poker, story points, sprint planning, collaboration tool, open source, real time, summitplanningpoker.com" />
+  <meta name="author" content="Summit Planning Poker" />
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
 
   <!-- Canonical -->
   <link rel="canonical" href="https://www.summitplanningpoker.com/" />
 
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Summit Planning Poker – Real-Time Agile Estimation" />
+  <meta property="og:description"
+        content="Estimate story points collaboratively in real time. Modern, minimal, and free—built for Agile teams who want frictionless planning poker sessions." />
+  <meta property="og:url" content="https://www.summitplanningpoker.com/" />
+  <meta property="og:site_name" content="Summit Planning Poker" />
+  <meta property="og:image" content="https://www.summitplanningpoker.com/preview.png" />
+  <meta property="og:image:alt" content="Summit Planning Poker – collaborative agile estimation interface" />
+  <meta property="og:locale" content="en_US" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Summit Planning Poker – Real-Time Agile Estimation" />
+  <meta name="twitter:description"
+        content="Collaborate on story point estimation with speed and style. Summit Planning Poker brings agile estimation into the modern era." />
+  <meta name="twitter:image" content="https://www.summitplanningpoker.com/preview.png" />
+  <meta name="twitter:creator" content="@SummitPlanning" />
+
+  <!-- PWA / Theme -->
+  <meta name="theme-color" content="#0ea5e9" />
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- Icons -->
+  <link rel="icon" type="image/png" href="/SummitLogo.png" sizes="512x512" />
+  <link rel="apple-touch-icon" href="/SummitIcon.png" />
+
+  <!-- Preload critical assets -->
+  <link rel="preload" as="image" href="/preview.png" type="image/png" />
+  <link rel="preload" as="image" href="/SummitLogo.png" type="image/png" />
+  <link rel="preload" as="image" href="/SummitIcon.png" type="image/png" />
+
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
-  />
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" />
+
+  <!-- Structured Data (JSON-LD) -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Summit Planning Poker",
+      "operatingSystem": "Any",
+      "applicationCategory": "BusinessApplication",
+      "url": "https://www.summitplanningpoker.com/",
+      "image": "https://www.summitplanningpoker.com/preview.png",
+      "screenshot": "https://www.summitplanningpoker.com/preview.png",
+      "description": "Real-time agile estimation for Scrum and Agile teams. Create rooms, vote, and reveal results collaboratively—no logins required.",
+      "author": {
+        "@type": "Organization",
+        "name": "Summit Planning Poker"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Summit Planning Poker",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://www.summitplanningpoker.com/SummitLogo.png"
+        }
+      }
+    }
+  </script>
 </head>
 
 <body class="h-full">

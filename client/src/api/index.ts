@@ -1,3 +1,5 @@
+import {TypedTypePolicies} from "@/api/apollo-helpers.generated.ts";
+
 export * from "./operations.generated";
 
 import { ApolloClient, HttpLink, InMemoryCache, split } from "@apollo/client";
@@ -29,7 +31,16 @@ const splitLink = split(
   httpLink,
 );
 
+const typePolicies: TypedTypePolicies = {
+  Room: {
+    fields: {
+      users: { merge: false },
+      chatHistory: { merge: false },
+    },
+  },
+};
+
 export const client = new ApolloClient({
   link: splitLink,
-  cache: new InMemoryCache(),
+  cache: new InMemoryCache({ typePolicies }),
 });

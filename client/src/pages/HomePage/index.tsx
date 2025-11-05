@@ -27,7 +27,7 @@ export const HomePage: FC = () => {
       navigate({
         to: "/room/$roomId",
         params: { roomId: data.createRoom.id }
-      }).catch((e) => console.log(e));
+      }).catch((e) => console.error(e));
     },
 
     onError: (error) => {

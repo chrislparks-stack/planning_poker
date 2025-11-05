@@ -8,7 +8,7 @@ import {
   Sun,
   User
 } from "lucide-react";
-import { FC, useEffect, useState } from "react";
+import { FC, useState } from "react";
 
 import { useLogoutMutation, useSetRoomOwnerMutation } from "@/api";
 import { ConfirmLogoutDialog } from "@/components/ConfirmLogoutDialog";
@@ -39,7 +39,6 @@ interface AccountMenuProps {
 export const AccountMenu: FC<AccountMenuProps> = ({ room, onOpenChange }) => {
   const { user, logout } = useAuth();
   const { toast } = useToast();
-  const [roomId, setRoomId] = useState("");
   const [openEditUserDialog, setOpenEditUserDialog] = useState(false);
   const [openRoomOptionsDialog, setOpenRoomOptionsDialog] = useState(false);
   const [openToggleModeDialog, setOpenToggleModeDialog] = useState(false);
@@ -59,42 +58,23 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room, onOpenChange }) => {
     }
   });
 
-  useEffect(() => {
-    if (room) {
-      setRoomId(room.id);
-    }
-  }, [room]);
-
   async function handleLogout() {
-    if (user) {
-      await logoutMutation({
+    if (!user) return;
+
+    await logoutMutation({ variables: { userId: user.id } });
+
+    if (room && room.id) {
+      const nextOwner = room.users.find(u => u.id !== user.id);
+
+      await setRoomOwner({
         variables: {
-          userId: user.id
-        }
-      }).then(async () => {
-        if (room && room.users.length > 1) {
-          for (const remainingUsers of room.users) {
-            if (remainingUsers.id != user.id) {
-              await setRoomOwner({
-                variables: {
-                  roomId: roomId,
-                  userId: remainingUsers.id
-                }
-              });
-              break;
-            }
-          }
-        } else {
-          await setRoomOwner({
-            variables: {
-              roomId: roomId,
-              userId: ""
-            }
-          });
-        }
-        localStorage.removeItem("Room");
+          roomId: room.id,
+          userId: nextOwner?.id ?? null, // use null when no next owner
+        },
       });
     }
+
+    localStorage.removeItem("Room");
   }
 
   return (

@@ -128,7 +128,7 @@ export type MutationRootKickUserArgs = {
 
 
 export type MutationRootLogoutArgs = {
-  userId: Scalars['UUID']['input'];
+  userId?: InputMaybe<Scalars['UUID']['input']>;
 };
 
 
