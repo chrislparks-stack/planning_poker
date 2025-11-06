@@ -213,9 +213,6 @@ export const ChatPanel: React.FC<{
       timestamp: new Date().toISOString(),
     };
 
-    // instantly show in UI
-    setMessages((prev) => [...prev, newMessage]);
-
     try {
       const position = getCardRect(currentUserId);
       const variables: any = {
