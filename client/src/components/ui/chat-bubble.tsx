@@ -8,7 +8,7 @@ interface ChatBubbleProps {
   playerId: string;
   senderName?: string;
   absolutePosition?: { x: number; y: number; width?: number; height?: number };
-  duration?: number; // seconds bubble is alive/animating
+  duration?: number;
   className?: string;
   onExpire?: (playerId: string) => void;
   onShowInChat?: () => void;
@@ -32,7 +32,6 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
 
   const bubbleRef = useRef<HTMLDivElement>(null);
 
-  // -- your original positioning logic, untouched --
   const computeAndSetCoords = () => {
     if (!absolutePosition) return;
     const el = bubbleRef.current;
@@ -44,11 +43,9 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
     const bubbleWidth = Math.max(1, bubbleRect.width || 160);
     const bubbleHeight = Math.max(1, bubbleRect.height || 60);
 
-    // center horizontally, position bubble bottom at card top
     const baseX = x + width / 2 - bubbleWidth / 2;
     const baseY = y - bubbleHeight;
 
-    // clamp so we don't go off-screen
     const margin = 8;
     const clampedX = Math.min(
       Math.max(baseX, margin),
@@ -62,16 +59,13 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
     setCoords({ x: clampedX, y: clampedY });
   };
 
-  // measure after mount + when message / position changes
   useLayoutEffect(() => {
     if (!absolutePosition) return;
 
-    // 2 RAFs so DOM + imgs render before we grab size
     requestAnimationFrame(() => {
       requestAnimationFrame(computeAndSetCoords);
     });
 
-    // handle bubble resize (GIF loads etc.)
     const el = bubbleRef.current;
     let ro: ResizeObserver | undefined;
     if (el && "ResizeObserver" in window) {
@@ -79,7 +73,6 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
       ro.observe(el);
     }
 
-    // if images load later, reposition
     const imgs = el?.querySelectorAll?.("img") ?? [];
     const offs: Array<() => void> = [];
     imgs.forEach((img) => {
@@ -89,7 +82,6 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
       offs.push(() => img.removeEventListener("load", onLoad));
     });
 
-    // keep in place on viewport change
     const onWin = () => computeAndSetCoords();
     window.addEventListener("resize", onWin);
     window.addEventListener("scroll", onWin, true);
@@ -102,11 +94,9 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
     };
   }, [message, absolutePosition]);
 
-  // auto-expire same as before, just using new duration
   useLayoutEffect(() => {
     const timer = setTimeout(() => {
       setVisible(false);
-      // give exit anim a beat before cleanup
       setTimeout(() => onExpire?.(playerId), 300);
     }, duration * 1000);
 
@@ -115,8 +105,6 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
 
   if (!visible) return null;
 
-  // NOTE: we are STILL rendering one fixed, positioned motion.div.
-  // No extra relative wrapper around it. So positioning stays correct.
   const bubble = (
     <AnimatePresence>
       {visible && (
@@ -137,14 +125,11 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
             y: { duration, ease: "easeInOut" },
           }}
           className={cn(
-            // IMPORTANT: keep this fixed so computeAndSetCoords math applies to viewport
             "fixed z-[9999] select-none pointer-events-auto group",
             "px-3.5 py-2 text-sm rounded-2xl font-medium tracking-tight",
             "overflow-hidden break-words text-center",
             "backdrop-blur-[22px] border shadow-[0_2px_18px_rgba(0,0,0,0.25)]",
-            // glass body
             "bg-gradient-to-br from-accent/25 via-background/30 to-accent/10 border-white/15",
-            // images stay contained
             "[&>img]:block [&>img]:mx-auto [&>img]:my-1.5",
             "[&>img]:max-w-[220px] [&>img]:max-h-[120px] [&>img]:rounded-xl [&>img]:object-contain",
             "[&>img]:shadow-md [&>img]:border [&>img]:border-white/20",
@@ -156,7 +141,6 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
             transform: "translate(0, -100%)",
             maxWidth: "180px",
             maxHeight: "150px",
-            // kill scrollbars: hide overflow visually instead of scroll
             overflow: "hidden",
           }}
         >
@@ -169,11 +153,13 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
           <div
             className={cn(
               "text-[13px] leading-snug",
-              // same readable contrast trick you had
               "text-foreground-soft dark:text-accent-foreground"
             )}
-            // eslint-disable-next-line react/no-danger
-            dangerouslySetInnerHTML={{ __html: message }}
+            dangerouslySetInnerHTML={{
+              __html: /\n/.test(message) && !/<br\s*\/?>|<\/p>/i.test(message)
+                ? message.replace(/\n/g, "<br>")
+                : message,
+            }}
           />
 
           {/* hover-to-reveal overlay */}

@@ -204,52 +204,28 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        handleSend();
-      }
-    };
-    const handleBeforeInput = (e: InputEvent) => {
-      const hasShift =
-        (e as any).shiftKey ||
-        (typeof (e as any).getModifierState === "function" &&
-          (e as any).getModifierState("Shift"));
-      if (e.inputType === "insertParagraph" && !hasShift) {
-        e.preventDefault();
-      }
-    };
-    editor.addEventListener("keydown", handleKeyDown);
-    editor.addEventListener("beforeinput", handleBeforeInput);
-    return () => {
-      editor.removeEventListener("keydown", handleKeyDown);
-      editor.removeEventListener("beforeinput", handleBeforeInput);
-    };
-  }, [handleSend]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey) {
         const key = e.key.toLowerCase();
         if (["b", "i", "u"].includes(key)) {
           e.preventDefault();
           applyCommand(key === "b" ? "bold" : key === "i" ? "italic" : "underline");
+          return;
         }
-      } else if (e.key === "Enter") {
+      }
+
+      if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         handleSend();
       } else if (e.key === "Escape") {
         onClose?.();
       }
     };
-    const editor = editorRef.current;
-    editor?.addEventListener("keydown", onKey);
-    document.addEventListener("selectionchange", updateActiveStates);
-    return () => {
-      editor?.removeEventListener("keydown", onKey);
-      document.removeEventListener("selectionchange", updateActiveStates);
-    };
-  }, []);
+
+    editor.addEventListener("keydown", handleKeyDown);
+    return () => editor.removeEventListener("keydown", handleKeyDown);
+  }, [handleSend, applyCommand, onClose]);
 
   // === Attachments & GIFs ===
   const handleImageUpload = () => fileInputRef.current?.click();
@@ -995,9 +971,28 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         className
       )}
       style={inPanel ? undefined : { width: 220 }}
-      onClick={() => showGifPicker && setShowGifPicker(false)}
+      onMouseDown={(e) => {
+        const target = e.target as HTMLElement;
+
+        // --- allow click-through for these UI regions ---
+        const allowClick =
+          emojiPickerRef.current?.contains(target) ||
+          gifPickerRef.current?.contains(target) ||
+          target.closest("button") ||
+          target.closest("input[type='file']") ||
+          target.closest(".react-colorful") || // color picker area
+          target.closest(".emoji-mart") || // emoji picker area
+          target.closest(".tenor-gif-picker"); // your GIF panel if classed
+
+        if (allowClick) return;
+
+        e.preventDefault();
+
+        const editor = editorRef.current;
+        if (editor) editor.focus();
+      }}
     >
-      <input
+     <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
