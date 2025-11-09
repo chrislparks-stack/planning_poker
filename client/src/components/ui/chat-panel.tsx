@@ -254,21 +254,16 @@ export const ChatPanel: React.FC<{
         exit={{ x: "100%", opacity: 0 }}
         transition={{ type: "spring", stiffness: 180, damping: 22 }}
         className={cn(
-          "absolute right-0 h-[calc(100%)] w-[340px] flex flex-col z-50 overflow-hidden border-l border-border/70 backdrop-blur-2xl scroll-anchoring-fix",
-
-          // --- Light mode: subtle warm tint for contrast ---
+          "chat-panel fixed top-[56px] right-0 h-[calc(100vh-56px)] w-[340px] flex flex-col z-[60]",
+          "overflow-hidden border-l border-border/70 backdrop-blur-2xl transform-gpu will-change-transform",
           "bg-[color-mix(in_oklab,hsl(var(--background))_85%,hsl(var(--accent))_15%)] shadow-[0_0_25px_-6px_rgba(0,0,0,0.25)]",
-
-          // --- Dark mode: deeper hue rotation + emissive accent edge ---
           "dark:bg-[hsl(calc(var(--accent-hue)+12)_40%_12%_/_0.9)]",
           "dark:shadow-[inset_0_0_25px_rgba(255,255,255,0.04),0_0_18px_rgba(var(--accent-rgb),0.25)]",
           "dark:border-l-accent/25",
-
-          // --- Accent shimmer edge divider ---
           "before:absolute before:inset-y-0 before:left-0 before:w-[2px] before:bg-gradient-to-b before:from-accent/20 before:via-accent/60 before:to-accent/20 before:blur-[2px]"
         )}
       >
-        {/* Header */}
+      {/* Header */}
         <div className="relative flex items-center justify-between px-4 py-2 bg-gradient-to-r from-background/70 via-background/60 to-background/70 backdrop-blur-md overflow-visible z-40">
           {/* Title + Info */}
           <div className="flex items-center gap-2">
@@ -518,7 +513,7 @@ export const ChatPanel: React.FC<{
         {/* Input area */}
         <div className="relative border-t border-border/60 bg-gradient-to-t from-background/95 via-background/85 to-background/90 backdrop-blur-2xl p-2 shadow-[0_-4px_14px_rgba(0,0,0,0.25)] dark:shadow-[0_-4px_10px_rgba(255,255,255,0.05)] chat-input-container">
           <div className="absolute -top-px left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-accent/40 to-transparent blur-[1px]" />
-          <ChatInput onSend={handleSendChat} inPanel />
+          {visible && <ChatInput onSend={handleSendChat} inPanel />}
         </div>
       </motion.aside>
     </>

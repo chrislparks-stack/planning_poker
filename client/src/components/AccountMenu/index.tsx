@@ -95,7 +95,7 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room, onOpenChange }) => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="w-56"
+            className="w-56 z-[200]"
             align="end"
             forceMount
             sideOffset={10}

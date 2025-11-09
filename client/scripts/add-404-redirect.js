@@ -7,4 +7,3 @@ const src = resolve("dist", "index.html");
 const dest = resolve("dist", "404.html");
 
 copyFileSync(src, dest);
-console.log("404.html rewrite created:", dest);

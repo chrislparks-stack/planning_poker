@@ -77,14 +77,24 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     { color: "#F59E0B", name: "Amber" },
   ];
 
-  // Focus editor on mount
+  // Focus editor on mount (used by both overlay + panel, which mount lazily)
   useEffect(() => {
-    if (inPanel) return; // panel input shouldn't auto-focus like overlay
     let attempts = 0;
+
     const tryFocus = () => {
       const editor = editorRef.current;
       if (!editor) return;
+
+      // If it's not laid out yet, retry a few times
+      const rect = editor.getBoundingClientRect();
+      const notVisible = rect.width === 0 || rect.height === 0;
+      if (notVisible && attempts < 8) {
+        attempts++;
+        return setTimeout(tryFocus, 30);
+      }
+
       editor.focus();
+
       const sel = window.getSelection();
       if (sel && sel.rangeCount === 0) {
         const range = document.createRange();
@@ -93,13 +103,19 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         sel.removeAllRanges();
         sel.addRange(range);
       }
-      if (document.activeElement !== editor && attempts < 10) {
+
+      if (document.activeElement !== editor && attempts < 8) {
         attempts++;
         setTimeout(tryFocus, 30);
       }
     };
+
     requestAnimationFrame(tryFocus);
-  }, [inPanel]);
+
+    return () => {
+      attempts = 999; // kill retries on unmount
+    };
+  }, []);
 
   // === Core handlers ===
   const handleSend = () => {
@@ -192,7 +208,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   }, [onClose, inPanel]);
 
   useEffect(() => {
-    const handler = () => updateActiveStates();
+    const handler = () => {
+      const editor = editorRef.current;
+      if (editor && document.activeElement === editor) {
+        updateActiveStates();
+      }
+    };
     document.addEventListener("mouseup", handler, true);
     document.addEventListener("keyup", handler, true);
     return () => {
@@ -976,13 +997,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
         // --- allow click-through for these UI regions ---
         const allowClick =
+          editorRef.current?.contains(target) ||
           emojiPickerRef.current?.contains(target) ||
           gifPickerRef.current?.contains(target) ||
           target.closest("button") ||
           target.closest("input[type='file']") ||
-          target.closest(".react-colorful") || // color picker area
-          target.closest(".emoji-mart") || // emoji picker area
-          target.closest(".tenor-gif-picker"); // your GIF panel if classed
+          target.closest(".react-colorful") ||
+          target.closest(".emoji-mart") ||
+          target.closest(".tenor-gif-picker");
 
         if (allowClick) return;
 

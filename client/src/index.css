@@ -245,6 +245,12 @@
   overflow-anchor: none;
 }
 
+body.dialog-open .chat-panel {
+  filter: blur(6px);
+  opacity: 0.8;
+  pointer-events: none !important;
+  transition: filter 0.25s ease, opacity 0.25s ease;
+}
 
 /* Theme overrides */
 [data-theme="aqua"] {
