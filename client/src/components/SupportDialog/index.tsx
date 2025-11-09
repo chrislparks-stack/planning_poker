@@ -24,7 +24,7 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
   const [delayedFade, setDelayedFade] = useState(true);
   const [descHeight, setDescHeight] = useState(120);
   const descRef = useRef<HTMLDivElement>(null);
-  const isOpen = accordionValue === "donate";
+  const isOpen = accordionValue === "tip";
 
   useEffect(() => {
     const origError = console.error;
@@ -141,7 +141,7 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
             >
               <p className="text-sm leading-relaxed text-muted-foreground">
                 This project runs on caffeine, curiosity, and late-night coding.
-                If you’d like to support continued development, you can donate
+                If you’d like to support continued development, you can tip the developer
                 below or visit{" "}
                 <a
                   href="https://ko-fi.com/crispyasian"
@@ -154,7 +154,7 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
                 .
               </p>
               <p className="text-sm mt-3 text-muted-foreground italic">
-                Donations are entirely optional — your time and feedback mean just as much.
+                Tips are entirely optional — your time and feedback mean just as much.
               </p>
             </div>
           </div>
@@ -168,13 +168,13 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
             className="w-full"
           >
             <AccordionItem
-              value="donate"
+              value="tip"
               className="rounded-lg border bg-card/60 backdrop-blur-sm shadow-sm overflow-hidden"
             >
               <AccordionTrigger
                 className="px-4 py-3 text-sm font-semibold justify-center hover:no-underline focus:outline-none focus:ring-0 transition-all duration-700"
               >
-                {isOpen ? "Close Donation Panel" : "Donate Here!"}
+                {isOpen ? "Close Tip Panel" : "Tip Here!"}
               </AccordionTrigger>
 
               <div
@@ -197,7 +197,7 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
                   <iframe
                     src="https://ko-fi.com/crispyasian/?hidefeed=true&widget=true"
                     loading="lazy"
-                    title="Ko-fi Donation Widget"
+                    title="Ko-fi Tip Widget"
                     width="100%"
                     height="550"
                     className="rounded-md border border-border shadow-sm"

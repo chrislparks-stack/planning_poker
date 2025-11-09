@@ -24,6 +24,16 @@ export function PageLayout({ children, room, users, showChat }: {
   // this ref map will be filled by the room view
   const cardRefs = useRef<Record<string, RefObject<HTMLDivElement>>>({});
 
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      const anyDialogOpen = !!document.querySelector('[data-state="open"][role="dialog"]');
+      document.body.classList.toggle('dialog-open', anyDialogOpen);
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <CardPositionProvider cardRefs={cardRefs}>
       <Header room={room} users={users} onMenuOpenChange={setMenuOpen} />

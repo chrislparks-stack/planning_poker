@@ -47,7 +47,7 @@ export const Header: FC<HeaderProps> = ({ room, users, onMenuOpenChange }) => {
   }
 
   return (
-    <header className="flex justify-between items-center h-14 px-4 border-b">
+    <header className="flex justify-between items-center h-14 px-4 border-b z-[100]">
       <div className="flex items-center space-x-4">
         <Tooltip>
           <TooltipTrigger asChild>

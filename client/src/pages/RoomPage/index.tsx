@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "@/types";
 import { validate as validateUUID } from "uuid";
+import {ResultsTag} from "@/components/ui/results-tag.tsx";
 
 export function RoomPage() {
   const { roomId } = useParams({ from: "/room/$roomId" });
@@ -461,6 +462,7 @@ export function RoomPage() {
 
                   {room.isGameOver && room.game.table.length > 0 && (
                       <div className="flex justify-center sm:justify-end w-full sm:w-1/2">
+                        <ResultsTag active />
                         <VoteDistributionChart room={room} />
                       </div>
                   )}

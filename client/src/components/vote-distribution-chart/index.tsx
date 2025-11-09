@@ -134,8 +134,6 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
                   return null;
                 }
 
-                console.log(nwidth);
-
                 const isMajority = nvalue === maxCardCount;
                 const labelFontSize = nwidth < 80 ? nwidth / 5 : 14;
 
