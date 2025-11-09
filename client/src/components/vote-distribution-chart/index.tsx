@@ -1,4 +1,4 @@
-import { FC, useMemo } from "react";
+import {FC, useEffect, useMemo} from "react";
 import {Bar, BarChart, Cell, LabelList, XAxis} from "recharts";
 
 import { CardTitle } from "@/components/ui/card";
@@ -61,13 +61,42 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
     return totalVotes > 0 ? (mostCommonVotes / totalVotes) * 100 : 0;
   }, [room.game.table, voteCount]);
 
+
+  const numBars = chartData.length;
+  const dynamicWidth = 20 + numBars * 2;
+  const dynamicMinWidth = 100 + numBars * 3;
+  const dynamicMaxWidth = 120 + numBars * 70;
+
+  const chartContainerStyle = {
+    minWidth: `${dynamicMinWidth}px`,
+    width: `${dynamicWidth}vw`,
+    maxWidth: `${dynamicMaxWidth}px`,
+    minHeight: "170px"
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      window.dispatchEvent(new Event("resize"));
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [chartData]);
+
   return (
     <div
-      className="flex flex-col items-center justify-center overflow-hidden w-[20vw]"
+      className="flex flex-col items-center justify-center overflow-hidden"
       data-testid="vote-distribution-chart"
     >
+      {chartData.length === 0 && (
+        <div className="absolute flex items-center justify-center w-[4vw] bg-background/70 z-10">
+          <span className="text-lg md:text-2xl font-semibold text-muted-foreground select-none text-center">
+            NO VOTES SUBMITTED
+          </span>
+        </div>
+      )}
+
       <ChartContainer
-        className="w-[14vw] -mb-5"
+        style={chartContainerStyle}
+        className="-mb-5 h-[15vh]"
         config={{
           card: {
             label: "Votes",
@@ -78,15 +107,13 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
         <BarChart
           accessibilityLayer
           margin={{
-            top: 8,
-            left: -4,
-            right: -4
+            top: 8
           }}
           data={chartData}
         >
           <Bar
             dataKey="Votes"
-            radius={5}
+            radius={10}
             fillOpacity={0.9}
           >
             {chartData.map((entry, index) => {
@@ -100,7 +127,7 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
                       ? "drop-shadow(0 0 10px hsl(var(--accent))) drop-shadow(0 0 24px rgba(var(--accent-rgb),0.4))"
                       : "drop-shadow(0 0 10px rgba(var(--accent-rgb),0.3))",
                     animation: isMajority ? "pulseGlow 3s ease-in-out infinite" : undefined,
-                    transformOrigin: "center",
+                    transformOrigin: "center"
                   }}
                 />
               );
@@ -120,7 +147,6 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
                 width?: number | string;
                 height?: number | string;
               }) => {
-                // tiny helper to coerce string|number|undefined -> number safely
                 const toNum = (v?: number | string, fallback = 0) =>
                   typeof v === "number" ? v : v ? parseFloat(String(v)) || fallback : fallback;
 

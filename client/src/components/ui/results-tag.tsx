@@ -8,11 +8,11 @@ interface ResultsTagProps {
 export const ResultsTag: React.FC<ResultsTagProps> = ({ active }) => {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 0 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
       className={cn(
-        "flex items-center justify-center rounded-full py-3 select-none -mr-8",
+        "flex items-center justify-center rounded-full py-3 select-none mr-2",
         "text-[8px] font-semibold uppercase tracking-[0.2em]",
         "text-[hsl(var(--accent))]",
         "border border-[hsl(var(--accent)/0.3)]",

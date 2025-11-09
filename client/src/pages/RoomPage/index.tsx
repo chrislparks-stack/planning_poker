@@ -37,6 +37,7 @@ export function RoomPage() {
   const [openRoomOptionsDialog, setOpenRoomOptionsDialog] = useState(false);
 
   const [chatVisible, setChatVisible] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
   const handleShowInChat = () => {
     setChatVisible(true);
@@ -411,6 +412,15 @@ export function RoomPage() {
     }
   }, [roomEventsError, toast]);
 
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const shouldTwoRowLayout =
+    room && room.deck.cards.length > 5 && windowWidth < (500 + 75 * room.deck.cards.length);
+
   return (
     <div>
       {!room ? (
@@ -430,41 +440,40 @@ export function RoomPage() {
               <div
                   className="absolute top-0 left-0 right-0 overflow-y-auto"
                   style={{
-                    height: `calc(100% - ${room.isGameOver ? 220 : 140}px)`,
+                    height: `calc(100% - ${room.isGameOver || shouldTwoRowLayout ? 245 : 100}px)`,
                     paddingBottom: "1rem",
                   }}
               >
                 <Room room={room} onShowInChat={handleShowInChat}/>
               </div>
 
-              <div className="absolute bottom-3 left-0 right-0 mx-auto w-full max-w-4xl">
+              <div className="absolute bottom-0 left-0 right-0 mx-auto w-[100%] max-w-4xl">
                 <div
-                    className={`flex gap-4 ${
-                        room.isGameOver
-                            ? "sm:flex-row sm:justify-center"
-                            : "justify-center"
-                    }`}
+                  className={`flex ${
+                    room.isGameOver
+                      ? "sm:flex-row sm:justify-center"
+                      : "justify-center"
+                  }`}
                 >
                   <div
-                      className={`flex ${
-                          room.isGameOver
-                              ? "justify-center sm:justify-start"
-                              : "justify-center"
-                      }`}
+                    className={`flex ${
+                      room.isGameOver
+                        ? "sm:flex-row sm:justify-center"
+                        : "justify-center"
+                    }`}
                   >
                     <Deck
-                        roomId={roomId}
-                        isGameOver={room.isGameOver}
-                        cards={room.deck.cards}
-                        table={room.game.table}
+                      roomId={roomId}
+                      isGameOver={room.isGameOver}
+                      cards={room.deck.cards}
+                      table={room.game.table}
                     />
                   </div>
-
-                  {room.isGameOver && room.game.table.length > 0 && (
-                      <div className="flex justify-center sm:justify-end w-full sm:w-1/2">
-                        <ResultsTag active />
-                        <VoteDistributionChart room={room} />
-                      </div>
+                  {room.isGameOver && (
+                    <div className="flex justify-center w-full ml-10">
+                      <ResultsTag active />
+                      <VoteDistributionChart room={room} />
+                    </div>
                   )}
                 </div>
               </div>
