@@ -211,7 +211,7 @@ export function RoomPage() {
         const storageData = {
           RoomID: roomData.roomById.id,
           Cards: roomData.roomById.deck.cards,
-          RoomName: roomData.roomById.name,
+          RoomName: roomData.roomById.name ?? null,
           RoomOwner: roomData.roomById.roomOwnerId ?? user.id
         };
         localStorage.setItem("Room", JSON.stringify(storageData));
@@ -223,7 +223,7 @@ export function RoomPage() {
           user: {
             id: user.id,
             username: user.username,
-            roomName: roomName
+            roomName: roomName && roomName.trim().length > 0 ? roomName : undefined
           },
           roomOwnerId: roomOwner && roomOwner.trim().length > 0 ? roomOwner : undefined
         }
@@ -351,7 +351,7 @@ export function RoomPage() {
     return () => {
       document.title = prevTitleRef.current || APP_NAME;
     };
-  }, [room?.name, room?.users?.length, openCreateUserDialog]);
+  }, [room, openCreateUserDialog]);
 
   const isMissingRoom =
     roomData && roomData.roomById === null && !joinRoomData && !subscriptionData;
@@ -367,7 +367,6 @@ export function RoomPage() {
       navigate({ to: "/invalid-room/$roomId", params: { roomId } });
     }
   }, [roomId, navigate]);
-
 
   useEffect(() => {
     if (roomData && roomData.roomById === null) {

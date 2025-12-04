@@ -1,4 +1,4 @@
-import {FC, useEffect, useMemo} from "react";
+import {FC, useMemo } from "react";
 import {Bar, BarChart, Cell, LabelList, XAxis} from "recharts";
 
 import { CardTitle } from "@/components/ui/card";
@@ -61,7 +61,6 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
     return totalVotes > 0 ? (mostCommonVotes / totalVotes) * 100 : 0;
   }, [room.game.table, voteCount]);
 
-
   const numBars = chartData.length;
   const dynamicWidth = 20 + numBars * 2;
   const dynamicMinWidth = 100 + numBars * 3;
@@ -73,13 +72,6 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
     maxWidth: `${dynamicMaxWidth}px`,
     minHeight: "170px"
   };
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      window.dispatchEvent(new Event("resize"));
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [chartData]);
 
   return (
     <div
@@ -112,6 +104,7 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
           data={chartData}
         >
           <Bar
+            key={chartData.length}
             dataKey="Votes"
             radius={10}
             fillOpacity={0.9}
@@ -134,56 +127,39 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
             })}
             <LabelList
               dataKey="Votes"
-              content={({
-                          x,
-                          y,
-                          value,
-                          width,
-                          height,
-                        }: {
-                x?: number | string;
-                y?: number | string;
-                value?: number | string;
-                width?: number | string;
-                height?: number | string;
-              }) => {
-                const toNum = (v?: number | string, fallback = 0) =>
-                  typeof v === "number" ? v : v ? parseFloat(String(v)) || fallback : fallback;
+              position="center"
+              content={(props: any) => {
+                const { x, y, width, height, value, index } = props;
 
-                const nx = toNum(x);
-                const ny = toNum(y);
-                const nwidth = toNum(width);
-                const nheight = toNum(height);
-                const nvalue = toNum(value);
+                if (x == null || y == null || index == null) return null;
 
-                if (Number.isNaN(nx) || Number.isNaN(ny) || Number.isNaN(nwidth) || Number.isNaN(nheight)) {
-                  return null;
-                }
+                const entry = chartData[index];
+                if (!entry) return null;
 
-                const isMajority = nvalue === maxCardCount;
-                const labelFontSize = nwidth < 80 ? nwidth / 5 : 14;
-
-                let labelY = ny + nheight / 2;
-                let fillColor = "white";
-
-                const centerX = nx + nwidth / 2;
+                const isMajority = entry.Votes === maxCardCount;
+                const safeWidth = Math.max(width ?? 0, 1);
+                const safeHeight = Math.max(height ?? 0, 1);
+                const centerX = x + safeWidth / 2;
+                const centerY = y + safeHeight / 2;
+                const labelFontSize = safeWidth < 80 ? safeWidth / 5 : 14;
+                const majorityFontSize = safeWidth < 80 ? safeWidth / 7 : 12;
 
                 return (
                   <text
                     x={centerX}
-                    y={labelY}
-                    fill={fillColor}
+                    y={centerY}
+                    fill="white"
                     textAnchor="middle"
                     fontSize={labelFontSize}
-                    className="tabular-nums"
                     dominantBaseline="middle"
+                    className="tabular-nums"
                   >
                     <tspan x={centerX} fontWeight={isMajority ? "bold" : "normal"}>
-                      Votes: {nvalue}
+                      Votes: {value}
                     </tspan>
 
                     {isMajority && (
-                      <tspan x={centerX} dy="1.6em" fontSize={ nwidth < 80 ? nwidth / 7 : 12} className="text-white font-semibold">
+                      <tspan x={centerX} dy="1.6em" fontSize={majorityFontSize}>
                         MAJORITY
                       </tspan>
                     )}

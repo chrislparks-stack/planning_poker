@@ -460,8 +460,8 @@ export function Player({
             <button
               onClick={() => setShowChatInput(!showChatInput)}
               title="Open chat"
-              className="absolute p-1 rounded-full bg-background/80 hover:bg-accent/20 border border-border shadow-sm"
-              style={{ right: isLeftSide ? 70 : -28 }}
+              className="absolute p-1 rounded-full bg-accent/20 hover:bg-accent/40 dark:bg-background dark:hover:bg-accent/40 border border-border shadow-sm"
+              style={{ right: -48 }}
             >
               <MessageSquareText
                 className={`w-4 h-4 text-accent ${isLeftSide ? "scale-x-[-1]" : ""}`}
@@ -530,7 +530,7 @@ export function Player({
             <button
               onClick={() => setShowChatInput(!showChatInput)}
               title="Open chat"
-              className="absolute p-1 rounded-full bg-background/80 hover:bg-accent/20 border border-border shadow-sm"
+              className="absolute p-1 rounded-full bg-accent/20 hover:bg-accent/40 border border-border shadow-sm dark:bg-background dark:hover:bg-accent/40"
               style={{ right: isLeftSide ? 65 : -28 }}
             >
               <MessageSquareText
