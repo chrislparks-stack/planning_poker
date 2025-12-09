@@ -409,7 +409,10 @@ export function Player({
           isTargetSelf ? "cursor-pointer" : "cursor-default"
         }`}
         ref={cardRef}
-        title={room?.roomOwnerId === user.id ? "Room Owner" : "Player"}
+        title={
+          isTargetSelf ? "Click to chat" : room?.roomOwnerId === user.id ? `Room Owner: ${user.username}`
+          : user.username.length < 30 ? user.username : `${user.username.slice(0, 26)}...`
+        }
         onClick={() => {
           if (isTargetSelf) setShowChatInput(!showChatInput);
         }}
