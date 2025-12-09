@@ -20,7 +20,6 @@ interface ChatInputProps {
   className?: string;
   isLeftSide?: boolean;
   isTopSide?: boolean;
-  /** when true, renders inline in a chat panel instead of popup overlay */
   inPanel?: boolean;
 }
 
@@ -30,7 +29,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   className,
   isLeftSide = false,
   isTopSide = true,
-  inPanel = false,
+  inPanel = false
 }) => {
   const [showPalette, setShowPalette] = useState(false);
   const [showCustomPicker, setShowCustomPicker] = useState(false);
@@ -57,7 +56,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const gifPickerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
-  const selectionRef = useRef<Range | null>(null)
+  const selectionRef = useRef<Range | null>(null);
 
   const [pickerPos, setPickerPos] = useState({ top: 0, left: 0, width: 0, height: 0 });
 
@@ -191,18 +190,23 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
+
       if (
         containerRef.current?.contains(target) ||
-        gifPickerRef.current?.contains(target) ||
-        emojiPickerRef.current?.contains(target)
-      )
+        emojiPickerRef.current?.contains(target) ||
+        gifPickerRef.current?.contains(target)
+      ) {
         return;
+      }
+
       if (!inPanel) onClose?.();
+
       setShowPalette(false);
       setShowGifPicker(false);
       setShowCustomPicker(false);
       setShowEmojiPicker(false);
     };
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose, inPanel]);
@@ -992,26 +996,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         className
       )}
       style={inPanel ? undefined : { width: 220 }}
-      onMouseDown={(e) => {
-        const target = e.target as HTMLElement;
+      onClick={(e) => {
+        editorRef.current?.focus();
+        e.stopPropagation();
 
-        // --- allow click-through for these UI regions ---
-        const allowClick =
-          editorRef.current?.contains(target) ||
-          emojiPickerRef.current?.contains(target) ||
-          gifPickerRef.current?.contains(target) ||
-          target.closest("button") ||
-          target.closest("input[type='file']") ||
-          target.closest(".react-colorful") ||
-          target.closest(".emoji-mart") ||
-          target.closest(".tenor-gif-picker");
-
-        if (allowClick) return;
-
-        e.preventDefault();
-
-        const editor = editorRef.current;
-        if (editor) editor.focus();
+        if (!gifPickerRef?.current?.contains(e.target as Node) && showGifPicker) {
+          setShowGifPicker(false);
+        }
       }}
     >
      <input

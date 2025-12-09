@@ -204,6 +204,42 @@
   [data-selected="true"]:active {
     background-color: hsl(var(--accent-active));
   }
+
+  .text-glass {
+    --glass-ink: rgba(210, 235, 255, 0.40);
+    color: var(--glass-ink);
+
+    text-shadow:
+            0 -1px 1px rgba(0, 0, 0, 0.55),
+
+              /* soft illuminated bottom highlight */
+            0 1px 1px rgba(255, 255, 255, 0.45),
+
+              /* internal diffusion */
+            0 0 4px rgba(120, 180, 255, 0.30),
+
+              /* faint surface glow */
+            0 0 8px rgba(120, 180, 255, 0.20);
+  }
+
+  .light .text-glass {
+    --glass-ink: hsla(var(--accent)/0.7);
+
+    text-shadow:
+            0 -1px 1px rgba(255, 255, 255, 0.55),
+            0 1px 1px rgba(0, 0, 0, 0.35),
+            0 0 3px hsla(var(--accent)/0.6);
+  }
+
+  .dark .text-glass {
+    --glass-ink: hsla(var(--accent)/0.9);
+
+    text-shadow:
+            0 -1px 1px rgba(0, 0, 0, 0.9),
+            0 1px 1px rgba(255, 255, 255, 0.5),
+            0 0 6px hsla(var(--accent)/0.4),
+            0 0 12px hsla(var(--accent)/0.3);
+  }
 }
 
 /* ---------- Countdown Overlay Animations ---------- */

@@ -38,6 +38,8 @@
     "@radix-ui/react-slot": "1.1.2",
     "@radix-ui/react-toast": "1.2.6",
     "@radix-ui/react-tooltip": "1.1.8",
+    "@react-three/drei": "10.7.7",
+    "@react-three/fiber": "9.4.2",
     "@tanstack/react-router": "1.114.22",
     "@tanstack/router-vite-plugin": "1.133.21",
     "@vercel/analytics": "1.5.0",
@@ -59,6 +61,7 @@
     "tailwind-merge": "3.0.2",
     "tailwindcss-animate": "1.0.7",
     "terser": "5.44.1",
+    "three": "0.181.2",
     "uuid": "13.0.0",
     "web-vitals": "5.1.0"
   },

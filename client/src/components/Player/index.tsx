@@ -405,25 +405,33 @@ export function Player({
   return (
     <div className="flex flex-col items-center" data-testid="player">
       {room?.roomOwnerId === user.id ? (
-        <div className="flex flex-col items-center" ref={cardRef} title={"Room Owner"}>
+        <div
+          className={`flex flex-col items-center ${
+            isTargetSelf ? "cursor-pointer" : "cursor-default"
+          }`}
+          ref={cardRef}
+          title="Room Owner"
+          onClick={() => {
+            if (isTargetSelf) setShowChatInput(!showChatInput);
+          }}
+        >
           <div
             {...interactiveProps}
-            className="relative flex flex-col items-center cursor-default z-20 hover:z-50 focus-within:z-50 transition-[z-index]"
+            className="relative flex flex-col items-center z-20 hover:z-50 focus-within:z-50 transition-[z-index]"
           >
-            {/* --- Continuous accent glow behind card --- */}
+            {/* Glow Behind Card */}
             <div
-              className="absolute top-0 left-[3px] rounded-t-xl blur-sm"
+              className="absolute top-0 left-0 right-0 mx-auto rounded-xl blur-sm"
               style={{
-                width: "3.5rem",
-                height: "5.5rem",
-                zIndex: 0,
+                width: "4rem",
+                height: "6rem",
                 boxShadow: `
-                    0 0 4px 3px hsl(var(--accent) / 0.55),
-                    0 0 4px 3px hsl(var(--accent) / 0.35)
-                  `,
+                  0 0 4px 3px hsl(var(--accent) / 0.55),
+                  0 0 4px 3px hsl(var(--accent) / 0.35)
+                `,
                 background: `
                   radial-gradient(
-                    circle at 50% 40%,
+                    circle at 50% 35%,
                     hsl(var(--accent) / 0.35) 0%,
                     transparent 75%
                   )
@@ -431,51 +439,93 @@ export function Player({
               }}
             />
 
-            {/* --- Card --- */}
-            <div className="relative w-[4rem] h-[5rem] flex items-center justify-center bg-gradient-to-br from-accent/30 via-transparent to-accent/10 rounded-t-xl shadow-[inset_0_0_2px_rgba(0,0,0,0.2)] z-0 isolate">
-              <Crown
-                className="absolute top-1 left-1 w-3 h-3 text-accent/70 fill-accent/70"
-                strokeWidth={2}
-              />
-              <Crown
-                className="absolute bottom-0.5 right-1 w-3 h-3 text-accent/70 fill-accent/70 rotate-180"
-                strokeWidth={2}
-              />
-              {cardIcon}
-            </div>
-
-            {/* --- Nameplate --- */}
+            {/* Glass Card */}
             <div
-              className="relative w-[4rem] bg-gray-100/90 dark:bg-background/60
-               text-[10px] font-semibold text-center text-gray-800 dark:text-gray-200
-               border border-gray-300 dark:border-none rounded-b-xl px-1 py-[2px]
-               shadow-sm truncate"
-              title={user.username}
+              className="
+                relative w-[4rem] h-[6rem]
+                rounded-xl isolate
+                bg-[radial-gradient(circle_at_50%_30%,rgba(var(--accent-rgb),0.15)_0%,transparent_70%)]
+                backdrop-blur-[2px]
+                shadow-[inset_0_0_6px_rgba(0,0,0,0.45),inset_0_0_20px_rgba(0,0,0,0.25)]
+                group
+              "
             >
-              {user.username}
+              {isTargetSelf && (
+                <div
+                  className="
+                    flex mt-1.5 ml-1
+                    text-[5px] uppercase tracking-[0.14em]
+                    select-none flex-row
+                  "
+                  style={{
+                    textShadow: `
+                      0 0 1px rgba(255,255,255,0.5),
+                      0 1px 2px rgba(0,0,0,0.6),
+                      0 0 6px hsla(var(--accent), 0.45)
+                    `,
+                  }}
+                >
+                  <span
+                    className="
+                      flex flex-row items-center
+                      text-center font-bold
+                      text-accent/35 dark:text-accent/25
+                      group-hover:text-accent/90
+                      transition-all duration-500
+                      scale-x-[-1]
+                    "
+                  >
+                    <MessageSquareText className="text-glass w-2.5 h-2.5 ml-[2px]" />
+                  </span>
+                  <span
+                    className="
+                      flex flex-row items-center
+                      text-center font-bold
+                      text-accent/0
+                      group-hover:text-accent
+                      transition-all duration-500
+                    "
+                                    >
+                    Click to chat
+                  </span>
+                </div>
+              )}
+
+              <div
+                className="
+                  absolute inset-0
+                  flex flex-col items-center justify-center
+                  pointer-events-none
+                "
+              >
+                {/* Avatar */}
+                <div className="flex items-center justify-center">
+                  {cardIcon}
+                </div>
+              </div>
+              <div
+                className="
+                  absolute bottom-[4px] w-full
+                  text-center text-[14px]
+                  font-semibold tracking-wide
+                  pointer-events-none select-none
+                  text-glass
+                "
+              >
+                <div className="flex flex-row items-center justify-center gap-[3px]">
+                  <Crown className="text-glass w-3 h-3 text-accent/40 fill-accent/20"/>
+                  {user.username}
+                </div>
+              </div>
             </div>
           </div>
 
           {isTargetSelf && (
-            <button
-              onClick={() => setShowChatInput(!showChatInput)}
-              title="Open chat"
-              className="absolute p-1 rounded-full bg-accent/20 hover:bg-accent/40 dark:bg-background dark:hover:bg-accent/40 border border-border shadow-sm"
-              style={{ right: -48 }}
-            >
-              <MessageSquareText
-                className={`w-4 h-4 text-accent ${isLeftSide ? "scale-x-[-1]" : ""}`}
-              />
-            </button>
-          )}
-          {isTargetSelf && (
             <ChatInputWrapper
-              onSend={(plain, formatted) =>
-                handleSendChat(plain, formatted)
-              }
+              onSend={(plain, formatted) => handleSendChat(plain, formatted)}
               onClose={() => setShowChatInput(false)}
               isOpen={showChatInput}
-              className={`top-8 ${isLeftSide ? "right-[18px]" : "-right-[275px]"}`}
+              className={`${isLeftSide ? "right-[20px] -top-1" : "-right-[280px] -top-1"}`}
               isLeftSide={isLeftSide}
               isTopSide={isTopSide}
             />
