@@ -79,6 +79,7 @@
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
+    --glass-fade-stop: 65%;
   }
 
   .dark {
@@ -112,6 +113,7 @@
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+    --glass-fade-stop: 90%;
   }
 
   /* Responsive */
@@ -208,37 +210,23 @@
   .text-glass {
     --glass-ink: rgba(210, 235, 255, 0.40);
     color: var(--glass-ink);
-
-    text-shadow:
-            0 -1px 1px rgba(0, 0, 0, 0.55),
-
-              /* soft illuminated bottom highlight */
-            0 1px 1px rgba(255, 255, 255, 0.45),
-
-              /* internal diffusion */
-            0 0 4px rgba(120, 180, 255, 0.30),
-
-              /* faint surface glow */
-            0 0 8px rgba(120, 180, 255, 0.20);
   }
 
   .light .text-glass {
-    --glass-ink: hsla(var(--accent)/0.7);
+    --glass-ink: hsla(var(--accent)/0.8);
 
     text-shadow:
-            0 -1px 1px rgba(255, 255, 255, 0.55),
-            0 1px 1px rgba(0, 0, 0, 0.35),
-            0 0 3px hsla(var(--accent)/0.6);
+      0 2px 2px rgba(255, 255, 255, 1),
+      0 0 1px rgba(0, 0, 0, 1);
   }
 
   .dark .text-glass {
-    --glass-ink: hsla(var(--accent)/0.9);
+    --glass-ink: hsla(var(--accent)/1);
 
     text-shadow:
-            0 -1px 1px rgba(0, 0, 0, 0.9),
-            0 1px 1px rgba(255, 255, 255, 0.5),
-            0 0 6px hsla(var(--accent)/0.4),
-            0 0 12px hsla(var(--accent)/0.3);
+      -1px -1px 1px rgba(0, 0, 0, 1),
+      1px 2px 0px rgba(0, 0, 0, 1),
+      -1px 0 0 hsla(var(--accent)/0.5);
   }
 }
 

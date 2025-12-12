@@ -162,13 +162,32 @@ export function Player({
     }
     if (isGameOver) {
       return (
+        <div
+          style={{
+            width: 80,
+            height: 100,
+            background: `
+                radial-gradient(
+                  circle at 50% 50%,
+                  white 20%,
+                  transparent 40%
+                )
+              `,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+            backdropFilter: "blur(2px)"
+          }}
+        >
         <DotLottieReact
-          key="gameover"
-          src="https://lottie.host/407d17f3-a83c-46ca-ab4c-981dcbc77919/TKjtavdeuG.json"
-          loop
-          autoplay
-          style={{ width: 50, height: 35, margin: -25 }}
-        />
+            key="gameover"
+            src="https://lottie.host/407d17f3-a83c-46ca-ab4c-981dcbc77919/TKjtavdeuG.json"
+            loop
+            autoplay
+            style={{ width: 50, height: 35 }}
+          />
+        </div>
       );
     }
     return (
@@ -427,15 +446,12 @@ export function Player({
             style={{
               width: "4rem",
               height: "6rem",
-              boxShadow: `
-                0 0 4px 3px hsl(var(--accent) / 0.55),
-                0 0 4px 3px hsl(var(--accent) / 0.35)
-              `,
+              boxShadow: `0 0 5px 3px hsl(var(--accent) / 0.65)`,
               background: `
                 radial-gradient(
-                  circle at 50% 35%,
-                  hsl(var(--accent) / 0.35) 0%,
-                  transparent 75%
+                  circle at 50% 50%,
+                  hsl(var(--accent) / 0.55) 0%,
+                  transparent var(--glass-fade-stop)
                 )
               `,
             }}
@@ -446,7 +462,6 @@ export function Player({
             className="
               relative w-[4rem] h-[6rem]
               rounded-xl isolate
-              bg-[radial-gradient(circle_at_50%_30%,rgba(var(--accent-rgb),0.15)_0%,transparent_70%)]
               backdrop-blur-[2px]
               shadow-[inset_0_0_6px_rgba(0,0,0,0.45),inset_0_0_20px_rgba(0,0,0,0.25)]
               group
@@ -471,7 +486,7 @@ export function Player({
                   className="
                     flex flex-row items-center
                     text-center font-bold
-                    text-accent/35 dark:text-accent/25
+                    text-accent/50 dark:text-accent/25
                     group-hover:text-accent/90
                     transition-all duration-500
                     scale-x-[-1]
@@ -518,7 +533,7 @@ export function Player({
                 className="flex flex-row items-center justify-center gap-[3px] break-all"
                 style={{fontSize: Math.max(7, Math.min(80 / user.username.length, 14))}}
               >
-                {room?.roomOwnerId === user.id && <Crown className="text-glass w-3 h-3 text-accent/40 fill-accent/20"/>}
+                {room?.roomOwnerId === user.id && <Crown className="text-glass w-3 h-3"/>}
                 {user.username.length < 30 ? user.username : `${user.username.slice(0, 26)}...`}
               </div>
             </div>
