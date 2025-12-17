@@ -22,6 +22,28 @@ export interface Position {
   height?: number;
 }
 
+const TEST_PLAYER_COUNT = 0;
+
+function withTestUsers(
+  users?: RoomType["users"]
+): RoomType["users"] {
+  const safeUsers = users ?? [];
+
+  if (!import.meta.env.DEV) return safeUsers;
+
+  if (safeUsers.length >= TEST_PLAYER_COUNT) return safeUsers;
+
+  const needed = TEST_PLAYER_COUNT - safeUsers.length;
+
+  return [
+    ...safeUsers,
+    ...Array.from({ length: needed }, (_, i) => ({
+      id: `test-${i}`,
+      username: `Test ${i + 1}`,
+    })),
+  ];
+}
+
 export function Room({ room, onShowInChat }: RoomProps) {
   const tableRef = useRef<HTMLDivElement | null>(null);
   const playerRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -32,6 +54,12 @@ export function Room({ room, onShowInChat }: RoomProps) {
   const [chatPositionMap, setChatPositionMap] = useState<
     Record<string, Position | null>
   >({});
+  const users = useMemo(
+    () => withTestUsers(room?.users),
+    [room?.users]
+  );
+  const [minWidth, setMinWidth] = useState(window.innerWidth);
+  const [minHeight, setMinHeight] = useState(window.innerHeight);
 
   useRoomChatSubscription({
     variables: { roomId: room?.id ?? "" },
@@ -74,7 +102,6 @@ export function Room({ room, onShowInChat }: RoomProps) {
         return;
       }
 
-      // --- Fallback if no position (clears bubble) ---
       setChatPositionMap((prev) => ({ ...prev, [userId]: null }));
     },
   });
@@ -91,66 +118,114 @@ export function Room({ room, onShowInChat }: RoomProps) {
 
   const playerPositions = useMemo(() => {
     if (!tableRect || !room) return [];
-    const totalPlayers = room.users.length;
+
+    const totalPlayers = users.length;
     const { width, height } = tableRect;
+
     const padding = 80;
     const CARD_WIDTH = 60;
     const CARD_HEIGHT = 110;
     const CARD_MARGIN = 20;
 
+    // ---------- Layout tuning ----------
+    const SIDE_MAX_PER_COLUMN = 3;
+    const SIDE_COLUMN_GAP = 14;
+
+    const TB_MIN_GAP = CARD_WIDTH + 24;
+    const TB_ROW_OFFSET = CARD_HEIGHT + 14;
+
+    // ---------- Helpers ----------
+    const clampCenteredCoords = (
+      len: number,
+      count: number,
+      minGap: number
+    ) => {
+      if (count <= 0) return [];
+
+      const natural = len / (count + 1);
+      if (natural >= minGap) {
+        return Array.from({ length: count }, (_, i) => (i + 1) * natural);
+      }
+
+      const total = minGap * (count - 1);
+      const start = (len - total) / 2;
+      return Array.from({ length: count }, (_, i) => start + i * minGap);
+    };
+
     const computeSidePositions = (
       side: "top" | "right" | "bottom" | "left",
       count: number
     ): Position[] => {
-      const positions: Position[] = [];
-      const availableLength =
-        side === "top" || side === "bottom" ? width : height;
-      const minGap =
-        side === "top" || side === "bottom"
-          ? CARD_WIDTH + CARD_MARGIN
-          : CARD_HEIGHT + CARD_MARGIN;
-
-      const coordinates: number[] = [];
       if (count === 0) return [];
 
-      const defaultSpacing = availableLength / (count + 1);
-      if (defaultSpacing < minGap) {
-        const totalRequired = minGap * (count - 1);
-        const start = (availableLength - totalRequired) / 2;
-        for (let j = 0; j < count; j++)
-          coordinates.push(start + j * minGap);
-      } else {
-        for (let j = 0; j < count; j++)
-          coordinates.push((j + 1) * defaultSpacing);
+      const positions: Position[] = [];
+
+      // ---------- TOP / BOTTOM ----------
+      if (side === "top" || side === "bottom") {
+        const available = width;
+
+        const perRow = Math.max(1, Math.floor(available / TB_MIN_GAP));
+        const rows = Math.ceil(count / perRow);
+
+        for (let row = 0; row < rows; row++) {
+          const rowCount =
+            row === rows - 1 ? count - row * perRow : perRow;
+
+          const xs = clampCenteredCoords(
+            available,
+            rowCount,
+            TB_MIN_GAP
+          );
+
+          for (let i = 0; i < rowCount; i++) {
+            const rowOffset = padding + row * TB_ROW_OFFSET;
+            positions.push({
+              x: xs[i],
+              y:
+                side === "top"
+                  ? -rowOffset
+                  : height + rowOffset,
+            });
+          }
+        }
+
+        return positions;
       }
 
-      for (const coord of coordinates) {
-        let x = 0,
-          y = 0;
-        switch (side) {
-          case "top":
-            x = coord;
-            y = -padding;
-            break;
-          case "bottom":
-            x = coord;
-            y = height + padding;
-            break;
-          case "left":
-            x = -padding;
-            y = coord;
-            break;
-          case "right":
-            x = width + padding;
-            y = coord;
-            break;
+      // ---------- LEFT / RIGHT ----------
+      const available = height;
+      const columns = Math.ceil(count / SIDE_MAX_PER_COLUMN);
+
+      for (let col = 0; col < columns; col++) {
+        const colCount =
+          col === columns - 1
+            ? count - col * SIDE_MAX_PER_COLUMN
+            : SIDE_MAX_PER_COLUMN;
+
+        const ys = clampCenteredCoords(
+          available,
+          colCount,
+          CARD_HEIGHT + CARD_MARGIN
+        );
+
+        const colOffset =
+          padding + col * (CARD_WIDTH + SIDE_COLUMN_GAP);
+
+        for (let i = 0; i < colCount; i++) {
+          positions.push({
+            x:
+              side === "left"
+                ? -colOffset
+                : width + colOffset,
+            y: ys[i],
+          });
         }
-        positions.push({ x, y });
       }
+
       return positions;
     };
 
-    const positions: Position[] = [];
+    // ---------- Small player count fallback ----------
     if (totalPlayers < 4) {
       const sides: ("top" | "right" | "bottom" | "left")[] = [
         "top",
@@ -158,50 +233,93 @@ export function Room({ room, onShowInChat }: RoomProps) {
         "bottom",
         "left",
       ];
-      for (let i = 0; i < totalPlayers; i++) {
+
+      return users.map((_, i) => {
         const side = sides[i];
-        let pos: Position;
         switch (side) {
           case "top":
-            pos = { x: width / 2, y: -padding };
-            break;
+            return { x: width / 2, y: -padding };
           case "right":
-            pos = { x: width + padding, y: height / 2 };
-            break;
+            return { x: width + padding, y: height / 2 };
           case "bottom":
-            pos = { x: width / 2, y: height + padding };
-            break;
+            return { x: width / 2, y: height + padding };
           case "left":
-            pos = { x: -padding, y: height / 2 };
-            break;
+            return { x: -padding, y: height / 2 };
         }
-        positions.push(pos);
-      }
-      return positions;
+      });
     }
 
-    const base = Math.floor(totalPlayers / 4);
-    const remainder = totalPlayers % 4;
-    const sideCounts = { top: base, right: base, bottom: base, left: base };
-    const extraOrder: ("top" | "right" | "bottom" | "left")[] =
-      width >= height
-        ? ["top", "bottom", "right", "left"]
-        : ["right", "left", "top", "bottom"];
-    for (let i = 0; i < remainder; i++)
-      sideCounts[extraOrder[i]] += 1;
+    // ---------- Seat allocation policy ----------
 
-    positions.push(...computeSidePositions("top", sideCounts.top));
-    positions.push(...computeSidePositions("right", sideCounts.right));
-    positions.push(...computeSidePositions("bottom", sideCounts.bottom));
-    positions.push(...computeSidePositions("left", sideCounts.left));
+    console.log("Window height: ", window.innerHeight, "px")
+    // Allow top/bottom second row only if viewport is tall enough
+    const allowTBSecondRow = window.innerHeight / 5 > CARD_HEIGHT * 2;
 
-    return positions;
-  }, [tableRect, room]);
+    const MAX_TB_ROWS = allowTBSecondRow ? 2 : 1;
+    const TB_PER_ROW = Math.max(1, Math.floor(width / TB_MIN_GAP));
+
+    const sideCounts = {
+      top: 0,
+      bottom: 0,
+      left: 0,
+      right: 0,
+    };
+
+    let remaining = totalPlayers;
+
+    // First row top & bottom
+    const baseTB = Math.min(TB_PER_ROW, Math.floor(remaining / 4));
+    sideCounts.top = baseTB;
+    sideCounts.bottom = baseTB;
+    remaining -= baseTB * 2;
+
+    // Optional second row top & bottom
+    if (MAX_TB_ROWS === 2 && remaining > 0) {
+      const extraTB = Math.min(
+        TB_PER_ROW,
+        Math.floor(remaining / 2)
+      );
+      sideCounts.top += extraTB;
+      sideCounts.bottom += extraTB;
+      remaining -= extraTB * 2;
+    }
+
+    // Everything else goes left/right
+    sideCounts.left = Math.ceil(remaining / 2);
+    sideCounts.right = remaining - sideCounts.left;
+
+    const sideColumns =
+      Math.ceil(sideCounts.left / SIDE_MAX_PER_COLUMN) +
+      Math.ceil(sideCounts.right / SIDE_MAX_PER_COLUMN);
+
+    const topRows = Math.ceil(sideCounts.top / TB_PER_ROW);
+    const bottomRows = Math.ceil(sideCounts.bottom / TB_PER_ROW);
+
+    setMinWidth(
+      width +
+      sideColumns * (CARD_WIDTH + SIDE_COLUMN_GAP) +
+      padding * 1.2
+    );
+
+    setMinHeight(
+      height +
+      (topRows + bottomRows) * TB_ROW_OFFSET +
+      padding
+    );
+
+    // ---------- Build positions ----------
+    return [
+      ...computeSidePositions("top", sideCounts.top),
+      ...computeSidePositions("right", sideCounts.right),
+      ...computeSidePositions("bottom", sideCounts.bottom),
+      ...computeSidePositions("left", sideCounts.left),
+    ];
+  }, [tableRect, room, users]);
 
   const playerPositionMap = useMemo(() => {
     if (!room || playerPositions.length === 0) return {};
     const map: Record<string, { x: number; y: number }> = {};
-    room.users.forEach((user, i) => {
+    users.forEach((user, i) => {
       const pos = playerPositions[i];
       if (pos) map[user.id] = pos;
     });
@@ -224,14 +342,17 @@ export function Room({ room, onShowInChat }: RoomProps) {
     <div
       className="relative flex flex-col items-center justify-center w-full min-h-[450px]"
       style={{
-        height: "calc(50vh)",
-        overflow: "hidden",
-        position: "relative",
-        transform: "translateY(calc(25% - 1vh))",
+        width: "100%",
+        height: "100%",
+        minWidth: minWidth,
+        minHeight: minHeight,
+        overflow: "visible",
       }}
     >
-      <div className="relative">
-        {/* Table */}
+      <div
+        className="relative"
+      >
+      {/* Table */}
         <Table
           room={room}
           innerRef={tableRef}
@@ -239,7 +360,7 @@ export function Room({ room, onShowInChat }: RoomProps) {
         />
 
         {/* Player Cards */}
-        {room.users.map((user, index) => {
+        {users.map((user, index) => {
           const position = playerPositions[index];
           if (!position) return null;
           const pickedCard = getPickedUserCard(user.id, room.game.table);

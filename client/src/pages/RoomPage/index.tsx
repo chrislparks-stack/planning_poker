@@ -434,13 +434,15 @@ export function RoomPage() {
             showChat={chatVisible}
             setShowChat={() => setChatVisible(true)}
           >
-            <div className="relative h-[calc(100vh-80px)] overflow-hidden">
+            <div className="relative h-[calc(100vh-80px)] w-[calc(100vw-120px)] overflow-hidden">
               {/* Scrollable Room container */}
               <div
-                  className="absolute top-0 left-0 right-0 overflow-y-auto"
+                  className="absolute inset-0 overflow-auto"
                   style={{
-                    height: `calc(100% - ${room.isGameOver || shouldTwoRowLayout ? 245 : 100}px)`,
-                    paddingBottom: "1rem",
+                    height: room.isGameOver || shouldTwoRowLayout
+                      ? "calc(100% - 245px)"
+                      : "calc(100% - 95px)",
+                    paddingBottom: "1rem"
                   }}
               >
                 <Room room={room} onShowInChat={handleShowInChat}/>
