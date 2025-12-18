@@ -410,7 +410,7 @@ export function Room({ room, onShowInChat, roomRef}: RoomProps) {
 
     return {
       minHeight: heightRows,
-      offsetHeight: topRows > 1 ? doubleRowHeight : singleRowHeight
+      offsetHeight: topRows > 1 ? doubleRowHeight : topRows < 1 && bottomRows < 1 ? (window.innerHeight / 3) : singleRowHeight
     };
   }, [containerSize, tableRect, seatLayout]);
 
