@@ -83,7 +83,7 @@ export function Deck({ roomId, isGameOver: isGameOverProp, cards }: DeckProps) {
         "items-end justify-center transition-[transform,opacity] duration-300",
         shouldTwoRowLayout
           ? "grid"
-          : "flex flex-nowrap justify-center"
+          : "flex flex-nowrap"
       )}
       style={
         shouldTwoRowLayout

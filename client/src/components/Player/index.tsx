@@ -9,7 +9,7 @@ import {
   useSendChatMessageMutation,
 } from "@/api";
 import { useToast } from "@/hooks/use-toast";
-import { User } from "@/types";
+import {Room, User} from "@/types";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import {useTheme} from "@/components";
 import {Ban, Crown, DoorOpen, MessageSquareText} from "lucide-react";
@@ -22,7 +22,7 @@ interface PlayerProps {
   isGameOver: boolean;
   card?: string | null | undefined;
   roomId: string;
-  onMakeOwner?: (userId: string) => Promise<void> | void;
+  onMakeOwner?: (userId: string, room: Room) => Promise<void> | void;
   playerPositionMap?: Record<string, { x: number; y: number }>;
   tableRect?: DOMRect | null;
 }
@@ -266,9 +266,9 @@ export function Player({
   // --- Actions ---
   const handleMakeOwner = async () => {
     closeMenu();
-    if (!onMakeOwner) return;
+    if (!onMakeOwner || !room) return;
     try {
-      await onMakeOwner(user.id);
+      await onMakeOwner(user.id, room);
       toast({
         title: "Ownership transferred",
         description: `${user.username} is now the room owner.`

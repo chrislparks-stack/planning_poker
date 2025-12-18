@@ -441,11 +441,12 @@ export function RoomPage() {
                   style={{
                     height: room.isGameOver || shouldTwoRowLayout
                       ? "calc(100% - 245px)"
-                      : "calc(100% - 95px)",
-                    paddingBottom: "1rem"
+                      : "calc(100% - 95px)"
                   }}
               >
-                <Room room={room} onShowInChat={handleShowInChat}/>
+                <div className="relative min-w-full min-h-full">
+                  <Room room={room} onShowInChat={handleShowInChat}/>
+                </div>
               </div>
 
               <div className="absolute bottom-0 left-0 right-0 mx-auto w-[100%] max-w-4xl">

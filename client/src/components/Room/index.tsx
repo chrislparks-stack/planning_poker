@@ -9,6 +9,7 @@ import { ChatBubble } from "@/components/ui/chat-bubble";
 import { Room as RoomType } from "@/types";
 import { getPickedUserCard } from "@/utils";
 import {decompressMessage} from "@/utils/messageUtils.ts";
+import {withTestUsers} from "@/utils/testUtils.tsx";
 
 interface RoomProps {
   room?: RoomType;
@@ -22,44 +23,34 @@ export interface Position {
   height?: number;
 }
 
-const TEST_PLAYER_COUNT = 0;
-
-function withTestUsers(
-  users?: RoomType["users"]
-): RoomType["users"] {
-  const safeUsers = users ?? [];
-
-  if (!import.meta.env.DEV) return safeUsers;
-
-  if (safeUsers.length >= TEST_PLAYER_COUNT) return safeUsers;
-
-  const needed = TEST_PLAYER_COUNT - safeUsers.length;
-
-  return [
-    ...safeUsers,
-    ...Array.from({ length: needed }, (_, i) => ({
-      id: `test-${i}`,
-      username: `Test ${i + 1}`,
-    })),
-  ];
+function handlePromote(userId: string, room: RoomType) {
+  useSetRoomOwnerMutation({ variables: { roomId: room["id"] || "", userId } });
 }
 
 export function Room({ room, onShowInChat }: RoomProps) {
   const tableRef = useRef<HTMLDivElement | null>(null);
   const playerRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [tableRect, setTableRect] = useState<DOMRect | null>(null);
-  const [setRoomOwner] = useSetRoomOwnerMutation();
   const [senderName, setSenderName] = useState<string | null>(null);
   const [lastChats, setLastChats] = useState<Record<string, string | null>>({});
   const [chatPositionMap, setChatPositionMap] = useState<
     Record<string, Position | null>
   >({});
   const users = useMemo(
-    () => withTestUsers(room?.users),
+    () => withTestUsers(0, room?.users),
     [room?.users]
   );
-  const [minWidth, setMinWidth] = useState(window.innerWidth);
-  const [minHeight, setMinHeight] = useState(window.innerHeight);
+
+  // Layout constants
+  const CARD_WIDTH = 60;
+  const CARD_HEIGHT = 96;
+  const CARD_MARGIN = 20;
+
+  const TB_ROW_OFFSET = CARD_HEIGHT + 14;
+  const SIDE_COLUMN_GAP = 14;
+  const SIDE_MAX_PER_COLUMN = 3;
+
+  const padding = 80;
 
   useRoomChatSubscription({
     variables: { roomId: room?.id ?? "" },
@@ -116,23 +107,100 @@ export function Room({ room, onShowInChat }: RoomProps) {
     return () => window.removeEventListener("resize", updateTableRect);
   }, []);
 
+  const seatLayout = useMemo(() => {
+    if (!tableRect || !room) return null;
+
+    const totalPlayers = users.length;
+    const { width } = tableRect;
+
+    const TB_MIN_GAP = CARD_WIDTH + 24;
+
+    // Allow top/bottom second row only if viewport is tall enough
+    const allowTBSecondRow = window.innerHeight / 5.5 > CARD_HEIGHT * 2;
+    const MAX_TB_ROWS = allowTBSecondRow ? 2 : 1;
+    const TB_PER_ROW = Math.max(1, Math.floor(width / TB_MIN_GAP));
+
+    const sideCounts = {
+      top: 0,
+      bottom: 0,
+      left: 0,
+      right: 0,
+    };
+
+    let remaining = totalPlayers;
+
+    // First row top & bottom
+    const baseTB = Math.min(TB_PER_ROW, Math.floor(remaining / 4));
+    sideCounts.top = baseTB;
+    sideCounts.bottom = baseTB;
+    remaining -= baseTB * 2;
+
+    // Optional second row
+    if (MAX_TB_ROWS === 2 && remaining > 0) {
+      const extraTB = Math.min(TB_PER_ROW, Math.floor(remaining / 2));
+      sideCounts.top += extraTB;
+      sideCounts.bottom += extraTB;
+      remaining -= extraTB * 2;
+    }
+
+    // Everything else goes left/right
+    sideCounts.left = Math.ceil(remaining / 2);
+    sideCounts.right = remaining - sideCounts.left;
+
+    if (totalPlayers < 4) {
+      const sideCounts = { top: 0, bottom: 0, left: 0, right: 0 };
+
+      if (totalPlayers === 1) {
+        sideCounts.top = 1;
+      } else if (totalPlayers === 2) {
+        sideCounts.top = 1;
+        sideCounts.bottom = 1;
+      } else if (totalPlayers === 3) {
+        sideCounts.top = 1;
+        sideCounts.left = 1;
+        sideCounts.right = 1;
+      }
+
+      const topRows = sideCounts.top > 0 ? 1 : 0;
+      const bottomRows = sideCounts.bottom > 0 ? 1 : 0;
+      const leftColumns = Math.ceil(sideCounts.left / SIDE_MAX_PER_COLUMN);
+      const rightColumns = Math.ceil(sideCounts.right / SIDE_MAX_PER_COLUMN);
+
+      return {
+        sideCounts,
+        topRows,
+        bottomRows,
+        leftColumns,
+        rightColumns,
+        TB_PER_ROW,
+      }
+    }
+
+    const topRows = Math.ceil(sideCounts.top / TB_PER_ROW);
+    const bottomRows = Math.ceil(sideCounts.bottom / TB_PER_ROW);
+    const leftColumns = Math.ceil(sideCounts.left / SIDE_MAX_PER_COLUMN);
+    const rightColumns = Math.ceil(sideCounts.right / SIDE_MAX_PER_COLUMN);
+
+    return {
+      sideCounts,
+      topRows,
+      bottomRows,
+      leftColumns,
+      rightColumns,
+      TB_PER_ROW,
+    };
+  }, [tableRect, room, users]);
+
   const playerPositions = useMemo(() => {
-    if (!tableRect || !room) return [];
+    if (!tableRect || !room || !seatLayout) return [];
 
     const totalPlayers = users.length;
     const { width, height } = tableRect;
 
-    const padding = 80;
-    const CARD_WIDTH = 60;
-    const CARD_HEIGHT = 110;
-    const CARD_MARGIN = 20;
-
     // ---------- Layout tuning ----------
     const SIDE_MAX_PER_COLUMN = 3;
-    const SIDE_COLUMN_GAP = 14;
 
     const TB_MIN_GAP = CARD_WIDTH + 24;
-    const TB_ROW_OFFSET = CARD_HEIGHT + 14;
 
     // ---------- Helpers ----------
     const clampCenteredCoords = (
@@ -249,63 +317,7 @@ export function Room({ room, onShowInChat }: RoomProps) {
       });
     }
 
-    // ---------- Seat allocation policy ----------
-
-    console.log("Window height: ", window.innerHeight, "px")
-    // Allow top/bottom second row only if viewport is tall enough
-    const allowTBSecondRow = window.innerHeight / 5 > CARD_HEIGHT * 2;
-
-    const MAX_TB_ROWS = allowTBSecondRow ? 2 : 1;
-    const TB_PER_ROW = Math.max(1, Math.floor(width / TB_MIN_GAP));
-
-    const sideCounts = {
-      top: 0,
-      bottom: 0,
-      left: 0,
-      right: 0,
-    };
-
-    let remaining = totalPlayers;
-
-    // First row top & bottom
-    const baseTB = Math.min(TB_PER_ROW, Math.floor(remaining / 4));
-    sideCounts.top = baseTB;
-    sideCounts.bottom = baseTB;
-    remaining -= baseTB * 2;
-
-    // Optional second row top & bottom
-    if (MAX_TB_ROWS === 2 && remaining > 0) {
-      const extraTB = Math.min(
-        TB_PER_ROW,
-        Math.floor(remaining / 2)
-      );
-      sideCounts.top += extraTB;
-      sideCounts.bottom += extraTB;
-      remaining -= extraTB * 2;
-    }
-
-    // Everything else goes left/right
-    sideCounts.left = Math.ceil(remaining / 2);
-    sideCounts.right = remaining - sideCounts.left;
-
-    const sideColumns =
-      Math.ceil(sideCounts.left / SIDE_MAX_PER_COLUMN) +
-      Math.ceil(sideCounts.right / SIDE_MAX_PER_COLUMN);
-
-    const topRows = Math.ceil(sideCounts.top / TB_PER_ROW);
-    const bottomRows = Math.ceil(sideCounts.bottom / TB_PER_ROW);
-
-    setMinWidth(
-      width +
-      sideColumns * (CARD_WIDTH + SIDE_COLUMN_GAP) +
-      padding * 1.2
-    );
-
-    setMinHeight(
-      height +
-      (topRows + bottomRows) * TB_ROW_OFFSET +
-      padding
-    );
+    const { sideCounts } = seatLayout;
 
     // ---------- Build positions ----------
     return [
@@ -334,23 +346,82 @@ export function Room({ room, onShowInChat }: RoomProps) {
     );
   }
 
-  function handlePromote(userId: string) {
-    setRoomOwner({ variables: { roomId: room?.id || "", userId } });
-  }
+  const containerSize = useMemo(() => {
+    if (!tableRect || !seatLayout) return null;
+
+    const {
+      sideCounts,
+      topRows,
+      bottomRows,
+      leftColumns,
+      rightColumns,
+    } = seatLayout;
+
+    // Vertical expansion
+    const topHeight =
+      sideCounts.top > 0
+        ? padding + (Math.max(topRows - 1, 0) * TB_ROW_OFFSET)
+        : 0;
+
+    const bottomHeight =
+      sideCounts.bottom > 0
+        ? padding + (bottomRows - 1) * TB_ROW_OFFSET + CARD_HEIGHT
+        : 0;
+
+    // Horizontal expansion
+    const leftWidth =
+      leftColumns > 0
+        ? padding +
+        (leftColumns - 1) * (CARD_WIDTH + SIDE_COLUMN_GAP) +
+        CARD_WIDTH
+        : 0;
+
+    const rightWidth =
+      rightColumns > 0
+        ? padding +
+        (rightColumns - 1) * (CARD_WIDTH + SIDE_COLUMN_GAP) +
+        CARD_WIDTH
+        : 0;
+
+    return {
+      width: tableRect.width + leftWidth + rightWidth,
+      height: tableRect.height + topHeight + bottomHeight,
+      offsetX: leftWidth,
+      offsetY: topHeight,
+      topHeight,
+      bottomHeight,
+    };
+  }, [tableRect, seatLayout]);
+
+  const totalHeight = useMemo(() => {
+    if (!containerSize || !tableRect || !seatLayout) {
+      return {
+        minHeight: 0,
+        offsetHeight: 0
+      };
+    }
+
+    const { topRows, bottomRows } = seatLayout;
+
+    const heightRows = tableRect.height + ((topRows + bottomRows) * CARD_HEIGHT)
+
+    return {
+      minHeight: heightRows,
+      offsetHeight: Math.max((window.innerHeight / 2) - (containerSize.height / 1.5), ((heightRows - CARD_HEIGHT) / (topRows + bottomRows)))
+    };
+  }, [containerSize, tableRect, seatLayout]);
 
   return (
     <div
-      className="relative flex flex-col items-center justify-center w-full min-h-[450px]"
+      className="relative flex items-center justify-center"
       style={{
-        width: "100%",
-        height: "100%",
-        minWidth: minWidth,
-        minHeight: minHeight,
-        overflow: "visible",
+        minWidth: containerSize ? containerSize.width - 30 : 100,
+        minHeight: totalHeight["minHeight"]
       }}
     >
       <div
         className="relative"
+        style={{marginTop: totalHeight["offsetHeight"]}}
       >
       {/* Table */}
         <Table
