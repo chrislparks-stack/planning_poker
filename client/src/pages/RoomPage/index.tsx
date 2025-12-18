@@ -24,6 +24,7 @@ import {ResultsTag} from "@/components/ui/results-tag.tsx";
 
 export function RoomPage() {
   const { roomId } = useParams({ from: "/room/$roomId" });
+  const roomRef = useRef<HTMLDivElement | null>(null);
   const { user, logout } = useAuth();
   const { toast } = useToast();
   const redirectingRef = useRef(false);
@@ -437,16 +438,17 @@ export function RoomPage() {
             <div className="relative h-[calc(100vh-80px)] w-[calc(100vw-120px)] overflow-hidden">
               {/* Scrollable Room container */}
               <div
-                  className="absolute inset-0 overflow-auto"
-                  style={{
-                    height: room.isGameOver || shouldTwoRowLayout
-                      ? "calc(100% - 245px)"
-                      : "calc(100% - 95px)",
-                    scrollbarGutter: "stable both-edges"
-                  }}
+                ref={roomRef}
+                className="absolute inset-0 overflow-auto"
+                style={{
+                  height: room.isGameOver || shouldTwoRowLayout
+                    ? "calc(100% - 245px)"
+                    : "calc(100% - 105px)",
+                  scrollbarGutter: "stable both-edges"
+                }}
               >
-                <div className="relative min-w-full min-h-full">
-                  <Room room={room} onShowInChat={handleShowInChat}/>
+                <div className="relative">
+                  <Room room={room} onShowInChat={handleShowInChat} roomRef={roomRef}/>
                 </div>
               </div>
 

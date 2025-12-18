@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useMemo } from "react";
+import {useRef, useEffect, useState, useMemo, RefObject} from "react";
 import {
   useSetRoomOwnerMutation,
   useRoomChatSubscription,
@@ -14,6 +14,7 @@ import {withTestUsers} from "@/utils/testUtils.tsx";
 interface RoomProps {
   room?: RoomType;
   onShowInChat?: () => void;
+  roomRef?: RefObject<HTMLDivElement | null>;
 }
 
 export interface Position {
@@ -27,7 +28,7 @@ function handlePromote(userId: string, room: RoomType) {
   useSetRoomOwnerMutation({ variables: { roomId: room["id"] || "", userId } });
 }
 
-export function Room({ room, onShowInChat }: RoomProps) {
+export function Room({ room, onShowInChat, roomRef}: RoomProps) {
   const tableRef = useRef<HTMLDivElement | null>(null);
   const playerRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [tableRect, setTableRect] = useState<DOMRect | null>(null);
@@ -404,10 +405,12 @@ export function Room({ room, onShowInChat }: RoomProps) {
     const { topRows, bottomRows } = seatLayout;
 
     const heightRows = tableRect.height + ((topRows + bottomRows) * CARD_HEIGHT)
+    const singleRowHeight = Math.max(((window.innerHeight / 1.8) - heightRows), ((heightRows - TB_ROW_OFFSET) / (topRows + bottomRows)));
+    const doubleRowHeight = Math.max(((window.innerHeight / 1.35) - heightRows), ((heightRows - TB_ROW_OFFSET) / (topRows + bottomRows)));
 
     return {
       minHeight: heightRows,
-      offsetHeight: Math.max((window.innerHeight / 2) - (containerSize.height / 2.5), ((heightRows - CARD_HEIGHT) / (topRows + bottomRows)))
+      offsetHeight: topRows > 1 ? doubleRowHeight : singleRowHeight
     };
   }, [containerSize, tableRect, seatLayout]);
 
@@ -428,6 +431,7 @@ export function Room({ room, onShowInChat }: RoomProps) {
           room={room}
           innerRef={tableRef}
           isGameOver={room.isGameOver}
+          roomOverlayRef={roomRef ?? null}
         />
 
         {/* Player Cards */}
