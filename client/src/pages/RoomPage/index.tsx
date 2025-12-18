@@ -441,7 +441,8 @@ export function RoomPage() {
                   style={{
                     height: room.isGameOver || shouldTwoRowLayout
                       ? "calc(100% - 245px)"
-                      : "calc(100% - 95px)"
+                      : "calc(100% - 95px)",
+                    scrollbarGutter: "stable both-edges"
                   }}
               >
                 <div className="relative min-w-full min-h-full">

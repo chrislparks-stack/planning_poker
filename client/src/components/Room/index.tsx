@@ -407,7 +407,7 @@ export function Room({ room, onShowInChat }: RoomProps) {
 
     return {
       minHeight: heightRows,
-      offsetHeight: Math.max((window.innerHeight / 2) - (containerSize.height / 1.5), ((heightRows - CARD_HEIGHT) / (topRows + bottomRows)))
+      offsetHeight: Math.max((window.innerHeight / 2) - (containerSize.height / 2.5), ((heightRows - CARD_HEIGHT) / (topRows + bottomRows)))
     };
   }, [containerSize, tableRect, seatLayout]);
 
