@@ -475,7 +475,7 @@ export function RoomPage() {
                     />
                   </div>
                   {room.isGameOver && (
-                    <div className="flex justify-center w-full ml-10">
+                    <div className="flex justify-center ml-5">
                       <ResultsTag active />
                       <VoteDistributionChart room={room} />
                     </div>
