@@ -9,7 +9,7 @@ import {
   useSendChatMessageMutation,
 } from "@/api";
 import { useToast } from "@/hooks/use-toast";
-import { User } from "@/types";
+import {Room, User} from "@/types";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import {useTheme} from "@/components";
 import {Ban, Crown, DoorOpen, MessageSquareText} from "lucide-react";
@@ -22,7 +22,7 @@ interface PlayerProps {
   isGameOver: boolean;
   card?: string | null | undefined;
   roomId: string;
-  onMakeOwner?: (userId: string) => Promise<void> | void;
+  onMakeOwner?: (userId: string, room: Room) => Promise<void> | void;
   playerPositionMap?: Record<string, { x: number; y: number }>;
   tableRect?: DOMRect | null;
 }
@@ -162,13 +162,32 @@ export function Player({
     }
     if (isGameOver) {
       return (
+        <div
+          style={{
+            width: 80,
+            height: 100,
+            background: `
+                radial-gradient(
+                  circle at 50% 50%,
+                  white 20%,
+                  transparent 40%
+                )
+              `,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+            backdropFilter: "blur(2px)"
+          }}
+        >
         <DotLottieReact
-          key="gameover"
-          src="https://lottie.host/407d17f3-a83c-46ca-ab4c-981dcbc77919/TKjtavdeuG.json"
-          loop
-          autoplay
-          style={{ width: 50, height: 35, margin: -25 }}
-        />
+            key="gameover"
+            src="https://lottie.host/407d17f3-a83c-46ca-ab4c-981dcbc77919/TKjtavdeuG.json"
+            loop
+            autoplay
+            style={{ width: 50, height: 35 }}
+          />
+        </div>
       );
     }
     return (
@@ -247,9 +266,9 @@ export function Player({
   // --- Actions ---
   const handleMakeOwner = async () => {
     closeMenu();
-    if (!onMakeOwner) return;
+    if (!onMakeOwner || !room) return;
     try {
-      await onMakeOwner(user.id);
+      await onMakeOwner(user.id, room);
       toast({
         title: "Ownership transferred",
         description: `${user.username} is now the room owner.`
@@ -404,155 +423,134 @@ export function Player({
 
   return (
     <div className="flex flex-col items-center" data-testid="player">
-      {room?.roomOwnerId === user.id ? (
-        <div className="flex flex-col items-center" ref={cardRef} title={"Room Owner"}>
+      <div
+        className={`flex flex-col items-center ${
+          isTargetSelf ? "cursor-pointer" : "cursor-default"
+        }`}
+        ref={cardRef}
+        title={
+          isTargetSelf ? "Click to chat" : room?.roomOwnerId === user.id ? `Room Owner: ${user.username}`
+          : user.username.length < 30 ? user.username : `${user.username.slice(0, 26)}...`
+        }
+        onClick={() => {
+          if (isTargetSelf) setShowChatInput(!showChatInput);
+        }}
+      >
+        <div
+          {...interactiveProps}
+          className="relative flex flex-col items-center z-20 hover:z-50 focus-within:z-50 transition-[z-index]"
+        >
+          {/* Glow Behind Card */}
           <div
-            {...interactiveProps}
-            className="relative flex flex-col items-center cursor-default z-20 hover:z-50 focus-within:z-50 transition-[z-index]"
+            className="absolute top-0 left-0 right-0 mx-auto rounded-xl blur-sm"
+            style={{
+              width: "4rem",
+              height: "6rem",
+              boxShadow: `0 0 5px 3px hsl(var(--accent) / 0.65)`,
+              background: `
+                radial-gradient(
+                  circle at 50% 50%,
+                  hsl(var(--accent) / 0.55) 0%,
+                  transparent var(--glass-fade-stop)
+                )
+              `,
+            }}
+          />
+
+          {/* Glass Card */}
+          <div
+            className="
+              relative w-[4rem] h-[6rem]
+              rounded-xl isolate
+              backdrop-blur-[2px]
+              shadow-[inset_0_0_6px_rgba(0,0,0,0.45),inset_0_0_20px_rgba(0,0,0,0.25)]
+              group
+            "
           >
-            {/* --- Continuous accent glow behind card --- */}
-            <div
-              className="absolute top-0 left-[3px] rounded-t-xl blur-sm"
-              style={{
-                width: "3.5rem",
-                height: "5.5rem",
-                zIndex: 0,
-                boxShadow: `
-                    0 0 4px 3px hsl(var(--accent) / 0.55),
-                    0 0 4px 3px hsl(var(--accent) / 0.35)
-                  `,
-                background: `
-                  radial-gradient(
-                    circle at 50% 40%,
-                    hsl(var(--accent) / 0.35) 0%,
-                    transparent 75%
-                  )
-                `,
-              }}
-            />
-
-            {/* --- Card --- */}
-            <div className="relative w-[4rem] h-[5rem] flex items-center justify-center bg-gradient-to-br from-accent/30 via-transparent to-accent/10 rounded-t-xl shadow-[inset_0_0_2px_rgba(0,0,0,0.2)] z-0 isolate">
-              <Crown
-                className="absolute top-1 left-1 w-3 h-3 text-accent/70 fill-accent/70"
-                strokeWidth={2}
-              />
-              <Crown
-                className="absolute bottom-0.5 right-1 w-3 h-3 text-accent/70 fill-accent/70 rotate-180"
-                strokeWidth={2}
-              />
-              {cardIcon}
-            </div>
-
-            {/* --- Nameplate --- */}
-            <div
-              className="relative w-[4rem] bg-gray-100/90 dark:bg-background/60
-               text-[10px] font-semibold text-center text-gray-800 dark:text-gray-200
-               border border-gray-300 dark:border-none rounded-b-xl px-1 py-[2px]
-               shadow-sm truncate"
-              title={user.username}
-            >
-              {user.username}
-            </div>
-          </div>
-
-          {isTargetSelf && (
-            <button
-              onClick={() => setShowChatInput(!showChatInput)}
-              title="Open chat"
-              className="absolute p-1 rounded-full bg-background/80 hover:bg-accent/20 border border-border shadow-sm"
-              style={{ right: isLeftSide ? 70 : -28 }}
-            >
-              <MessageSquareText
-                className={`w-4 h-4 text-accent ${isLeftSide ? "scale-x-[-1]" : ""}`}
-              />
-            </button>
-          )}
-          {isTargetSelf && (
-            <ChatInputWrapper
-              onSend={(plain, formatted) =>
-                handleSendChat(plain, formatted)
-              }
-              onClose={() => setShowChatInput(false)}
-              isOpen={showChatInput}
-              className={`top-8 ${isLeftSide ? "right-[18px]" : "-right-[275px]"}`}
-              isLeftSide={isLeftSide}
-              isTopSide={isTopSide}
-            />
-          )}
-        </div>
-      ) : (
-        <div className="relative flex flex-col items-center" style={{ cursor: "default" }} ref={cardRef}>
-          <div className="flex flex-col items-center">
-            <div
-              {...interactiveProps}
-              className="relative flex flex-col items-center cursor-default z-0"
-            >
+            {isTargetSelf && (
               <div
-                className="absolute top-0 left-[3px] rounded-t-xl blur-sm"
+                className="
+                  flex mt-1.5 ml-1
+                  text-[5px] uppercase tracking-[0.14em]
+                  select-none flex-row
+                "
                 style={{
-                  width: "3.5rem",
-                  height: "5.5rem",
-                  zIndex: 0,
-                  boxShadow: `
-                    0 0 4px 3px hsl(var(--accent) / 0.55),
-                    0 0 4px 3px hsl(var(--accent) / 0.35)
-                  `,
-                  background: `
-                    radial-gradient(
-                      circle at 50% 40%,
-                      hsl(var(--accent) / 0.35) 0%,
-                      transparent 75%
-                    )
+                  textShadow: `
+                    0 0 1px rgba(255,255,255,0.5),
+                    0 1px 2px rgba(0,0,0,0.6),
+                    0 0 6px hsla(var(--accent), 0.45)
                   `,
                 }}
-              />
+              >
+                <span
+                  className="
+                    flex flex-row items-center
+                    text-center font-bold
+                    text-accent/50 dark:text-accent/25
+                    group-hover:text-accent/90
+                    transition-all duration-500
+                    scale-x-[-1]
+                  "
+                >
+                  <MessageSquareText className="text-glass w-2.5 h-2.5 ml-[2px]" />
+                </span>
+                <span
+                  className="
+                    flex flex-row items-center
+                    text-center font-bold
+                    text-accent/0
+                    group-hover:text-accent
+                    transition-all duration-500
+                  "
+                                  >
+                  Click to chat
+                </span>
+              </div>
+            )}
 
-              {/* --- Card --- */}
-              <div className="relative w-[4rem] h-[5rem] flex items-center justify-center bg-gradient-to-br from-accent/30 via-transparent to-accent/10 rounded-t-xl shadow-[inset_0_0_2px_rgba(0,0,0,0.2)] z-0 isolate">
+            <div
+              className="
+                absolute inset-0
+                flex flex-col items-center justify-center
+                pointer-events-none
+              "
+            >
+              {/* Avatar */}
+              <div className="flex items-center justify-center">
                 {cardIcon}
               </div>
-
-              {/* --- Nameplate --- */}
+            </div>
+            <div
+              className="
+                absolute bottom-[4px] w-full
+                text-center text-[14px]
+                font-semibold tracking-wide
+                pointer-events-none select-none
+                text-glass
+              "
+            >
               <div
-                className="relative z-10 w-[4rem] bg-gray-100/90 dark:bg-background/60
-                 text-[10px] font-semibold text-center text-gray-800 dark:text-gray-200
-                 border border-gray-300 dark:border-none rounded-b-xl
-                 shadow-sm truncate"
-                title={user.username}
+                className="flex flex-row items-center justify-center gap-[3px] break-all"
+                style={{fontSize: Math.max(7, Math.min(80 / user.username.length, 14))}}
               >
-                {user.username}
+                {room?.roomOwnerId === user.id && <Crown className="text-glass w-3 h-3"/>}
+                {user.username.length < 30 ? user.username : `${user.username.slice(0, 26)}...`}
               </div>
             </div>
           </div>
-
-          {isTargetSelf && (
-            <button
-              onClick={() => setShowChatInput(!showChatInput)}
-              title="Open chat"
-              className="absolute p-1 rounded-full bg-background/80 hover:bg-accent/20 border border-border shadow-sm"
-              style={{ right: isLeftSide ? 65 : -28 }}
-            >
-              <MessageSquareText
-                className={`w-4 h-4 text-accent ${isLeftSide ? "scale-x-[-1]" : ""}`}
-              />
-            </button>
-          )}
-          {isTargetSelf && (
-            <ChatInputWrapper
-              onSend={(plain, formatted) =>
-                handleSendChat(plain, formatted)
-              }
-              onClose={() => setShowChatInput(false)}
-              isOpen={showChatInput}
-              className={`top-8 ${isLeftSide ? "right-[18px]" : "-right-[275px]"}`}
-              isLeftSide={isLeftSide}
-              isTopSide={isTopSide}
-            />
-          )}
         </div>
-      )}
 
+        {isTargetSelf && (
+          <ChatInputWrapper
+            onSend={(plain, formatted) => handleSendChat(plain, formatted)}
+            onClose={() => setShowChatInput(false)}
+            isOpen={showChatInput}
+            className={`${isLeftSide ? "right-[20px] -top-0.5" : "-right-[280px] -top-0.5"}`}
+            isLeftSide={isLeftSide}
+            isTopSide={isTopSide}
+          />
+        )}
+      </div>
       {portalRootRef.current && menu
         ? createPortal(menu, portalRootRef.current)
         : menu}

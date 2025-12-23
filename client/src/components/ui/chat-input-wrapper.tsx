@@ -22,7 +22,7 @@ export const ChatInputWrapper = ({
 }) => {
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [phase, setPhase] = useState<Phase>("idle");
-  const skipExitRef = useRef(false); // mark “immediate close” (from send)
+  const skipExitRef = useRef(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -46,20 +46,18 @@ export const ChatInputWrapper = ({
     }
   };
 
-  // --- CLOSE BECAUSE OF SEND: skip exit animation entirely ---
   const handleSend = (
     plain: string,
     formatted: string,
     position?: { x: number; y: number; width: number; height: number } | null
   ) => {
     skipExitRef.current = true;
-    onSend(plain, formatted, position); // forward to parent
-    setShouldRender(false);             // unmount immediately (no exit)
+    onSend(plain, formatted, position);
+    setShouldRender(false);
     setPhase("idle");
-    onClose();                          // notify parent state
+    onClose();
   };
 
-  // --- DISMISS/ESC/OUTSIDE: animate out ---
   const handleChildClose = () => {
     if (skipExitRef.current) {
       skipExitRef.current = false;

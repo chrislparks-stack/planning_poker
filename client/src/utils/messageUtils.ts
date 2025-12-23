@@ -47,3 +47,28 @@ export function safeDecompressMessage(msg: ChatMessage): ChatMessage {
 
   return { ...msg, formattedContent: decompressed };
 }
+
+type ClampValue = number | string;
+
+const toCss = (v: ClampValue) =>
+  typeof v === "number" ? `${v}px` : v;
+
+export const clamp = (
+  min: ClampValue,
+  value: ClampValue,
+  max: ClampValue
+): ClampValue => {
+  const allNumbers =
+    typeof min === "number" &&
+    typeof value === "number" &&
+    typeof max === "number";
+
+  // Pure numeric → JS clamp
+  if (allNumbers) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  // Anything else → CSS clamp
+  return `clamp(${toCss(min)}, ${toCss(value)}, ${toCss(max)})`;
+};
+

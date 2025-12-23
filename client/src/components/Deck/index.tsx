@@ -83,7 +83,7 @@ export function Deck({ roomId, isGameOver: isGameOverProp, cards }: DeckProps) {
         "items-end justify-center transition-[transform,opacity] duration-300",
         shouldTwoRowLayout
           ? "grid"
-          : "flex flex-nowrap justify-center"
+          : "flex flex-nowrap"
       )}
       style={
         shouldTwoRowLayout
@@ -93,11 +93,11 @@ export function Deck({ roomId, isGameOver: isGameOverProp, cards }: DeckProps) {
             gridTemplateColumns: `repeat(${cardsPerRow}, minmax(min(5vw, 80px), 1fr))`,
             justifyContent: "center",
             alignContent: "end",
-            gap: "3vw",
-            paddingLeft: "8vw"
+            gap: "2vw",
+            paddingLeft: "5vw"
           }
           : {
-            gap: "2vw"
+            gap: "1.5vw"
           }
       }
     >
