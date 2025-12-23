@@ -289,9 +289,9 @@ export const HomePage: FC = () => {
 
         <div
           className="
-          relative overflow-hidden
-          h-[min(70svh,600px)]
-        "
+            flex overflow-hidden
+            h-[min(60svh,600px)]
+          "
         >
           <AnimatePresence initial={false} mode="wait" custom={direction}>
             {scene === 0 && (
@@ -421,8 +421,8 @@ export const HomePage: FC = () => {
 
         {/* ================= FIXED FOOTER (restored + mobile-safe) ================= */}
         <div className="fixed  left-1/2 -translate-x-1/2 bottom-0 z-50 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
-          <div className="mx-auto w-full max-w-3xl px-4 sm:px-6">
-            <div className="relative h-[48px]">
+          <div className="mx-auto w-full max-w-3xl">
+            <div className="relative pb-[6svh]">
               <AnimatePresence mode="wait">
                 {(scene === 0 || scene === 1) && !showedLastScene && (
                   <motion.div
