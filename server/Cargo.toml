@@ -1,6 +1,6 @@
 [package]
 name = "planning-poker-server"
-version = "1.1.6"
+version = "1.1.7"
 authors = ["INQTR <ivanchenko.b@gmail.com>, Chris Parks <chrislparks7@gmail.com>"]
 homepage = "https://www.summitplanningpoker.com/"
 edition = "2024"

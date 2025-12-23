@@ -234,7 +234,7 @@ export const HomePage: FC = () => {
   }
 
   return (
-    <div className="h-screen bg-white dark:bg-gray-900 overflow-hidden">
+    <div className="min-h-[100svh] bg-white dark:bg-gray-900 overflow-hidden">
     <header className="relative z-50">
         <nav
           aria-label="Global"
@@ -393,7 +393,7 @@ export const HomePage: FC = () => {
 
             {scene === 2 && (
               <Scene key="cta" direction={direction}>
-                <div className="text-center max-w-xl mx-auto">
+                <div className="text-center mx-auto">
                   <p className="text-[clamp(8px,1.5svmin,18px)] uppercase tracking-widest text-accent/80 mb-3">
                     The Summit
                   </p>
@@ -402,7 +402,7 @@ export const HomePage: FC = () => {
                     Alignment Starts Here
                   </h2>
 
-                  <p className="mt-2 text-[clamp(10px,1.8svmin,28px)] text-gray-600 dark:text-gray-400">
+                  <p className="mt-2 text-[clamp(10px,1.8svmin,28px)] text-gray-600 dark:text-gray-400 max-w-[50svw]">
                     Bring your team together, estimate with confidence, and start every sprint on the same page
                   </p>
 
@@ -422,7 +422,7 @@ export const HomePage: FC = () => {
         {/* ================= FIXED FOOTER (restored + mobile-safe) ================= */}
         <div className="fixed  left-1/2 -translate-x-1/2 bottom-0 z-50 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
           <div className="mx-auto w-full max-w-3xl">
-            <div className="relative pb-[6svh]">
+            <div className="relative h-[6svh] min-h-[48px]">
               <AnimatePresence mode="wait">
                 {(scene === 0 || scene === 1) && !showedLastScene && (
                   <motion.div
