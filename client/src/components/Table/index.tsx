@@ -1,5 +1,5 @@
 import { ReloadIcon } from "@radix-ui/react-icons";
-import { FC, useEffect, useRef, useState } from "react";
+import {FC, RefObject, useEffect, useRef, useState} from "react";
 import {
   useCancelRevealCountdownMutation,
   useResetGameMutation,
@@ -11,12 +11,13 @@ import { CountdownOverlay } from "@/components/ui/countdown-overlay.tsx";
 import { useToast } from "@/hooks/use-toast";
 import type { Room } from "@/types";
 import { NewGameDialog } from "@/components/NewGameDialog";
-import { createPortal } from "react-dom";
+import {createPortal} from "react-dom";
 
 interface TableProps {
   room: Room;
   isGameOver: boolean;
-  innerRef: React.RefObject<HTMLDivElement | null>;
+  innerRef: RefObject<HTMLDivElement | null>;
+  roomOverlayRef: RefObject<HTMLDivElement | null> | null;
 }
 
 type TableEntry = {
@@ -26,10 +27,11 @@ type TableEntry = {
 };
 
 export const Table: FC<TableProps> = ({
-                                        room,
-                                        isGameOver,
-                                        innerRef,
-                                      }) => {
+  room,
+  isGameOver,
+  innerRef,
+  roomOverlayRef
+}) => {
   const { toast } = useToast();
   const [openNewGameDialog, setOpenNewGameDialog] = useState(false);
 
@@ -231,7 +233,7 @@ export const Table: FC<TableProps> = ({
   return (
     <div
       ref={innerRef}
-      className="flex justify-center items-center w-[25vw] max-w-72 min-w-48 h-36 rounded-full border-2 border-s-4 border-e-4 border-gray-500"
+      className="relative flex justify-center items-center w-[25vw] max-w-72 min-w-48 h-36 rounded-full border-2 border-s-4 border-e-4 border-gray-500"
     >
       {(() => {
         // === ROUND OVER ===
@@ -336,24 +338,33 @@ export const Table: FC<TableProps> = ({
         }
       })()}
 
-      {showCountdownOverlay &&
-        localCountdown !== null &&
-        typeof document !== "undefined" &&
-        document.body &&
+      {showCountdownOverlay && localCountdown !== null && roomOverlayRef && roomOverlayRef.current &&
         createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 pointer-events-auto">
-            <CountdownOverlay
-              seconds={localCountdown}
-              isRoomOwner={currentIsRoomOwner}
-              onCancel={() =>
-                cancelRevealCountdownMutation({
-                  variables: { roomId: room.id, userId: currentUserId },
-                })
-              }
+          <div className="absolute inset-0 z-50 pointer-events-none">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "radial-gradient(circle at center, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.45) 20%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0) 100%)",
+              }}
             />
+            {/* Countdown */}
+            <div className="relative z-10 flex h-full w-full items-center justify-center pointer-events-auto">
+              <CountdownOverlay
+                seconds={localCountdown}
+                isRoomOwner={currentIsRoomOwner}
+                onCancel={() =>
+                  cancelRevealCountdownMutation({
+                    variables: { roomId: room.id, userId: currentUserId },
+                  })
+                }
+              />
+            </div>
           </div>,
-          document.body
-        )}
+          roomOverlayRef.current
+        )
+      }
 
       <NewGameDialog
         open={openNewGameDialog}

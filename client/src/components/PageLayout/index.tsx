@@ -36,7 +36,7 @@ export function PageLayout({ children, room, users, showChat }: {
 
   return (
     <CardPositionProvider cardRefs={cardRefs}>
-      <Header room={room} users={users} onMenuOpenChange={setMenuOpen} />
+      <Header room={room} users={users} onMenuOpenChange={setMenuOpen} chatOpen={chatVisible}/>
       <ChatRevealPrompt onClick={() => setChatVisible(true)} menuOpen={menuOpen} />
 
       <main className="flex flex-col flex-grow h-[calc(100vh-56px)] overflow-hidden relative">

@@ -1,4 +1,4 @@
-import {FC, useEffect, useMemo} from "react";
+import {FC, useEffect, useMemo, useState} from "react";
 import {Bar, BarChart, Cell, LabelList, XAxis} from "recharts";
 
 import { CardTitle } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import {
   ChartTooltipContent
 } from "@/components/ui/chart";
 import { Room } from "@/types";
+import {clamp} from "@/utils/messageUtils.ts";
 
 interface VoteDistributionChartProps {
   room: Room;
@@ -61,10 +62,9 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
     return totalVotes > 0 ? (mostCommonVotes / totalVotes) * 100 : 0;
   }, [room.game.table, voteCount]);
 
-
   const numBars = chartData.length;
-  const dynamicWidth = 20 + numBars * 2;
-  const dynamicMinWidth = 100 + numBars * 3;
+  const dynamicWidth = 8 + numBars * 1.5;
+  const dynamicMinWidth = 10 + numBars * 2;
   const dynamicMaxWidth = 120 + numBars * 70;
 
   const chartContainerStyle = {
@@ -74,12 +74,13 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
     minHeight: "170px"
   };
 
+  const [showLabels, setShowLabels] = useState(false);
+
   useEffect(() => {
-    const timer = setTimeout(() => {
-      window.dispatchEvent(new Event("resize"));
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [chartData]);
+    if(room.isGameOver && !showLabels) {
+      setShowLabels(true);
+    }
+  }, [room, showLabels, chartData]);
 
   return (
     <div
@@ -88,7 +89,7 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
     >
       {chartData.length === 0 && (
         <div className="absolute flex items-center justify-center w-[4vw] bg-background/70 z-10">
-          <span className="text-lg md:text-2xl font-semibold text-muted-foreground select-none text-center">
+          <span className="text-[clamp(0.5rem,1.5vw,2rem)] font-semibold text-muted-foreground select-none text-center">
             NO VOTES SUBMITTED
           </span>
         </div>
@@ -106,15 +107,17 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
       >
         <BarChart
           accessibilityLayer
-          margin={{
-            top: 8
-          }}
+          margin={{top: 10}}
           data={chartData}
         >
           <Bar
             dataKey="Votes"
             radius={10}
             fillOpacity={0.9}
+            isAnimationActive
+            animationDuration={500}
+            onAnimationStart={() => setShowLabels(false)}
+            onAnimationEnd={() => setShowLabels(true)}
           >
             {chartData.map((entry, index) => {
               const isMajority = entry.Votes === maxCardCount;
@@ -134,56 +137,42 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
             })}
             <LabelList
               dataKey="Votes"
-              content={({
-                          x,
-                          y,
-                          value,
-                          width,
-                          height,
-                        }: {
-                x?: number | string;
-                y?: number | string;
-                value?: number | string;
-                width?: number | string;
-                height?: number | string;
-              }) => {
-                const toNum = (v?: number | string, fallback = 0) =>
-                  typeof v === "number" ? v : v ? parseFloat(String(v)) || fallback : fallback;
+              position="center"
+              content={(props: any) => {
+                const { x, y, width, height, value, index } = props;
 
-                const nx = toNum(x);
-                const ny = toNum(y);
-                const nwidth = toNum(width);
-                const nheight = toNum(height);
-                const nvalue = toNum(value);
+                if (x == null || y == null || index == null) return null;
 
-                if (Number.isNaN(nx) || Number.isNaN(ny) || Number.isNaN(nwidth) || Number.isNaN(nheight)) {
-                  return null;
-                }
+                const entry = chartData[index];
+                if (!entry) return null;
 
-                const isMajority = nvalue === maxCardCount;
-                const labelFontSize = nwidth < 80 ? nwidth / 5 : 14;
-
-                let labelY = ny + nheight / 2;
-                let fillColor = "white";
-
-                const centerX = nx + nwidth / 2;
+                const isMajority = entry.Votes === maxCardCount;
+                const safeWidth = Math.max(width ?? 0, 1);
+                const safeHeight = Math.max(height ?? 0, 1);
+                const centerX = x + safeWidth / 2;
+                const centerY = y + safeHeight / 2;
+                const numBars = chartData.length;
+                const labelWidthValue= 0.9 / (numBars / 2);
+                const majorityWidthValue = 0.75 / (numBars / 2);
+                const labelFontSize = clamp(5, `${labelWidthValue}vw`, 18);
+                const majorityFontSize =  clamp(4, `${majorityWidthValue}vw`, 15);
 
                 return (
                   <text
                     x={centerX}
-                    y={labelY}
-                    fill={fillColor}
+                    y={centerY}
+                    fill="white"
                     textAnchor="middle"
                     fontSize={labelFontSize}
-                    className="tabular-nums"
                     dominantBaseline="middle"
+                    className="tabular-nums"
                   >
                     <tspan x={centerX} fontWeight={isMajority ? "bold" : "normal"}>
-                      Votes: {nvalue}
+                      Votes: {value}
                     </tspan>
 
                     {isMajority && (
-                      <tspan x={centerX} dy="1.6em" fontSize={ nwidth < 80 ? nwidth / 7 : 12} className="text-white font-semibold">
+                      <tspan x={centerX} dy="1.6em" fontSize={majorityFontSize}>
                         MAJORITY
                       </tspan>
                     )}
@@ -210,7 +199,7 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
       </ChartContainer>
 
       {/* --- Gauge --- */}
-      <div className="relative w-[150px] h-[90px] flex items-end justify-center">
+      <div className="relative w-[clamp(1.25rem,10vw,10rem)] h-[clamp(60px,10vw,100px)] flex items-end justify-center">
         <svg viewBox="0 0 100 50" className="absolute top-0 left-0 w-full h-full">
           <path
             d="M10,50 A40,40 0 0,1 90,50"
@@ -236,10 +225,10 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
         </svg>
 
         <div className="absolute bottom-0 flex flex-col items-center justify-center text-center">
-          <CardTitle className="text-3xl tabular-nums text-foreground dark:text-accent-foreground drop-shadow-[0_0_6px_rgba(var(--accent-rgb),0.4)]">
+          <CardTitle className="text-[clamp(1rem,3vw,2rem)] tabular-nums text-foreground dark:text-accent-foreground drop-shadow-[0_0_6px_rgba(var(--accent-rgb),0.4)]">
             {averageVote.toFixed(1)}
           </CardTitle>
-          <span className="text-[11px] text-muted-foreground tracking-tight">
+          <span className="text-[clamp(0.45rem,1.2vw,0.75rem)] text-muted-foreground tracking-tight text-nowrap">
             avg • {agreement.toFixed(0)}% agree
           </span>
         </div>

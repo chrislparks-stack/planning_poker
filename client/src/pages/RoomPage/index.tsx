@@ -24,6 +24,7 @@ import {ResultsTag} from "@/components/ui/results-tag.tsx";
 
 export function RoomPage() {
   const { roomId } = useParams({ from: "/room/$roomId" });
+  const roomRef = useRef<HTMLDivElement | null>(null);
   const { user, logout } = useAuth();
   const { toast } = useToast();
   const redirectingRef = useRef(false);
@@ -211,7 +212,7 @@ export function RoomPage() {
         const storageData = {
           RoomID: roomData.roomById.id,
           Cards: roomData.roomById.deck.cards,
-          RoomName: roomData.roomById.name,
+          RoomName: roomData.roomById.name ?? null,
           RoomOwner: roomData.roomById.roomOwnerId ?? user.id
         };
         localStorage.setItem("Room", JSON.stringify(storageData));
@@ -223,7 +224,7 @@ export function RoomPage() {
           user: {
             id: user.id,
             username: user.username,
-            roomName: roomName
+            roomName: roomName && roomName.trim().length > 0 ? roomName : undefined
           },
           roomOwnerId: roomOwner && roomOwner.trim().length > 0 ? roomOwner : undefined
         }
@@ -351,7 +352,7 @@ export function RoomPage() {
     return () => {
       document.title = prevTitleRef.current || APP_NAME;
     };
-  }, [room?.name, room?.users?.length, openCreateUserDialog]);
+  }, [room, openCreateUserDialog]);
 
   const isMissingRoom =
     roomData && roomData.roomById === null && !joinRoomData && !subscriptionData;
@@ -367,7 +368,6 @@ export function RoomPage() {
       navigate({ to: "/invalid-room/$roomId", params: { roomId } });
     }
   }, [roomId, navigate]);
-
 
   useEffect(() => {
     if (roomData && roomData.roomById === null) {
@@ -435,16 +435,21 @@ export function RoomPage() {
             showChat={chatVisible}
             setShowChat={() => setChatVisible(true)}
           >
-            <div className="relative h-[calc(100vh-80px)] overflow-hidden">
+            <div className="relative h-[calc(100vh-80px)] w-[calc(100vw-120px)] overflow-hidden">
               {/* Scrollable Room container */}
               <div
-                  className="absolute top-0 left-0 right-0 overflow-y-auto"
-                  style={{
-                    height: `calc(100% - ${room.isGameOver || shouldTwoRowLayout ? 245 : 100}px)`,
-                    paddingBottom: "1rem",
-                  }}
+                ref={roomRef}
+                className="absolute inset-0 overflow-auto"
+                style={{
+                  height: room.isGameOver || shouldTwoRowLayout
+                    ? "calc(100% - 245px)"
+                    : "calc(100% - 105px)",
+                  scrollbarGutter: "stable both-edges"
+                }}
               >
-                <Room room={room} onShowInChat={handleShowInChat}/>
+                <div className="relative">
+                  <Room room={room} onShowInChat={handleShowInChat} roomRef={roomRef}/>
+                </div>
               </div>
 
               <div className="absolute bottom-0 left-0 right-0 mx-auto w-[100%] max-w-4xl">
@@ -470,7 +475,7 @@ export function RoomPage() {
                     />
                   </div>
                   {room.isGameOver && (
-                    <div className="flex justify-center w-full ml-10">
+                    <div className="flex justify-center ml-5">
                       <ResultsTag active />
                       <VoteDistributionChart room={room} />
                     </div>

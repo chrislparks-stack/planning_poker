@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Copy } from "lucide-react";
 import {FC, useMemo} from "react";
+import * as Popover from "@radix-ui/react-popover";
 
 import { AccountMenu } from "@/components/AccountMenu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -11,6 +12,7 @@ import {
   TooltipContent,
   TooltipTrigger
 } from "@/components/ui/tooltip";
+import { withTestUsers } from "@/utils/testUtils.tsx";
 import { useAuth } from "@/contexts";
 import { useCopyRoomUrlToClipboard } from "@/hooks";
 import { Room, User } from "@/types";
@@ -20,11 +22,16 @@ interface HeaderProps {
   room?: Room;
   users?: User[];
   onMenuOpenChange?: (open: boolean) => void;
+  chatOpen?: boolean;
 }
 
-export const Header: FC<HeaderProps> = ({ room, users, onMenuOpenChange }) => {
+export const Header: FC<HeaderProps> = ({ room, users, onMenuOpenChange, chatOpen }) => {
   const { user } = useAuth();
   const { copyRoomUrlToClipboard } = useCopyRoomUrlToClipboard();
+  const displayUsers = useMemo(
+    () => withTestUsers(0, users),
+    [users]
+  );
 
   const handleCopyRoomUrl = async () => {
     if (room) {
@@ -84,32 +91,86 @@ export const Header: FC<HeaderProps> = ({ room, users, onMenuOpenChange }) => {
       </div>
       {user && (
         <div className="flex items-center space-x-4">
-          {users && (
-            <div className="flex items-center space-x-4 invisible md:visible">
-              <div className="flex -space-x-2">
-                {users.slice(0, 5).map((user) => (
+          {displayUsers && (
+            <div className="hidden md:flex items-center -space-x-2">
+              {displayUsers.slice(0, 5).map((user) =>
+                chatOpen ? (
+                  <Avatar
+                    key={user.id}
+                    className="border-2 border-background cursor-default"
+                  >
+                    <AvatarFallback>
+                      {user.username[0].toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                ) : (
                   <Tooltip key={user.id}>
                     <TooltipTrigger asChild>
-                      <Avatar
-                        key={user.id}
-                        className="border-2 border-background"
-                      >
+                      <Avatar className="border-2 border-background cursor-default">
                         <AvatarFallback>
                           {user.username[0].toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                     </TooltipTrigger>
+
                     <TooltipContent sideOffset={15}>
                       <p>{user.username}</p>
                     </TooltipContent>
                   </Tooltip>
-                ))}
-                {users.length > 5 && (
-                  <Avatar className="border-2 border-background">
-                    <AvatarFallback>+{users.length - 5}</AvatarFallback>
+                )
+              )}
+              {displayUsers.length > 5 && (
+                chatOpen ? (
+                  <Avatar className="border-2 border-background cursor-default">
+                    <AvatarFallback>
+                      +{displayUsers.length - 5}
+                    </AvatarFallback>
                   </Avatar>
-                )}
-              </div>
+                ) : (
+                  <Popover.Root>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Popover.Trigger asChild>
+                          <Avatar className="border-2 border-background cursor-pointer">
+                            <AvatarFallback>
+                              +{displayUsers.length - 5}
+                            </AvatarFallback>
+                          </Avatar>
+                        </Popover.Trigger>
+                      </TooltipTrigger>
+
+                      <TooltipContent sideOffset={15}>
+                        <p>Click to show more players</p>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    <Popover.Portal>
+                      <Popover.Content
+                        side="bottom"
+                        align="center"
+                        sideOffset={8}
+                        className="z-50 rounded-md bg-background border shadow-lg p-2 min-w-[180px]"
+                      >
+                        <div className="flex flex-col gap-1">
+                          {displayUsers.slice(5).map((user) => (
+                            <div
+                              key={user.id}
+                              className="flex items-center gap-2 text-sm"
+                            >
+                              <Avatar className="h-6 w-6">
+                                <AvatarFallback>
+                                  {user.username[0].toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span>{user.username}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </Popover.Content>
+                    </Popover.Portal>
+                  </Popover.Root>
+                )
+              )}
               <Separator orientation="vertical" className="h-6" />
             </div>
           )}
