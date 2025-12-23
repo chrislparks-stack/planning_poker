@@ -17,6 +17,7 @@ import {Scene} from "@/components/ui/scene.tsx";
 import {ChevronCascade, ScrollHint} from "@/components/ui/spinners.tsx";
 
 import type { Variants } from "framer-motion";
+import {useTouchInput} from "@/utils/mobileUtils.tsx";
 
 const beginClimbVariants: Variants = {
   hidden: {
@@ -52,7 +53,7 @@ const scrollVariants: Variants = {
     y: 0,
     transition: {
       duration: 2,
-      delay: 5,
+      delay: 4,
       ease: [0.25, 0.1, 0.25, 1]
     },
   },
@@ -67,34 +68,85 @@ const scrollVariants: Variants = {
 };
 
 export const HomePage: FC = () => {
+  const isTouch = useTouchInput();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [scene, setScene] = useState(0);
   const [direction, setDirection] = useState<"up" | "down">("down");
   const directionRef = useRef<"up" | "down">("down");
+  const [showedLastScene, setShowedLastScene] = useState(false);
+
+  const touchStartY = useRef<number | null>(null);
+  const touchStartX = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (scene === 2) {
+      setShowedLastScene(true);
+    }
+  }, [scene]);
+
 
   useEffect(() => {
     let locked = false;
+    const SWIPE_THRESHOLD = 40;
 
-    function onWheel(e: WheelEvent) {
-      e.preventDefault();
+    function triggerSceneChange(scrollDirection: "up" | "down") {
       if (locked) return;
       locked = true;
 
-      const scrollDirection: "up" | "down" = e.deltaY > 0 ? "down" : "up";
-
       directionRef.current = scrollDirection;
-      setDirection(scrollDirection); // <- this is the important “render me” line
+      setDirection(scrollDirection);
 
       setScene((s) =>
-        scrollDirection === "down" ? Math.min(s + 1, 2) : Math.max(s - 1, 0)
+        scrollDirection === "down"
+          ? Math.min(s + 1, 2)
+          : Math.max(s - 1, 0)
       );
 
       setTimeout(() => (locked = false), 700);
     }
 
+    // ===== Mouse / Trackpad =====
+    function onWheel(e: WheelEvent) {
+      e.preventDefault();
+      triggerSceneChange(e.deltaY > 0 ? "down" : "up");
+    }
+
+    // ===== Touch =====
+    function onTouchStart(e: TouchEvent) {
+      const touch = e.touches[0];
+      touchStartY.current = touch.clientY;
+      touchStartX.current = touch.clientX;
+    }
+
+    function onTouchEnd(e: TouchEvent) {
+      if (touchStartY.current === null || touchStartX.current === null) return;
+
+      const touch = e.changedTouches[0];
+      const deltaY = touch.clientY - touchStartY.current;
+      const deltaX = touch.clientX - touchStartX.current;
+
+      touchStartY.current = null;
+      touchStartX.current = null;
+
+      // Ignore small movements
+      if (Math.abs(deltaY) < SWIPE_THRESHOLD) return;
+
+      // Ignore horizontal intent
+      if (Math.abs(deltaX) > Math.abs(deltaY)) return;
+
+      triggerSceneChange(deltaY < 0 ? "down" : "up");
+    }
+
     window.addEventListener("wheel", onWheel, { passive: false });
-    return () => window.removeEventListener("wheel", onWheel);
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchend", onTouchEnd, { passive: true });
+
+    return () => {
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchend", onTouchEnd);
+    };
   }, []);
 
   const [createRoomMutation, { loading }] = useCreateRoomMutation({
@@ -370,33 +422,36 @@ export const HomePage: FC = () => {
         {/* ================= FIXED FOOTER (restored + mobile-safe) ================= */}
         <div className="fixed  left-1/2 -translate-x-1/2 bottom-0 z-50 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
           <div className="mx-auto w-full max-w-3xl px-4 sm:px-6">
-            <div className="flex justify-center">
-              <AnimatePresence>
-                {(scene === 0 || scene === 1) &&
+            <div className="relative h-[48px]">
+              <AnimatePresence mode="wait">
+                {(scene === 0 || scene === 1) && !showedLastScene && (
                   <motion.div
                     key="scroll-hint"
                     variants={scrollVariants}
                     initial="hidden"
                     animate="visible"
                     exit="exit"
-                    className="flex flex-col items-center mb-2"
+                    className="absolute inset-x-0 flex justify-center"
                   >
-                    <ScrollHint label="Scroll to continue" />
+                    <ScrollHint label={isTouch ? "Swipe to continue" : "Scroll to continue"} />
                   </motion.div>
-                }
-                {scene === 2 && (
+                )}
+
+                {showedLastScene && (
                   <motion.div
                     key="begin-climb"
                     variants={beginClimbVariants}
                     initial="hidden"
                     animate="visible"
                     exit="exit"
-                    className="mb-3 flex flex-col items-center"
+                    className="absolute inset-x-0 flex justify-center"
                   >
-                    <p className="text-[clamp(7px,1svmin,15px)] uppercase tracking-wide text-gray-700 dark:text-gray-400">
-                      Begin your climb
-                    </p>
-                    <ChevronCascade overlap={8} travel={2} />
+                    <div className="flex flex-col items-center">
+                      <p className="text-[clamp(7px,1svmin,15px)] uppercase tracking-wide text-gray-700 dark:text-gray-400">
+                        Begin your climb
+                      </p>
+                      <ChevronCascade overlap={8} travel={2} />
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
