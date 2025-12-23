@@ -116,12 +116,10 @@
     --glass-fade-stop: 90%;
   }
 
-  /* Responsive */
-  .resposive .react-colorful {
+  .responsive .react-colorful {
     width: auto;
   }
 
-  /* Small */
   .small .react-colorful {
     width: 80px;
     height: 80px;
@@ -138,6 +136,14 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  html, body {
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: manipulation;
   }
 
   /* Custom scrollbars (light/dark theme aware) */
@@ -225,7 +231,7 @@
 
     text-shadow:
       -1px -1px 1px rgba(0, 0, 0, 1),
-      1px 2px 0px rgba(0, 0, 0, 1),
+      1px 2px 0 rgba(0, 0, 0, 1),
       -1px 0 0 hsla(var(--accent)/0.5);
   }
 }
