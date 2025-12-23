@@ -1,5 +1,5 @@
-import { Link, useNavigate } from "@tanstack/react-router";
-import {FC, useEffect, useMemo, useState} from "react";
+import { useNavigate } from "@tanstack/react-router";
+import {FC, useEffect, useMemo, useRef, useState} from "react";
 
 import {useCreateRoomMutation, useGetRoomQuery} from "@/api";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -12,10 +12,90 @@ import {
 } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import SummitLogo from "@/assets/SummitLogo.png";
+import {AnimatePresence, motion} from "framer-motion";
+import {Scene} from "@/components/ui/scene.tsx";
+import {ChevronCascade, ScrollHint} from "@/components/ui/spinners.tsx";
+
+import type { Variants } from "framer-motion";
+
+const beginClimbVariants: Variants = {
+  hidden: {
+    opacity: 0,
+    y: 6,
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 2,
+      delay: 2,
+      ease: [0.25, 0.1, 0.25, 1]
+    },
+  },
+  exit: {
+    opacity: 0,
+    y: 6,
+    transition: {
+      duration: 0.25,
+      ease: [0.4, 0, 1, 1]
+    },
+  },
+};
+
+const scrollVariants: Variants = {
+  hidden: {
+    opacity: 0,
+    y: 6,
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 2,
+      delay: 5,
+      ease: [0.25, 0.1, 0.25, 1]
+    },
+  },
+  exit: {
+    opacity: 0,
+    y: 6,
+    transition: {
+      duration: 0.25,
+      ease: [0.4, 0, 1, 1]
+    },
+  },
+};
 
 export const HomePage: FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [scene, setScene] = useState(0);
+  const [direction, setDirection] = useState<"up" | "down">("down");
+  const directionRef = useRef<"up" | "down">("down");
+
+  useEffect(() => {
+    let locked = false;
+
+    function onWheel(e: WheelEvent) {
+      e.preventDefault();
+      if (locked) return;
+      locked = true;
+
+      const scrollDirection: "up" | "down" = e.deltaY > 0 ? "down" : "up";
+
+      directionRef.current = scrollDirection;
+      setDirection(scrollDirection); // <- this is the important “render me” line
+
+      setScene((s) =>
+        scrollDirection === "down" ? Math.min(s + 1, 2) : Math.max(s - 1, 0)
+      );
+
+      setTimeout(() => (locked = false), 700);
+    }
+
+    window.addEventListener("wheel", onWheel, { passive: false });
+    return () => window.removeEventListener("wheel", onWheel);
+  }, []);
 
   const [createRoomMutation, { loading }] = useCreateRoomMutation({
     onCompleted: async (data) => {
@@ -102,83 +182,239 @@ export const HomePage: FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900">
-      <header className="relative z-50">
+    <div className="h-screen bg-white dark:bg-gray-900 overflow-hidden">
+    <header className="relative z-50">
         <nav
           aria-label="Global"
-          className="flex items-center justify-between p-6 lg:px-8"
+          className="flex items-center justify-between p-6"
         >
-          <div className="flex lg:flex-1">
-            <Link
-              to="/"
-              className="-m-1.5 p-1.5 flex flex-col items-center justify-center group"
-            >
-              <img
-                src={SummitLogo}
-                alt="Summit Logo"
-                className="h-12 w-auto transition-transform duration-300 group-hover:scale-[1.03]"
-              />
-            </Link>
-          </div>
-
           <div className="flex lg:flex-1 justify-end">
             <ModeToggle />
           </div>
         </nav>
       </header>
 
-      <div className="relative isolate px-6 pt-14 lg:px-8">
+      <div
+        className="
+        relative isolate px-4 sm:px-6 sm:pt-14 lg:px-8
+        pb-[calc(env(safe-area-inset-bottom)+10.5rem)]
+        sm:pb-[calc(env(safe-area-inset-bottom)+8.5rem)]
+      "
+      >
         <div
           aria-hidden="true"
-          className="absolute w-[100vw] h-[65vh] -z-10 flex items-center justify-center overflow-hidden transform-gpu blur-3xl"
+          className="absolute w-full h-[65svh] -z-10 flex items-center justify-center overflow-hidden transform-gpu blur-3xl"
         >
           <div
             style={{
               clipPath:
                 "polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)",
-              // use CSS vars for gradient stops so the background matches the accent
               background: `linear-gradient(135deg, hsl(var(--accent-stop-1)) 0%, hsl(var(--accent-stop-2)) 50%, hsl(var(--accent-stop-3)) 100%)`,
               opacity: 0.25
             }}
-            className="w-[100vw] h-[100vh] max-w-none max-h-none animate-[waveDrift_60s_ease-in-out_infinite] blur-xl"
+            className="w-full h-[100svh] max-w-none max-h-none animate-[waveDrift_60s_ease-in-out_infinite] blur-xl"
           />
         </div>
 
         <style>
           {`
-            @keyframes waveDrift {
-              0%, 100% {
-                transform: translateY(0px) translateX(0px) rotate(25deg) scale(0.9);
-              }
-              50% {
-                transform: translateY(10px) translateX(25px) rotate(35deg) scale(1.1);
-              }
+          @keyframes waveDrift {
+            0%, 100% {
+              transform: translateY(0px) translateX(0px) rotate(25deg) scale(0.9);
             }
-            
-            html, body {
-              overflow-x: hidden;
-              margin: 0;
-              padding: 0;           
+            50% {
+              transform: translateY(10px) translateX(25px) rotate(35deg) scale(1.1);
             }
-          `}
+          }
+
+          html, body {
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+          }
+        `}
         </style>
 
-        <div className="mx-auto max-w-4xl py-32 sm:py-38 lg:py-46">
-          <div className="text-center">
-            <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold tracking-tight text-gray-900 dark:text-white">
-              Collaborate and Estimate Faster with Summit Planning Poker
-            </h1>
-            <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300">
-              Summit offers an open-source, intuitive platform for
-              Agile development teams to collaboratively estimate story points
-              online. Perfect for Agile workflows, our tool makes
-              collaboration-based estimation simple, fun, and effective.
-            </p>
+        <div
+          className="
+          relative overflow-hidden
+          h-[min(70svh,600px)]
+        "
+        >
+          <AnimatePresence initial={false} mode="wait" custom={direction}>
+            {scene === 0 && (
+              <Scene key="hero" direction={direction}>
+                <div className="text-center max-w-xl mx-auto px-2">
 
-            <div className="mt-10 flex items-center justify-center gap-x-10">
-              <Button
+                  {/* Scene label */}
+                  <p className="text-[clamp(8px,1.5svmin,16px)] uppercase tracking-widest text-accent/80 mb-2 max-[360px]:mb-1">
+                    The Journey
+                  </p>
+
+                  {/* Brand lockup */}
+                  <div className="flex flex-col items-center mb-4 max-[360px]:mb-2">
+                    <span className="text-[clamp(12px,2.2svmin,20px)] tracking-widest uppercase text-gray-500 dark:text-gray-400 mb-1">
+                      Every Sprint Has a
+                    </span>
+
+                    <img
+                      src={SummitLogo}
+                      alt="Summit"
+                      className="w-auto h-auto max-h-[20svmin]"
+                    />
+                  </div>
+
+                  <div className="flex justify-center mb-4 max-[360px]:mb-2">
+                    <div className="h-px w-24 bg-gradient-to-r from-transparent via-accent/50 to-transparent" />
+                  </div>
+
+                  <h2
+                    className="
+                      text-[clamp(16px,2.5svmin,30px)]
+                      font-semibold
+                      text-gray-800 dark:text-white
+                    "
+                  >
+                    A Better Way to Estimate Together
+                  </h2>
+
+                  {/* Supporting copy */}
+                  <p
+                    className="
+                      mt-3
+                      text-[clamp(12px,1.6svmin,20px)]
+                      max-[360px]:mt-2
+                      text-gray-600 dark:text-gray-400
+                    "
+                  >
+                    Collaborative planning poker that helps teams surface assumptions, align faster, and start every sprint with confidence
+                  </p>
+                </div>
+              </Scene>
+            )}
+
+            {scene === 1 && (
+              <Scene key="climb" direction={direction}>
+                <div className="w-full max-w-[50svmin] text-center px-2">
+                  <div>
+                    <p className="text-[clamp(8px,1.5svmin,18px)] uppercase tracking-widest text-accent/80 mb-1">
+                      The Ascent
+                    </p>
+                    <h2 className="text-[clamp(10px,3svmin,18px)] font-semibold text-gray-700 dark:text-white">
+                      How Teams Reach the Summit
+                    </h2>
+                    <p className="mt-1 text-[clamp(8px,2svmin,15px)] text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
+                      Summit Planning Poker turns estimation into a shared climb — structured, transparent, and collaborative
+                    </p>
+                  </div>
+
+                  {/* Route Map */}
+                  <section className="relative px-2 py-[5svh]">
+                    <div className="absolute left-1/2 top-0 h-[32svh] w-px bg-gradient-to-b from-transparent via-accent/30 to-transparent" />
+
+                    <div className="space-y-[0.5svh]">
+                      {[
+                        ["Basecamp", "Start Together", "Create a room in seconds and bring your whole team into the same space", "left"],
+                        ["The Climb", "Surface Assumptions", "Vote simultaneously to reveal gaps, spark discussion, and build shared understanding", "right"],
+                        ["The Summit", "Reach Alignment", "Lock in estimates with confidence and move forward as one team", "left"]
+                      ].map(([label, title, desc, side], i) => (
+                        <div key={i} className="relative flex items-start">
+                          <div className="absolute left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-accent shadow" />
+                          <div className={`${side === "left" ? "ml-auto text-left" : "mr-auto text-right"} w-[46%]`}>
+                            <p className="text-[clamp(7px,1.5svmin,13px)] uppercase tracking-widest text-accent/80 mb-0.5">
+                              {label}
+                            </p>
+                            <h3 className="text-[clamp(8px,2.3svmin,16px)] font-semibold text-gray-700 dark:text-white">
+                              {title}
+                            </h3>
+                            <p className={`${side === "left" ? "text-left" : " text-right float-right"} mt-0.5 text-[clamp(7px,2svmin,15px)] w-[clamp(100px,30svmin,300px)]  text-gray-600 dark:text-gray-400`}>
+                              {desc}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                </div>
+              </Scene>
+            )}
+
+            {scene === 2 && (
+              <Scene key="cta" direction={direction}>
+                <div className="text-center max-w-xl mx-auto">
+                  <p className="text-[clamp(8px,1.5svmin,18px)] uppercase tracking-widest text-accent/80 mb-3">
+                    The Summit
+                  </p>
+
+                  <h2 className="text-[clamp(16px,3.2svmin,45px)] font-semibold text-gray-800 dark:text-white">
+                    Alignment Starts Here
+                  </h2>
+
+                  <p className="mt-2 text-[clamp(10px,1.8svmin,28px)] text-gray-600 dark:text-gray-400">
+                    Bring your team together, estimate with confidence, and start every sprint on the same page
+                  </p>
+
+                  <div className="mt-6 sm:mt-8 flex justify-center">
+                    <div className="h-px w-32 bg-gradient-to-r from-transparent via-accent/50 to-transparent" />
+                  </div>
+
+                  <p className="mt-4 sm:mt-6 text-[clamp(8px,1.5svmin,22px)] text-gray-500 dark:text-gray-400">
+                    The climb begins with a single session
+                  </p>
+                </div>
+              </Scene>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* ================= FIXED FOOTER (restored + mobile-safe) ================= */}
+        <div className="fixed  left-1/2 -translate-x-1/2 bottom-0 z-50 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
+          <div className="mx-auto w-full max-w-3xl px-4 sm:px-6">
+            <div className="flex justify-center">
+              <AnimatePresence>
+                {(scene === 0 || scene === 1) &&
+                  <motion.div
+                    key="scroll-hint"
+                    variants={scrollVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    className="flex flex-col items-center mb-2"
+                  >
+                    <ScrollHint label="Scroll to continue" />
+                  </motion.div>
+                }
+                {scene === 2 && (
+                  <motion.div
+                    key="begin-climb"
+                    variants={beginClimbVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    className="mb-3 flex flex-col items-center"
+                  >
+                    <p className="text-[clamp(7px,1svmin,15px)] uppercase tracking-wide text-gray-700 dark:text-gray-400">
+                      Begin your climb
+                    </p>
+                    <ChevronCascade overlap={8} travel={2} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <div
+              className="
+                mx-auto
+                flex w-fit items-center justify-center gap-3 sm:gap-4
+                rounded-2xl border border-zinc-200/70 dark:border-zinc-700/70
+                bg-gray-300 dark:bg-zinc-900/80 backdrop-blur-md shadow-lg
+                px-4 sm:px-6 py-3 sm:py-4
+                flex-row
+              "
+            >
+            <Button
                 size="lg"
-                className="h-12"
+                className="h-[clamp(30px,5svmin,45px)] px-6 w-[clamp(70px,16svmin,130px)] text-[clamp(8px,1.5svmin,14px)]"
                 onClick={onCreateRoom}
                 disabled={loading}
               >
@@ -191,41 +427,40 @@ export const HomePage: FC = () => {
                     <TooltipTrigger asChild>
                       <Button
                         size="lg"
-                        className="h-12 relative group"
+                        variant="secondary"
+                        className="h-[clamp(30px,5svmin,45px)] px-6 w-[clamp(80px,20svmin,150px)] text-[clamp(8px,1.5svmin,14px)]"
                         onClick={onJoinExisting}
                         disabled={loading}
                       >
                         Join Existing Game
                       </Button>
                     </TooltipTrigger>
+
                     <TooltipContent
-                      side="bottom"
-                      sideOffset={8}
+                      side="top"
+                      sideOffset={24}
                       align="center"
                       className="rounded-xl bg-gradient-to-br from-zinc-200 to-zinc-300 dark:from-zinc-900 dark:to-zinc-800 text-zinc-800 dark:text-zinc-100 px-5 py-4 shadow-xl border border-zinc-700/70 text-sm text-left max-w-xs backdrop-blur-sm"
                     >
                       <div className="flex flex-col space-y-2">
-                        <div className="flex items-center justify-between">
-                          <p className="text-[0.75rem] uppercase tracking-wider text-zinc-800 dark:text-zinc-400">
-                            Last Session
-                          </p>
-                        </div>
+                        <p className="text-[0.75rem] uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                          Last Session
+                        </p>
 
                         <p className="font-semibold text-black dark:text-white text-base leading-tight truncate">
                           Room: {storedRoom?.RoomName || "Unnamed Room"}
                         </p>
 
-                        <div className="flex items-center gap-1.5 text-xs text-zinc-800 dark:text-zinc-400">
+                        <div className="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400">
                           <span>Last joined as</span>
                           <span className="text-accent font-medium">
-                            {storedUser?.username || "Unknown User"}
+                          {storedUser?.username || "Unknown User"}
+                        </span>
+                          {storedRoom?.RoomOwner === storedUser?.id && (
+                            <span className="text-[0.65rem] px-2 py-0.5 rounded-md bg-accent text-white font-medium">
+                            Room Owner
                           </span>
-                          {storedRoom?.RoomOwner &&
-                            storedRoom?.RoomOwner === storedUser?.id && (
-                              <span className="text-[0.65rem] px-2 py-0.5 rounded-md bg-accent text-white font-medium">
-                                Room Owner
-                              </span>
-                            )}
+                          )}
                         </div>
                       </div>
                     </TooltipContent>

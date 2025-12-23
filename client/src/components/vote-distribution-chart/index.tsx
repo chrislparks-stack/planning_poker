@@ -135,54 +135,51 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
                 />
               );
             })}
-            {showLabels &&
-              <LabelList
-                dataKey="Votes"
-                style={{zIndex: 1000}}
-                position="center"
-                content={(props: any) => {
-                  const { x, y, width, height, value, index } = props;
+            <LabelList
+              dataKey="Votes"
+              position="center"
+              content={(props: any) => {
+                const { x, y, width, height, value, index } = props;
 
-                  if (x == null || y == null || index == null) return null;
+                if (x == null || y == null || index == null) return null;
 
-                  const entry = chartData[index];
-                  if (!entry) return null;
+                const entry = chartData[index];
+                if (!entry) return null;
 
-                  const isMajority = entry.Votes === maxCardCount;
-                  const safeWidth = Math.max(width ?? 0, 1);
-                  const safeHeight = Math.max(height ?? 0, 1);
-                  const centerX = x + safeWidth / 2;
-                  const centerY = y + safeHeight / 2;
-                  const numBars = chartData.length;
-                  const labelWidthValue= 0.9 / (numBars / 2);
-                  const majorityWidthValue = 0.75 / (numBars / 2);
-                  const labelFontSize = clamp(5, `${labelWidthValue}vw`, 18);
-                  const majorityFontSize =  clamp(4, `${majorityWidthValue}vw`, 15);
+                const isMajority = entry.Votes === maxCardCount;
+                const safeWidth = Math.max(width ?? 0, 1);
+                const safeHeight = Math.max(height ?? 0, 1);
+                const centerX = x + safeWidth / 2;
+                const centerY = y + safeHeight / 2;
+                const numBars = chartData.length;
+                const labelWidthValue= 0.9 / (numBars / 2);
+                const majorityWidthValue = 0.75 / (numBars / 2);
+                const labelFontSize = clamp(5, `${labelWidthValue}vw`, 18);
+                const majorityFontSize =  clamp(4, `${majorityWidthValue}vw`, 15);
 
-                  return (
-                    <text
-                      x={centerX}
-                      y={centerY}
-                      fill="white"
-                      textAnchor="middle"
-                      fontSize={labelFontSize}
-                      dominantBaseline="middle"
-                      className="tabular-nums"
-                    >
-                      <tspan x={centerX} fontWeight={isMajority ? "bold" : "normal"}>
-                        Votes: {value}
+                return (
+                  <text
+                    x={centerX}
+                    y={centerY}
+                    fill="white"
+                    textAnchor="middle"
+                    fontSize={labelFontSize}
+                    dominantBaseline="middle"
+                    className="tabular-nums"
+                  >
+                    <tspan x={centerX} fontWeight={isMajority ? "bold" : "normal"}>
+                      Votes: {value}
+                    </tspan>
+
+                    {isMajority && (
+                      <tspan x={centerX} dy="1.6em" fontSize={majorityFontSize}>
+                        MAJORITY
                       </tspan>
-
-                      {isMajority && (
-                        <tspan x={centerX} dy="1.6em" fontSize={majorityFontSize}>
-                          MAJORITY
-                        </tspan>
-                      )}
-                    </text>
-                  );
-                }}
-              />
-            }
+                    )}
+                  </text>
+                );
+              }}
+            />
           </Bar>
           <XAxis
             dataKey="card"
