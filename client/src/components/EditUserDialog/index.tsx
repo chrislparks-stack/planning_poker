@@ -1,4 +1,4 @@
-import { FC, useEffect, useState } from "react";
+import {FC, FormEvent, useEffect, useState} from "react";
 import { useEditUserMutation } from "@/api";
 import { Button } from "@/components/ui/button";
 import {
@@ -65,7 +65,9 @@ export const EditUserDialog: FC<EditUserDialogProps> = ({ open, setOpen }) => {
     },
   });
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e?: FormEvent) => {
+    e?.preventDefault();
+
     const trimmed = username.trim();
 
     if (!trimmed) {
@@ -115,52 +117,54 @@ export const EditUserDialog: FC<EditUserDialogProps> = ({ open, setOpen }) => {
         {/* Accent bar */}
         <div className="h-1.5 w-full bg-gradient-to-r from-accent to-accent/60" />
 
-        {/* Inner content */}
-        <div className="px-6 py-5 space-y-4">
-          <div>
-            <DialogTitle className="text-lg font-semibold tracking-tight">
-              Update Your Username
-            </DialogTitle>
-            <DialogDescription className="mt-1.5 text-sm text-muted-foreground">
-              This name will appear to others in your current room
-            </DialogDescription>
-          </div>
+        <form onSubmit={handleSubmit}>
+          {/* Inner content */}
+          <div className="px-6 py-5 space-y-4">
+            <div>
+              <DialogTitle className="text-lg font-semibold tracking-tight">
+                Update Your Username
+              </DialogTitle>
+              <DialogDescription className="mt-1.5 text-sm text-muted-foreground">
+                This name will appear to others in your current room
+              </DialogDescription>
+            </div>
 
-          <div className="flex flex-col gap-2 pt-2">
-            <Label htmlFor="username" className="text-sm font-medium">
-              Username
-            </Label>
-            <Input
-              id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your new username"
-              className="transition-all focus:ring-2 focus:ring-accent focus:ring-offset-1"
-            />
-          </div>
+            <div className="flex flex-col gap-2 pt-2">
+              <Label htmlFor="username" className="text-sm font-medium">
+                Username
+              </Label>
+              <Input
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter your new username"
+                className="transition-all focus:ring-2 focus:ring-accent focus:ring-offset-1"
+              />
+            </div>
 
-          <DialogFooter className="flex justify-end gap-2 pt-3">
-            <Button
-              variant="ghost"
-              className="text-sm font-medium px-3 py-1.5"
-              onClick={() => setOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="
-                text-sm font-semibold px-4 py-1.5
-                transition-all duration-200
-                hover:shadow-[0_0_10px_var(--accent)]
-                hover:-translate-y-[1px]
-              "
-            >
-              {loading ? "Saving..." : "Save"}
-            </Button>
-          </DialogFooter>
-        </div>
+            <DialogFooter className="flex justify-end gap-2 pt-3">
+              <Button
+                variant="ghost"
+                className="text-sm font-medium px-3 py-1.5"
+                onClick={() => setOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="
+                  text-sm font-semibold px-4 py-1.5
+                  transition-all duration-200
+                  hover:shadow-[0_0_10px_var(--accent)]
+                  hover:-translate-y-[1px]
+                "
+              >
+                {loading ? "Saving..." : "Save"}
+              </Button>
+            </DialogFooter>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
