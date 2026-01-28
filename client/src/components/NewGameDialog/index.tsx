@@ -21,38 +21,38 @@ interface NewGameDialogProps {
  * A reimagined confirmation dialog — sleek, minimal, and command-palette inspired.
  */
 export const NewGameDialog: FC<NewGameDialogProps> = ({
-                                                          open,
-                                                          setOpen,
-                                                          room,
-                                                          onConfirm
-                                                      }) => {
-    const [toggleConfirmNewGame] = useToggleConfirmNewGameMutation();
-    const [disableFutureConfirm, setDisableFutureConfirm] = useState(false);
+    open,
+    setOpen,
+    room,
+    onConfirm
+}) => {
+  const [toggleConfirmNewGame] = useToggleConfirmNewGameMutation();
+  const [disableFutureConfirm, setDisableFutureConfirm] = useState(false);
 
-    useEffect(() => {
-        if (open) setDisableFutureConfirm(false);
-    }, [open]);
+  if (!room?.confirmNewGame) return null;
 
-    if (!room?.confirmNewGame) return null;
+  useEffect(() => {
+    if (open) setDisableFutureConfirm(false);
+  }, [open]);
 
-    const handleConfirm = async () => {
-        if (disableFutureConfirm) {
-            try {
-                await toggleConfirmNewGame({
-                    variables: { roomId: room.id, enabled: false }
-                });
-            } catch (err) {
-                console.error("toggleConfirmNewGame failed:", err);
-            }
-        }
-        onConfirm();
-        setOpen(false);
-    };
+  const handleConfirm = async () => {
+    if (disableFutureConfirm) {
+      try {
+        await toggleConfirmNewGame({
+          variables: { roomId: room.id, enabled: false }
+        });
+      } catch (err) {
+        console.error("toggleConfirmNewGame failed:", err);
+      }
+    }
+    onConfirm();
+    setOpen(false);
+  };
 
-    return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogContent
-                className="
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent
+        className="
           sm:max-w-[420px]
           rounded-2xl
           backdrop-blur-md
@@ -62,20 +62,18 @@ export const NewGameDialog: FC<NewGameDialogProps> = ({
           p-0 overflow-hidden
           animate-in fade-in-0 zoom-in-95
         "
-            >
-                {/* Accent bar */}
-                <div className="h-1.5 w-full bg-gradient-to-r from-accent to-accent/60" />
-
-                <div className="px-6 py-5 space-y-4 relative">
-                    <div>
-                        <DialogTitle className="text-lg font-semibold tracking-tight">
-                            Start a new game?
-                        </DialogTitle>
-                        <DialogDescription className="mt-1.5 text-sm text-muted-foreground">
-              This will reset the current round and clear everyone's selected cards
+      >
+        {/* Accent bar */}
+        <div className="h-1.5 w-full bg-gradient-to-r from-accent to-accent/60" />
+        <div className="px-6 py-5 space-y-4 relative">
+          <div>
+            <DialogTitle className="text-lg font-semibold tracking-tight">
+                Start a new game?
+            </DialogTitle>
+            <DialogDescription className="mt-1.5 text-sm text-muted-foreground">
+            This will reset the current round and clear everyone's selected cards
             </DialogDescription>
           </div>
-
           <div className="relative">
             <label
               htmlFor="disableConfirm"
@@ -112,7 +110,6 @@ export const NewGameDialog: FC<NewGameDialogProps> = ({
               </span>
             </div>
           </div>
-
           <DialogFooter className="flex justify-end gap-2">
             <Button
               variant="ghost"

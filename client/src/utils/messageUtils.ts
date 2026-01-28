@@ -72,3 +72,16 @@ export const clamp = (
   return `clamp(${toCss(min)}, ${toCss(value)}, ${toCss(max)})`;
 };
 
+export const clampWithError = (
+  raw: string,
+  maxLen: number
+): {
+  clamped: string;
+  triedTooLong: boolean;
+} => {
+  const triedTooLong = raw.length > maxLen;
+  return {
+    clamped: raw.slice(0, maxLen),
+    triedTooLong
+  };
+};

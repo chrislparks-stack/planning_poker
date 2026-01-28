@@ -240,18 +240,14 @@ export const HomePage: FC = () => {
           aria-label="Global"
           className="flex items-center justify-between p-6"
         >
-          <div className="flex lg:flex-1 justify-end">
+          <div className="flex justify-end">
             <ModeToggle />
           </div>
         </nav>
       </header>
 
       <div
-        className="
-        relative isolate px-4 sm:px-6 sm:pt-14 lg:px-8
-        pb-[calc(env(safe-area-inset-bottom)+10.5rem)]
-        sm:pb-[calc(env(safe-area-inset-bottom)+8.5rem)]
-      "
+        className="relative isolate pt-[20svh]"
       >
         <div
           aria-hidden="true"
@@ -290,7 +286,7 @@ export const HomePage: FC = () => {
         <div
           className="
             flex overflow-hidden
-            h-[min(60svh,600px)]
+            h-[50svh]
           "
         >
           <AnimatePresence initial={false} mode="wait" custom={direction}>
@@ -322,7 +318,7 @@ export const HomePage: FC = () => {
 
                   <h2
                     className="
-                      text-[clamp(16px,2.5svmin,30px)]
+                      text-[clamp(12px,2.5svmin,30px)]
                       font-semibold
                       text-gray-800 dark:text-white
                     "
@@ -334,7 +330,7 @@ export const HomePage: FC = () => {
                   <p
                     className="
                       mt-3
-                      text-[clamp(12px,1.6svmin,20px)]
+                      text-[clamp(8px,1.6svmin,20px)]
                       max-[360px]:mt-2
                       text-gray-600 dark:text-gray-400
                     "
@@ -420,7 +416,7 @@ export const HomePage: FC = () => {
         </div>
 
         {/* ================= FIXED FOOTER (restored + mobile-safe) ================= */}
-        <div className="fixed  left-1/2 -translate-x-1/2 bottom-0 z-50 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
+        <div className="fixed left-1/2 bottom-0 -translate-x-1/2 z-50 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
           <div className="mx-auto w-full max-w-3xl">
             <div className="relative h-[6svh] min-h-[48px]">
               <AnimatePresence mode="wait">
@@ -433,7 +429,7 @@ export const HomePage: FC = () => {
                     exit="exit"
                     className="absolute inset-x-0 flex justify-center"
                   >
-                    <ScrollHint label={isTouch ? "Swipe to continue" : "Scroll to continue"} />
+                    <ScrollHint label={isTouch ? "Swipe to learn more" : "Scroll to learn more"} />
                   </motion.div>
                 )}
 
@@ -467,7 +463,7 @@ export const HomePage: FC = () => {
                 flex-row
               "
             >
-            <Button
+              <Button
                 size="lg"
                 className="h-[clamp(30px,5svmin,45px)] px-6 w-[clamp(70px,16svmin,130px)] text-[clamp(8px,1.5svmin,14px)]"
                 onClick={onCreateRoom}
