@@ -25,6 +25,7 @@ export const ChatPanel: React.FC<{
   const { toast } = useToast();
   const { getCardRect } = useCardPosition();
   const [sendChatMessage] = useSendChatMessageMutation();
+  const [now, setNow] = useState(() => Date.now());
 
   const roomId = room?.id;
   const currentUserId = user?.id;
@@ -65,6 +66,16 @@ export const ChatPanel: React.FC<{
     });
   }, [visible]);
 
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setNow(Date.now());
+      const interval = setInterval(() => setNow(Date.now()), 60_000);
+      return () => clearInterval(interval);
+    }, 60_000 - (Date.now() % 60_000));
+
+    return () => clearTimeout(timeout);
+  }, []);
+
   // Subscribe for new messages
   useRoomChatSubscription({
     variables: { roomId: roomId ?? "" },
@@ -95,7 +106,6 @@ export const ChatPanel: React.FC<{
     },
   });
 
-
   const renderMessage = (html: string) => {
     return parse(html, {
       replace: (domNode: any) => {
@@ -110,6 +120,20 @@ export const ChatPanel: React.FC<{
         }
         return undefined; // keep normal rendering
       },
+    });
+  };
+
+  const formatMessageTime = (timestamp: string, now: number) => {
+    const messageTime = new Date(timestamp).getTime();
+    const diffMs = now - messageTime;
+
+    if (diffMs < 60_000) {
+      return "Just now";
+    }
+
+    return new Date(messageTime).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -339,10 +363,7 @@ export const ChatPanel: React.FC<{
           {messages.length ? (
             messages.map((msg) => {
               const isSelf = msg.userId === currentUserId;
-              const time = new Date(msg.timestamp).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              });
+              const time = formatMessageTime(msg.timestamp, now);
               const initials = msg.username
                 .split(" ")
                 .map((n) => n[0])

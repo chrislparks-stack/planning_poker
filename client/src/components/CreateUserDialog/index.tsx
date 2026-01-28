@@ -17,6 +17,7 @@ import { Room, User } from "@/types";
 import {VisuallyHidden} from "@radix-ui/react-visually-hidden";
 import {MAX_LEN} from "@/utils/enums.ts";
 import {useNavigate} from "@tanstack/react-router";
+import {House} from "lucide-react";
 
 interface CreateUserDialogProps {
   roomData: Room;
@@ -280,15 +281,19 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
 
           {/* Footer */}
           <DialogFooter className="px-6 py-3 border-t bg-card/60 backdrop-blur-sm shrink-0 w-full flex !justify-between">
-            {users.length >= 1 && (
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => navigate({ to: "/" })}
-              >
-                Go to Home
-              </Button>
-            )}
+            <div>
+              {users.length >= 1 && (
+                <Button
+                  type="button"
+                  title="Go To Home"
+                  variant="ghost"
+                  className="border-accent-hover border-[1px]"
+                  onClick={() => navigate({ to: "/" })}
+                >
+                  <House className="h-5 w-5"/>
+                </Button>
+              )}
+            </div>
 
             <Button
               type="submit"
