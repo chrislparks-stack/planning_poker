@@ -17,23 +17,52 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({ onClick, men
     const body = document.body;
     const prevHtmlOverflow = html.style.overflow;
     const prevBodyOverflow = body.style.overflow;
+
     html.style.overflowX = "clip";
     body.style.overflowX = "clip";
 
+    let inactivityTimer: number | null = null;
+
+    const startInactivityTimer = () => {
+      if (inactivityTimer !== null) return; // already running
+
+      inactivityTimer = window.setTimeout(() => {
+        setIsNearEdge(false);
+        inactivityTimer = null;
+      }, 10_000);
+    };
+
+    const clearInactivityTimer = () => {
+      if (inactivityTimer !== null) {
+        window.clearTimeout(inactivityTimer);
+        inactivityTimer = null;
+      }
+    };
+
     const handleMouseMove = (e: MouseEvent) => {
-      // Only trigger when not in header or account menu area
       const nearRight = window.innerWidth - e.clientX < 80;
       const belowHeader = e.clientY > HEADER_HEIGHT + HEADER_PADDING;
-      setIsNearEdge(nearRight && belowHeader && !menuOpen);
+      const shouldShow = nearRight && belowHeader && !menuOpen;
+
+      setIsNearEdge(shouldShow);
+
+      if (shouldShow) {
+        startInactivityTimer();
+      } else {
+        clearInactivityTimer();
+      }
     };
 
     window.addEventListener("mousemove", handleMouseMove);
+
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
+      clearInactivityTimer();
+
       html.style.overflowX = prevHtmlOverflow;
       body.style.overflowX = prevBodyOverflow;
     };
-  }, [menuOpen]);
+  }, []);
 
   return (
     <>

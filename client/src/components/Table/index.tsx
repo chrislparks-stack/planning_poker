@@ -233,7 +233,9 @@ export const Table: FC<TableProps> = ({
   return (
     <div
       ref={innerRef}
-      className="relative flex justify-center items-center w-[25vw] max-w-72 min-w-48 h-36 rounded-full border-2 border-s-4 border-e-4 border-gray-500"
+      className="relative flex justify-center items-center w-[25vw] max-w-72 min-w-48
+      h-36 rounded-full border-2 border-s-4 border-e-4
+      border-gray-500 bg-background"
     >
       {(() => {
         // === ROUND OVER ===

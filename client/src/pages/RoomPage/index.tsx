@@ -435,7 +435,7 @@ export function RoomPage() {
             showChat={chatVisible}
             setShowChat={() => setChatVisible(true)}
           >
-            <div className="relative h-[calc(100vh-80px)] w-[calc(100vw-120px)] overflow-hidden">
+            <div className="relative h-[calc(100vh-80px)] w-full overflow-hidden">
               {/* Scrollable Room container */}
               <div
                 ref={roomRef}
@@ -443,8 +443,7 @@ export function RoomPage() {
                 style={{
                   height: room.isGameOver || shouldTwoRowLayout
                     ? "calc(100% - 245px)"
-                    : "calc(100% - 105px)",
-                  scrollbarGutter: "stable both-edges"
+                    : "calc(100% - 105px)"
                 }}
               >
                 <div className="relative">

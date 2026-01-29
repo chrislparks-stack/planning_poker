@@ -10,6 +10,7 @@ import { Room as RoomType } from "@/types";
 import { getPickedUserCard } from "@/utils";
 import {decompressMessage} from "@/utils/messageUtils.ts";
 import {withTestUsers} from "@/utils/testUtils.tsx";
+import {StarrySky} from "@/components/StarrySky";
 
 interface RoomProps {
   room?: RoomType;
@@ -422,6 +423,10 @@ export function Room({ room, onShowInChat, roomRef}: RoomProps) {
         minHeight: totalHeight["minHeight"]
       }}
     >
+      <div className="absolute inset-0 pointer-events-none opacity-60 -z-10">
+        <StarrySky />
+      </div>
+
       <div
         className="relative"
         style={{marginTop: totalHeight["offsetHeight"]}}
