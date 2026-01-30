@@ -1,4 +1,11 @@
 import {CSSProperties, FC, useEffect, useMemo, useState} from "react";
+import Mountain from "@/assets/silhouetted-mountain-range-at-dusk.jpg";
+
+interface StarrySkyProps {
+  gradient?: boolean;
+  fallingStars?: boolean;
+  mountains?: boolean;
+}
 
 type Star = {
   className: string;
@@ -70,7 +77,7 @@ function generateBackgroundShadows(count: number): string {
   return out.join(", ");
 }
 
-export const StarrySky: FC = () => {
+export const StarrySky: FC<StarrySkyProps> = ({gradient, fallingStars, mountains}) => {
   const [shootingStars, setShootingStars] = useState<ShootingStar[]>([]);
 
   useEffect(() => {
@@ -135,7 +142,7 @@ export const StarrySky: FC = () => {
       });
     }
 
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 100; i++) {
       stars.push({
         className: "star star-4 blink",
         style: {
@@ -222,22 +229,7 @@ export const StarrySky: FC = () => {
   }, []);
 
   return (
-    <div
-      className="
-        sky
-        bg-black
-        before:absolute before:inset-0
-        before:bg-gradient-to-b
-        before:from-black
-        before:via-accent/10
-        before:to-accent/30
-        after:absolute after:inset-0
-        after:bg-gradient-to-b
-        after:from-transparent
-        after:via-accent/10
-        after:to-accent/40
-      "
-    >
+    <div className="sky">
       <div className="stars-cross">
         {crossStars.map((s, i) => (
           <div key={i} className={s.className} style={s.style} />
@@ -250,22 +242,25 @@ export const StarrySky: FC = () => {
         ))}
       </div>
 
-      <div className="shooting-stars">
-        {shootingStars.map(star => (
-          <div
-            key={star.id}
-            className="shooting-star"
-            style={{
-              top: star.top,
-              left: star.left,
-              "--angle": `${star.angle}deg`,
-              "--duration": `${star.duration}ms`,
-              "--tail-length": `${star.length}px`,
-              "--travel": `${star.travel}px`
-            } as CSSProperties}
-          />
-        ))}
-      </div>
+      {fallingStars === false ?
+        null :
+        <div className="shooting-stars">
+          {shootingStars.map(star => (
+            <div
+              key={star.id}
+              className="shooting-star"
+              style={{
+                top: star.top,
+                left: star.left,
+                "--angle": `${star.angle}deg`,
+                "--duration": `${star.duration}ms`,
+                "--tail-length": `${star.length}px`,
+                "--travel": `${star.travel}px`
+              } as CSSProperties}
+            />
+          ))}
+        </div>
+      }
 
       <div className="celestial-rotation">
         <div
@@ -279,6 +274,37 @@ export const StarrySky: FC = () => {
           ))}
         </div>
       </div>
+      <div
+        className={["bg-black",
+          gradient !== false &&
+            `before:absolute before:inset-0
+            before:bg-gradient-to-b
+            before:from-black
+            before:via-accent/10
+            before:to-accent/30
+            after:absolute after:inset-0
+            after:bg-gradient-to-b
+            after:from-transparent
+            after:via-accent/10
+            after:to-accent/40`
+        ]
+        .filter(Boolean)
+        .join(" ")}/>
+      {mountains === false ?
+        null :
+        <div>
+          <img
+            src={Mountain}
+            alt="Mountain Range1"
+            className="absolute bottom-0 left-0 w-1/2 min-h-[200px] max-h-[650px] opacity-100"
+          />
+          <img
+            src={Mountain}
+            alt="Mountain Range2"
+            className="absolute bottom-0 right-0 w-1/2 min-h-[200px] max-h-[650px] opacity-100 -scale-x-100"
+          />
+        </div>
+      }
     </div>
   );
 };

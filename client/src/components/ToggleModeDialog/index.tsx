@@ -11,6 +11,9 @@ import {
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { useToast } from "@/hooks/use-toast";
 import { applyAccent } from "@/lib/theme-accent";
+import {ThumbSwitch} from "@/components/ui/thumb-switch.tsx";
+import starrySkyThumbnail from "@/assets/StarrySkyThumb.png";
+import Mountain from "@/assets/silhouetted-mountain-range-at-dusk.jpg";
 
 interface ToggleModeDialogProps {
   open: boolean;
@@ -155,6 +158,54 @@ const THEME_PREVIEW_TOKENS = {
   }
 };
 
+type BackgroundOptionToggle = {
+  id: string;
+  label: string;
+  description?: string;
+};
+
+type BackgroundOption = {
+  id: string;
+  label: string;
+  subtitle?: string;
+  description?: string;
+  previewThumbnail: string;
+  options?: BackgroundOptionToggle[];
+};
+
+const BACKGROUNDS: BackgroundOption[] = [
+  {
+    id: "starry",
+    label: "Starry Sky",
+    subtitle: "Animated",
+    previewThumbnail: starrySkyThumbnail,
+    options: [
+      {
+        id: "gradient",
+        label: "Accent gradient",
+        description: "Subtle accent-tinted sky gradient"
+      },
+      {
+        id: "shooting-stars",
+        label: "Shooting stars",
+        description: "Occasional animated stars streak across the sky"
+      },
+      {
+        id: "mountains",
+        label: "Mountain ridge",
+        description: "Foreground silhouette along the bottom edge"
+      }
+    ]
+  }
+];
+
+type Star = {
+  top: number;
+  left: number;
+  size: number;
+  opacity: number;
+};
+
 export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
   open,
   setOpen
@@ -185,6 +236,26 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
       ? window.matchMedia("(prefers-color-scheme: dark)").matches
       : false
   );
+
+  const [previewBackgroundsEnabled, setPreviewBackgroundsEnabled] = useState<boolean>(false);
+  const [previewBackgroundId, setPreviewBackgroundId] = useState<string>(BACKGROUNDS[0]?.id ?? "starry");
+  const [previewBackgroundOptions, setPreviewBackgroundOptions] = useState<Record<string, boolean>>({});
+  const isStarryPreviewActive = previewBackgroundsEnabled && previewBackgroundId === "starry";
+  const bgOpt = (id: string) => previewBackgroundOptions[id] ?? true;
+
+  const starFieldRef = useRef<Star[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    // Generate once per dialog open
+    starFieldRef.current = Array.from({ length: 50 }).map(() => ({
+      top: Math.random() * 100,
+      left: Math.random() * 100,
+      size: Math.random() > 0.85 ? 2 : 1,
+      opacity: Math.random() * 0.6 + 0.25
+    }));
+  }, [open]);
 
   // ensure the stored accent is set on mount so page reflects persistent choice
   useEffect(() => {
@@ -420,9 +491,12 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
           {/* Header */}
           <div>
-            <h2 className="text-lg font-semibold tracking-tight">Theme & Color</h2>
+            <h2 className="text-lg font-semibold tracking-tight">Appearance Settings</h2>
             <p className="mt-1.5 text-sm text-muted-foreground">
-              Choose your appearance mode and accent color. Changes apply when you save.
+              Choose the appearance of your voting experience
+            </p>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              *Changes apply when you save.
             </p>
           </div>
 
@@ -478,14 +552,151 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                     {selected && (
                     <span className="absolute -right-1 -top-1">
                       <Check
-                        className="h-4 w-4"
-                        style={{ color: hslFromToken(mapEntry.foreground) }}
+                        className="text-black dark:text-white h-4 w-4"
                       />
                     </span>
                     )}
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Backgrounds */}
+          <div className="space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium">Backgrounds</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Enable and choose a background style for your voting table
+                </p>
+              </div>
+
+              <ThumbSwitch
+                checked={previewBackgroundsEnabled}
+                onCheckedChange={(next: boolean) => setPreviewBackgroundsEnabled(next)}
+                label="Enable backgrounds"
+              />
+            </div>
+
+            {/* Album-style selection */}
+            <div
+              className={[
+                "rounded-md border p-3 transition-opacity",
+                previewBackgroundsEnabled
+                  ? "opacity-100"
+                  : "opacity-50 pointer-events-none select-none",
+                "border-border/60 bg-background/40"
+              ].join(" ")}
+            >
+              <div className="grid grid-cols-2 gap-3">
+                {BACKGROUNDS.map((bg) => {
+                  const selected = previewBackgroundId === bg.id;
+
+                  return (
+                    <button
+                      key={bg.id}
+                      type="button"
+                      onClick={() => {
+                        setPreviewBackgroundId(bg.id);
+
+                        if (bg.options?.length) {
+                          const defaults = Object.fromEntries(
+                            bg.options.map(opt => [opt.id, true])
+                          );
+                          setPreviewBackgroundOptions(defaults);
+                        } else {
+                          setPreviewBackgroundOptions({});
+                        }
+                      }}
+                      className={[
+                        "group relative overflow-hidden rounded-lg border text-left transition-all",
+                        "hover:-translate-y-[1px] hover:shadow-md",
+                        selected
+                          ? "border-accent/60 ring-2 ring-accent/40"
+                          : "border-border/60 hover:border-accent/40"
+                      ].join(" ")}
+                    >
+                      {/* Thumbnail */}
+                      <img
+                        src={bg.previewThumbnail}
+                        alt="Starry Sky"
+                        className="h-20 w-full"
+                      />
+
+                      {/* Label strip */}
+                      <div className="flex items-center justify-between gap-2 px-2 py-2 bg-background/70 backdrop-blur-sm">
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold leading-none truncate">
+                            {bg.label}
+                          </div>
+                          {bg.subtitle && (
+                            <div className="text-xs text-muted-foreground truncate mt-0.5">
+                              {bg.subtitle}
+                            </div>
+                          )}
+                          {bg.description && (
+                            <div className="text-[8px] text-muted-foreground break-words mt-0.5">
+                              {bg.description}
+                            </div>
+                          )}
+                        </div>
+
+                        {selected && (
+                          <div className="shrink-0 inline-flex items-center justify-center h-6 w-6 rounded-full bg-accent/15">
+                            <Check className="h-4 w-4 text-accent" />
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Background-specific options */}
+              {previewBackgroundsEnabled && (() => {
+                const bg = BACKGROUNDS.find(b => b.id === previewBackgroundId);
+                if (!bg?.options?.length) return null;
+
+                return (
+                  <div className="mt-4 space-y-3 border-t border-border/50 pt-3">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Background options
+                    </p>
+
+                    <div className="space-y-2">
+                      {bg.options.map(option => (
+                        <div
+                          key={option.id}
+                          className="flex items-start justify-between gap-4"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium">
+                              {option.label}
+                            </p>
+                            {option.description && (
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {option.description}
+                              </p>
+                            )}
+                          </div>
+
+                          <ThumbSwitch
+                            checked={previewBackgroundOptions[option.id] ?? true}
+                            onCheckedChange={(next: boolean) =>
+                              setPreviewBackgroundOptions(prev => ({
+                                ...prev,
+                                [option.id]: next
+                              }))
+                            }
+                            label={option.label}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
@@ -559,25 +770,86 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                 style={{ display: "flex", gap: 12, alignItems: "flex-start" }}
               >
                 <div
+                  className="relative overflow-hidden"
                   style={{
                     flex: 1,
                     minHeight: 64,
                     borderRadius: 8,
-                    background: hslFromToken(previewTokens.card),
+                    background: isStarryPreviewActive
+                      ? "#030712"
+                      : hslFromToken(previewTokens.card),
                     padding: 12,
                     boxShadow: "0 8px 20px rgba(0,0,0,0.04)"
                   }}
                 >
+                  {isStarryPreviewActive && bgOpt("gradient") && (
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        background: `linear-gradient(
+                                      to top,
+                                      hsl(${accentPreview.base} / 0.25),
+                                      transparent 60%
+                                    )`
+                      }}
+                    />
+                  )}
+                  {isStarryPreviewActive && (
+                    <div className="absolute inset-0 pointer-events-none z-0">
+                      {starFieldRef.current.map((star, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            position: "absolute",
+                            top: `${star.top}%`,
+                            left: `${star.left}%`,
+                            width: star.size,
+                            height: star.size,
+                            background: "#fff",
+                            opacity: star.opacity,
+                            borderRadius: 9999
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {isStarryPreviewActive && bgOpt("shooting-stars") && (
+                    <div
+                      className="absolute pointer-events-none"
+                      style={{
+                        top: "28%",
+                        left: "65%",
+                        width: 90,
+                        height: 1,
+                        transform: "rotate(45deg)",
+                        background:
+                          "linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,0.9), rgba(255,255,255,0))",
+                        opacity: 0.85,
+                        zIndex: 0
+                      }}
+                    />
+                  )}
+                  {isStarryPreviewActive && bgOpt("mountains") && (
+                    <img
+                      src={Mountain}
+                      alt=""
+                      className="absolute bottom-0 left-0 w-full -mb-16 pointer-events-none -z-1"
+                      style={{
+                        opacity: 0.9
+                      }}
+                    />
+                  )}
                   {/* title line with accent underline integrated */}
                   <div
-                    style={{ display: "flex", alignItems: "center", gap: 8 }}
+                    style={{ display: "flex", alignItems: "center", gap: 8, zIndex: 1 }}
                   >
                     <div
                       style={{
                         height: 12,
                         width: "45%",
                         borderRadius: 6,
-                        background: skeletonStrokeColor
+                        background: skeletonStrokeColor,
+                        zIndex: 1
                       }}
                     />
                     {/* inline accent pill next to title */}
@@ -586,7 +858,8 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                         width: 32,
                         height: 12,
                         borderRadius: 9999,
-                        background: hslFromToken(accentPreview.base)
+                        background: hslFromToken(accentPreview.base),
+                        zIndex: 1
                       }}
                     />
                   </div>
@@ -599,7 +872,8 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                       height: 8,
                       width: "70%",
                       borderRadius: 6,
-                      background: skeletonStrokeColor
+                      background: skeletonStrokeColor,
+                      zIndex: 1
                     }}
                   />
                   <div style={{ height: 6 }} />
@@ -608,7 +882,8 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                       height: 8,
                       width: "40%",
                       borderRadius: 6,
-                      background: skeletonStrokeColor
+                      background: skeletonStrokeColor,
+                      zIndex: 1
                     }}
                   />
 
@@ -616,14 +891,15 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
 
                   {/* explicit small text-sample lines to show real text colors and subtle accent row */}
                   <div
-                    style={{ display: "flex", gap: 8, alignItems: "center" }}
+                    style={{ display: "flex", gap: 8, alignItems: "center", zIndex: 1 }}
                   >
                     <div
                       style={{
                         height: 10,
                         width: 140,
                         borderRadius: 6,
-                        background: hslFromToken(previewTokens.card)
+                        background: hslFromToken(previewTokens.card),
+                        zIndex: 1
                       }}
                     >
                       <div
@@ -633,7 +909,8 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                           background: hslFromToken(
                               previewTokens.cardForeground
                           ),
-                          borderRadius: 4
+                          borderRadius: 4,
+                          zIndex: 1
                         }}
                       />
                     </div>
@@ -643,7 +920,8 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                         height: 10,
                         width: 80,
                         borderRadius: 6,
-                        background: hslFromToken(previewTokens.card)
+                        background: hslFromToken(previewTokens.card),
+                        zIndex: 1
                       }}
                     >
                       <div
@@ -651,7 +929,8 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                           height: 10,
                           width: 60,
                           background: hslFromToken(previewTokens.muted),
-                          borderRadius: 4
+                          borderRadius: 4,
+                          zIndex: 1
                         }}
                       />
                     </div>
@@ -664,7 +943,8 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                         height: 8,
                         flex: 1,
                         borderRadius: 6,
-                        background: hslFromToken(accentPreview.base)
+                        background: hslFromToken(accentPreview.base),
+                        zIndex: 1
                       }}
                     />
                     <div
@@ -672,7 +952,8 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                         width: 20,
                         height: 20,
                         borderRadius: 9999,
-                        background: adjustLightness(accentPreview.base, 6)
+                        background: adjustLightness(accentPreview.base, 6),
+                        zIndex: 1
                       }}
                     />
                   </div>

@@ -153,7 +153,7 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room, onOpenChange }) => {
                   ) : (
                     <Palette className="mr-2 h-4 w-4" />
                   )}
-                  <span>Change Theme</span>
+                  <span>Change Appearance</span>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />

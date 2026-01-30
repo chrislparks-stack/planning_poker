@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { User } from "@/types";
 import { validate as validateUUID } from "uuid";
 import {ResultsTag} from "@/components/ui/results-tag.tsx";
+import {StarrySky} from "@/components/StarrySky";
 
 export function RoomPage() {
   const { roomId } = useParams({ from: "/room/$roomId" });
@@ -435,6 +436,9 @@ export function RoomPage() {
             showChat={chatVisible}
             setShowChat={() => setChatVisible(true)}
           >
+            <div className="absolute inset-0 pointer-events-none opacity-100 dark:opacity-60 -z-10">
+              <StarrySky />
+            </div>
             <div className="relative h-[calc(100vh-80px)] w-full overflow-hidden">
               {/* Scrollable Room container */}
               <div
