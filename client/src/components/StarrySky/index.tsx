@@ -1,4 +1,4 @@
-import {CSSProperties, FC, useEffect, useMemo, useState} from "react";
+import {CSSProperties, FC, useEffect, useMemo, useRef, useState} from "react";
 import Mountain from "@/assets/silhouetted-mountain-range-at-dusk.jpg";
 
 interface StarrySkyProps {
@@ -77,38 +77,51 @@ function generateBackgroundShadows(count: number): string {
   return out.join(", ");
 }
 
-export const StarrySky: FC<StarrySkyProps> = ({gradient, fallingStars, mountains}) => {
+export const StarrySky: FC<StarrySkyProps> = ({gradient = true, fallingStars = true, mountains = true}) => {
   const [shootingStars, setShootingStars] = useState<ShootingStar[]>([]);
+  const startedRef = useRef(false);
 
   useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+
     let id = 0;
+    let alive = true;
     let timeout: number;
 
+    const scheduleNext = () => {
+      timeout = window.setTimeout(spawn, rand(60_000, 600_000));
+    };
+
     const spawn = () => {
+      if (!alive) return;
+
       const star: ShootingStar = {
         id: id++,
         top: `${rand(5, 30)}vh`,
         left: `${rand(10, 75)}vw`,
-        angle: rand(25, 65),
+        angle: rand(35, 65),
         duration: rand(600, 1500),
         length: rand(50, 220),
-        travel: rand(400, 900)
+        travel: rand(400, 900),
       };
 
       setShootingStars(s => [...s, star]);
 
-      // remove after animation
-      window.setTimeout(() => {
+      setTimeout(() => {
         setShootingStars(s => s.filter(x => x.id !== star.id));
       }, star.duration + 200);
 
-      // next spawn (random interval)
-      timeout = window.setTimeout(spawn, rand(60_000, 300_000));
+      scheduleNext();
     };
 
-    timeout = window.setTimeout(spawn, rand(10_000, 60_000));
+    scheduleNext();
 
-    return () => window.clearTimeout(timeout);
+    return () => {
+      alive = false;
+      clearTimeout(timeout);
+      startedRef.current = false;
+    };
   }, []);
 
   const { stars, crossStars, crossAuxStars, backgroundShadows } = useMemo(() => {
@@ -242,7 +255,7 @@ export const StarrySky: FC<StarrySkyProps> = ({gradient, fallingStars, mountains
         ))}
       </div>
 
-      {fallingStars === false ?
+      {!fallingStars ?
         null :
         <div className="shooting-stars">
           {shootingStars.map(star => (
@@ -276,7 +289,7 @@ export const StarrySky: FC<StarrySkyProps> = ({gradient, fallingStars, mountains
       </div>
       <div
         className={["bg-black",
-          gradient !== false &&
+          gradient &&
             `before:absolute before:inset-0
             before:bg-gradient-to-b
             before:from-black
@@ -290,18 +303,26 @@ export const StarrySky: FC<StarrySkyProps> = ({gradient, fallingStars, mountains
         ]
         .filter(Boolean)
         .join(" ")}/>
-      {mountains === false ?
+      {!mountains ?
         null :
-        <div>
+        <div
+          className="mountains"
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 20,
+            pointerEvents: "none"
+          }}
+        >
           <img
             src={Mountain}
-            alt="Mountain Range1"
-            className="absolute bottom-0 left-0 w-1/2 min-h-[200px] max-h-[650px] opacity-100"
+            alt="Mountains 1"
+            className="absolute bottom-0 left-0 w-1/2 min-h-[200px] max-h-[650px]"
           />
           <img
             src={Mountain}
-            alt="Mountain Range2"
-            className="absolute bottom-0 right-0 w-1/2 min-h-[200px] max-h-[650px] opacity-100 -scale-x-100"
+            alt="Mountains 2"
+            className="absolute bottom-0 right-0 w-1/2 min-h-[200px] max-h-[650px] -scale-x-100"
           />
         </div>
       }

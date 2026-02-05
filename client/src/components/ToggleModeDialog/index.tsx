@@ -8,6 +8,12 @@ import {
   DialogContent, DialogDescription,
   DialogFooter, DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from "@/components/ui/popover";
+import { Settings } from "lucide-react";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { useToast } from "@/hooks/use-toast";
 import { applyAccent } from "@/lib/theme-accent";
@@ -594,29 +600,102 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                   const selected = previewBackgroundId === bg.id;
 
                   return (
-                    <button
+                    <div
                       key={bg.id}
-                      type="button"
-                      onClick={() => {
-                        setPreviewBackgroundId(bg.id);
-
-                        if (bg.options?.length) {
-                          const defaults = Object.fromEntries(
-                            bg.options.map(opt => [opt.id, true])
-                          );
-                          setPreviewBackgroundOptions(defaults);
-                        } else {
-                          setPreviewBackgroundOptions({});
-                        }
-                      }}
                       className={[
-                        "group relative overflow-hidden rounded-lg border text-left transition-all",
+                        "group relative overflow-hidden rounded-lg border transition-all",
                         "hover:-translate-y-[1px] hover:shadow-md",
                         selected
                           ? "border-accent/60 ring-2 ring-accent/40"
                           : "border-border/60 hover:border-accent/40"
                       ].join(" ")}
                     >
+                      <button
+                        type="button"
+                        className="absolute inset-0 z-10 pointer-events-none"
+                        onClick={() => {
+                          setPreviewBackgroundId(bg.id);
+
+                          if (bg.options?.length) {
+                            const defaults = Object.fromEntries(
+                              bg.options.map(opt => [opt.id, true])
+                            );
+                            setPreviewBackgroundOptions(defaults);
+                          } else {
+                            setPreviewBackgroundOptions({});
+                          }
+                        }}
+                        aria-label={`Select ${bg.label} background`}
+                      />
+
+                      {selected && bg.options?.length && (
+                        <Popover modal={false}>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className="absolute top-2 right-2 z-20 inline-flex h-7 w-7
+                                         items-center justify-center rounded-md
+                                         bg-background/80 backdrop-blur
+                                         border border-border/50
+                                         text-muted-foreground hover:text-foreground"
+                              aria-label="Background options"
+                              onPointerDown={(e) => e.stopPropagation()}
+                            >
+                              <Settings className="h-4 w-4" />
+                            </button>
+                          </PopoverTrigger>
+
+                          <PopoverContent
+                            side="right"
+                            align="start"
+                            className="w-64 p-3 space-y-2 pointer-events-auto"
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onFocusOutside={(e) => e.preventDefault()}
+                          >
+                            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                              {bg.label} options
+                            </div>
+
+                            <div className="space-y-2">
+                              {bg.options.map((option) => {
+                                const enabled = previewBackgroundOptions[option.id] ?? true;
+
+                                return (
+                                  <div
+                                    key={option.id}
+                                    className="flex items-start justify-between gap-3"
+                                  >
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-medium leading-none">
+                                        {option.label}
+                                      </p>
+                                      {option.description && (
+                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                          {option.description}
+                                        </p>
+                                      )}
+                                    </div>
+
+                                    <div onPointerDown={(e) => e.stopPropagation()}>
+                                      <ThumbSwitch
+                                        checked={enabled}
+                                        onCheckedChange={(next: boolean) =>
+                                          setPreviewBackgroundOptions((prev) => ({
+                                            ...prev,
+                                            [option.id]: next
+                                          }))
+                                        }
+                                        label={option.label}
+                                      />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      )}
+
                       {/* Thumbnail */}
                       <img
                         src={bg.previewThumbnail}
@@ -648,55 +727,10 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                           </div>
                         )}
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
-
-              {/* Background-specific options */}
-              {previewBackgroundsEnabled && (() => {
-                const bg = BACKGROUNDS.find(b => b.id === previewBackgroundId);
-                if (!bg?.options?.length) return null;
-
-                return (
-                  <div className="mt-4 space-y-3 border-t border-border/50 pt-3">
-                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      Background options
-                    </p>
-
-                    <div className="space-y-2">
-                      {bg.options.map(option => (
-                        <div
-                          key={option.id}
-                          className="flex items-start justify-between gap-4"
-                        >
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium">
-                              {option.label}
-                            </p>
-                            {option.description && (
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                {option.description}
-                              </p>
-                            )}
-                          </div>
-
-                          <ThumbSwitch
-                            checked={previewBackgroundOptions[option.id] ?? true}
-                            onCheckedChange={(next: boolean) =>
-                              setPreviewBackgroundOptions(prev => ({
-                                ...prev,
-                                [option.id]: next
-                              }))
-                            }
-                            label={option.label}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
             </div>
           </div>
 
@@ -819,16 +853,38 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                       style={{
                         top: "28%",
                         left: "65%",
-                        width: 90,
-                        height: 1,
+                        width: 75,
+                        height: 2,
                         transform: "rotate(45deg)",
-                        background:
-                          "linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,0.9), rgba(255,255,255,0))",
-                        opacity: 0.85,
-                        zIndex: 0
+                        zIndex: 0,
+                        filter: "blur(0.2px)",
+                        background: `
+                                    linear-gradient(
+                                      to right,
+                                      rgba(255,255,255,0) 0%,
+                                      rgba(255,255,255,0.15) 25%,
+                                      rgba(255,255,255,0.9) 100%
+                                    )
+                                  `
                       }}
-                    />
+                    >
+                      {/* bright head */}
+                      <div
+                        style={{
+                          position: "absolute",
+                          right: -2,
+                          top: "50%",
+                          width: 6,
+                          height: 6,
+                          transform: "translateY(-50%)",
+                          borderRadius: "50%",
+                          background: "white",
+                          boxShadow: "0 0 6px 2px rgba(255,255,255,0.8)"
+                        }}
+                      />
+                    </div>
                   )}
+
                   {isStarryPreviewActive && bgOpt("mountains") && (
                     <img
                       src={Mountain}

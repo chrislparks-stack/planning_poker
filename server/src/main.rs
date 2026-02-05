@@ -122,25 +122,25 @@ fn spawn_room_cleanup_task(
                     let inactive_days = inactive_hours_total / 24;
                     let inactive_hours = inactive_hours_total % 24;
 
-                    // --- removable_in (days + hours) ---
-                    let removable_in = (info.last_active + ttl) - now;
-                    let removable_str = if removable_in <= chrono::Duration::zero() {
+                    // --- removed_in (days + hours) ---
+                    let removed_in = (info.last_active + ttl) - now;
+                    let removed_str = if removed_in <= chrono::Duration::zero() {
                         "NOW".to_string()
                     } else {
-                        let hours_total = removable_in.num_hours();
+                        let hours_total = removed_in.num_hours();
                         let days = hours_total / 24;
                         let hours = hours_total % 24;
                         format!("{}d {}h", days, hours)
                     };
 
                     info!(
-                        "  • {:<36} | name={:<20} | inactive_for={}d {}h | size={:>6.1} KB | removable_in={}",
+                        "  • {:<36} | name={:<20} | inactive_for={}d {}h | size={:>6.1} KB | removed_in={}",
                         info.id,
                         info.name.as_deref().unwrap_or("<unnamed>"),
                         inactive_days,
                         inactive_hours,
                         info.estimated_bytes as f64 / 1024.0,
-                        removable_str,
+                        removed_str,
                     );
                 }
             }

@@ -487,6 +487,7 @@ body.dialog-open .chat-panel {
     top: 50%;
     width: 4px;
     height: 4px;
+    z-index: 5;
 
     background: rgb(var(--accent-rgb));
     border-radius: 50%;
