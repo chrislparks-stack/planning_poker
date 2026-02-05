@@ -22,6 +22,7 @@ import { User } from "@/types";
 import { validate as validateUUID } from "uuid";
 import {ResultsTag} from "@/components/ui/results-tag.tsx";
 import {StarrySky} from "@/components/StarrySky";
+import {useBackgroundConfig} from "@/contexts/BackgroundContext.tsx";
 
 export function RoomPage() {
   const { roomId } = useParams({ from: "/room/$roomId" });
@@ -37,6 +38,8 @@ export function RoomPage() {
   const [setRoomOwner] = useSetRoomOwnerMutation();
   const [openCreateUserDialog, setOpenCreateUserDialog] = useState(false);
   const [openRoomOptionsDialog, setOpenRoomOptionsDialog] = useState(false);
+
+  const { background } = useBackgroundConfig();
 
   const [chatVisible, setChatVisible] = useState(false);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -436,9 +439,15 @@ export function RoomPage() {
             showChat={chatVisible}
             setShowChat={() => setChatVisible(true)}
           >
-            <div className="absolute inset-0 pointer-events-none opacity-100 dark:opacity-60 -z-10">
-              <StarrySky />
-            </div>
+            {background.enabled && background.id === "starry" && (
+              <div className="absolute inset-0 pointer-events-none opacity-100 dark:opacity-60 -z-10">
+                <StarrySky
+                  gradient={background.options.gradient ?? true}
+                  fallingStars={background.options["shooting-stars"] ?? true}
+                  mountains={background.options.mountains ?? true}
+                />
+              </div>
+            )}
             <div className="relative h-[calc(100vh-80px)] w-full overflow-hidden">
               {/* Scrollable Room container */}
               <div

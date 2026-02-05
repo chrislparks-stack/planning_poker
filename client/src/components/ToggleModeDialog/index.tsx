@@ -20,6 +20,8 @@ import { applyAccent } from "@/lib/theme-accent";
 import {ThumbSwitch} from "@/components/ui/thumb-switch.tsx";
 import starrySkyThumbnail from "@/assets/StarrySkyThumb.png";
 import Mountain from "@/assets/silhouetted-mountain-range-at-dusk.jpg";
+import {loadBackgroundConfig} from "@/lib/background-config.ts";
+import {useBackgroundConfig} from "@/contexts/BackgroundContext.tsx";
 
 interface ToggleModeDialogProps {
   open: boolean;
@@ -243,6 +245,8 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
       : false
   );
 
+  const { setBackground } = useBackgroundConfig();
+
   const [previewBackgroundsEnabled, setPreviewBackgroundsEnabled] = useState<boolean>(false);
   const [previewBackgroundId, setPreviewBackgroundId] = useState<string>(BACKGROUNDS[0]?.id ?? "starry");
   const [previewBackgroundOptions, setPreviewBackgroundOptions] = useState<Record<string, boolean>>({});
@@ -254,7 +258,14 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
   useEffect(() => {
     if (!open) return;
 
-    // Generate once per dialog open
+    // Load an enable background
+    const bg = loadBackgroundConfig();
+
+    setPreviewBackgroundsEnabled(bg.enabled);
+    setPreviewBackgroundId(bg.id ?? BACKGROUNDS[0]?.id ?? "starry");
+    setPreviewBackgroundOptions(bg.options ?? {});
+
+    // Generate star field
     starFieldRef.current = Array.from({ length: 50 }).map(() => ({
       top: Math.random() * 100,
       left: Math.random() * 100,
@@ -403,6 +414,11 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
       // Apply theme and accent regardless (so it stays consistent)
       setTheme(previewTheme);
       applyAccent(previewAccent);
+      setBackground({
+        enabled: previewBackgroundsEnabled,
+        id: previewBackgroundsEnabled ? previewBackgroundId : null,
+        options: previewBackgroundsEnabled ? previewBackgroundOptions : {}
+      });
 
       // Only show toast if something actually changed
       if (themeChanged || accentChanged) {
