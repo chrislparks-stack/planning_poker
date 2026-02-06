@@ -29,11 +29,10 @@ export const NewGameDialog: FC<NewGameDialogProps> = ({
   const [toggleConfirmNewGame] = useToggleConfirmNewGameMutation();
   const [disableFutureConfirm, setDisableFutureConfirm] = useState(false);
 
-  if (!room?.confirmNewGame) return null;
-
   useEffect(() => {
+    if (!room?.confirmNewGame) return;
     if (open) setDisableFutureConfirm(false);
-  }, [open]);
+  }, [open, room?.confirmNewGame]);
 
   const handleConfirm = async () => {
     if (disableFutureConfirm) {

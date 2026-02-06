@@ -226,7 +226,7 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
   };
 
   // Live preview toggle (default ON)
-  const [livePreviewEnabled, setLivePreviewEnabled] = useState(true);
+  const [livePreviewEnabled, setLivePreviewEnabled] = useState(false);
 
   // preview-only state
   const [previewTheme, setPreviewTheme] = useState<"light" | "dark" | "system">(
