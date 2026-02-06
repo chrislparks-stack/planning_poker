@@ -251,8 +251,6 @@ export function RoomPage() {
         if (isNewRoom) {
           setOpenCreateUserDialog(true);
           sessionStorage.removeItem("NEW_ROOM_CREATED");
-        } else if ((room.deck.cards as unknown as never[]).length < 1) {
-          setOpenRoomOptionsDialog(true);
         }
       });
 
@@ -357,6 +355,28 @@ export function RoomPage() {
       document.title = prevTitleRef.current || APP_NAME;
     };
   }, [room, openCreateUserDialog]);
+
+  useEffect(() => {
+    if (!room || !user) return;
+
+    const storedRoom = localStorage.getItem("Room");
+    const storedCards = storedRoom ? JSON.parse(storedRoom).Cards : null;
+
+    const hasEverConfiguredDeck =
+      Array.isArray(storedCards) && storedCards.length > 0;
+
+    const isCreationFlow =
+      sessionStorage.getItem("NEW_ROOM_CREATED") === "true";
+
+    if (
+      room.roomOwnerId === user.id &&
+      room.deck.cards.length === 0 &&
+      !hasEverConfiguredDeck &&
+      !isCreationFlow
+    ) {
+      setOpenRoomOptionsDialog(true);
+    }
+  }, [room, user]);
 
   const isMissingRoom =
     roomData && roomData.roomById === null && !joinRoomData && !subscriptionData;
