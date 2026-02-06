@@ -20,8 +20,9 @@ import { applyAccent } from "@/lib/theme-accent";
 import {ThumbSwitch} from "@/components/ui/thumb-switch.tsx";
 import starrySkyThumbnail from "@/assets/StarrySkyThumb.png";
 import Mountain from "@/assets/silhouetted-mountain-range-at-dusk.jpg";
-import {loadBackgroundConfig} from "@/lib/background-config.ts";
+import {DEFAULT_BACKGROUND_CONFIG, loadBackgroundConfig} from "@/lib/background-config.ts";
 import {useBackgroundConfig} from "@/contexts/BackgroundContext.tsx";
+import {Switch} from "@/components/ui/switch.tsx";
 
 interface ToggleModeDialogProps {
   open: boolean;
@@ -224,6 +225,9 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
     theme?: string;
   };
 
+  // Live preview toggle (default ON)
+  const [livePreviewEnabled, setLivePreviewEnabled] = useState(true);
+
   // preview-only state
   const [previewTheme, setPreviewTheme] = useState<"light" | "dark" | "system">(
     "system"
@@ -232,11 +236,11 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
     () => localStorage.getItem("accent") || "lilac"
   );
 
-  // keep original applied values for cancel
   const originalThemeRef = useRef<"light" | "dark" | "system">("system");
   const originalAccentRef = useRef<string>(
     localStorage.getItem("accent") || "lilac"
   );
+  const originalBackgroundRef = useRef<ReturnType<typeof loadBackgroundConfig>>(DEFAULT_BACKGROUND_CONFIG);
 
   // system pref tracking for accurate System preview
   const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(() =>
@@ -260,6 +264,8 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
 
     // Load an enable background
     const bg = loadBackgroundConfig();
+
+    originalBackgroundRef.current = bg;
 
     setPreviewBackgroundsEnabled(bg.enabled);
     setPreviewBackgroundId(bg.id ?? BACKGROUNDS[0]?.id ?? "starry");
@@ -410,6 +416,14 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
     try {
       const themeChanged = previewTheme !== originalThemeRef.current;
       const accentChanged = previewAccent !== originalAccentRef.current;
+      const originalBg = originalBackgroundRef.current;
+
+      const backgroundChanged = !!originalBg && (
+        originalBg.enabled !== previewBackgroundsEnabled ||
+        originalBg.id !== (previewBackgroundsEnabled ? previewBackgroundId : null) ||
+        JSON.stringify(originalBg.options ?? {}) !==
+        JSON.stringify(previewBackgroundsEnabled ? previewBackgroundOptions : {})
+      );
 
       // Apply theme and accent regardless (so it stays consistent)
       setTheme(previewTheme);
@@ -421,37 +435,55 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
       });
 
       // Only show toast if something actually changed
-      if (themeChanged || accentChanged) {
-        const titleCase = (s: string) =>
-          s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+      if (themeChanged || accentChanged || backgroundChanged) {
+        const backgroundLabel = previewBackgroundsEnabled
+          ? BACKGROUNDS.find(b => b.id === previewBackgroundId)?.label ?? "Custom"
+          : "Disabled";
 
         toast({
-          title: "Theme updated",
+          title: "Appearance updated",
           duration: 3000,
           description: (
             <>
               <div style={{ fontWeight: 700 }}>
                 Your settings have been saved
               </div>
-              <div className="flex items-baseline gap-1">
-                <div style={{ fontWeight: 700 }}>Theme Mode:</div>
-                <div style={{ fontWeight: 600 }}>
-                  {previewTheme === "dark" ? (
-                    <Moon size="12px" />
-                  ) : previewTheme === "light" ? (
-                    <Sun size="12px" />
-                  ) : (
-                    <Laptop size="12px" />
-                  )}
+
+              {themeChanged && (
+                <div className="flex items-baseline gap-1">
+                  <div style={{ fontWeight: 700 }}>Theme Mode:</div>
+                  <div style={{ fontWeight: 600 }}>
+                    {previewTheme === "dark" ? (
+                      <Moon size="12px" />
+                    ) : previewTheme === "light" ? (
+                      <Sun size="12px" />
+                    ) : (
+                      <Laptop size="12px" />
+                    )}
+                  </div>
+                  <div style={{ fontWeight: 600 }}>
+                    {previewTheme.charAt(0).toUpperCase() + previewTheme.slice(1)}
+                  </div>
                 </div>
-                <div style={{ fontWeight: 600 }}>{titleCase(previewTheme)}</div>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <div style={{ fontWeight: 700 }}>Accent Color:</div>
-                <div style={{ fontWeight: 600 }} className="text-accent">
-                  {titleCase(previewAccent)}
+              )}
+
+              {accentChanged && (
+                <div className="flex items-baseline gap-2">
+                  <div style={{ fontWeight: 700 }}>Accent Color:</div>
+                  <div style={{ fontWeight: 600 }} className="text-accent">
+                    {previewAccent.charAt(0).toUpperCase() + previewAccent.slice(1)}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {backgroundChanged && (
+                <div className="flex items-baseline gap-2">
+                  <div style={{ fontWeight: 700 }}>Background:</div>
+                  <div style={{ fontWeight: 600 }}>
+                    {backgroundLabel}
+                  </div>
+                </div>
+              )}
             </>
           )
         });
@@ -492,15 +524,16 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
       }}
     >
       <DialogContent
-        className="
-          flex flex-col w-[90vw] max-w-[480px] max-h-[90vh]
-          rounded-2xl backdrop-blur-md bg-background/80
-          border border-border/50 shadow-[0_8px_32px_rgb(0_0_0_/_0.4)]
-          p-0 animate-in fade-in-0 zoom-in-95
-        "
+        className={[
+          "p-0 max-h-[90vh] overflow-hidden",
+          "rounded-2xl backdrop-blur-md bg-background/80",
+          "border border-border/50",
+          "shadow-[0_8px_32px_rgb(0_0_0_/_0.4)]",
+          "transition-all duration-700 ease-out",
+          livePreviewEnabled ? "max-w-[80vw] lg:max-w-[980px] min-w-[400px]" : "max-w-[500px] min-w-[400px]"
+        ].join(" ")}
       >
-
-        <VisuallyHidden>
+      <VisuallyHidden>
           <DialogTitle>Theme and Color Settings</DialogTitle>
           <DialogDescription>
             Adjust your appearance mode and accent color preferences
@@ -508,553 +541,623 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
         </VisuallyHidden>
 
         {/* Accent bar */}
-        <div className="h-1.5 w-full bg-gradient-to-r from-accent to-accent/60 shrink-0" />
+        <div className="h-1.5 w-full bg-gradient-to-r from-accent to-accent/60" />
 
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-          {/* Header */}
-          <div>
-            <h2 className="text-lg font-semibold tracking-tight">Appearance Settings</h2>
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              Choose the appearance of your voting experience
-            </p>
-            <p className="mt-1.5 text-xs text-muted-foreground">
-              *Changes apply when you save.
-            </p>
-          </div>
-
-          {/* Mode picker */}
-          <div>
-            <p className="mb-2 text-sm font-medium">Mode</p>
-            <div className="flex gap-2">
-              {[
-                { id: "light", icon: <Sun className="h-4 w-4" />, label: "Light" },
-                { id: "dark", icon: <Moon className="h-4 w-4" />, label: "Dark" },
-                { id: "system", icon: <Laptop className="h-4 w-4" />, label: "System" }
-              ].map(({ id, icon, label }) => (
-                  <button
-                    key={id}
-                    onClick={() => setPreviewTheme(id as "light" | "dark" | "system")}
-                    className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all
-                    ${
-                      previewTheme === id
-                          ? "bg-accent/10 ring-2 ring-accent/40 dark:ring-accent/50"
-                          : "hover:bg-accent/5 dark:hover:bg-accent/10"
-                    }`}
-                  >
-                    {icon}
-                    {label}
-                  </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Accent swatches */}
-          <div>
-            <p className="mb-2 text-sm font-medium">Accent color</p>
-            <div className="flex items-center gap-3">
-              {ACCENTS.map((a) => {
-                const selected = a.id === previewAccent;
-                const mapEntry = ACCENT_MAP[a.id];
-                return (
-                  <button
-                    key={a.id}
-                    onClick={() => setPreviewAccent(a.id)}
-                    className={`relative flex h-8 w-8 items-center justify-center rounded-md ring-offset-2 transition-all ${
-                        selected
-                            ? "ring-2 ring-offset-1 shadow-md"
-                            : "hover:translate-y-[-2px]"
-                    }`}
-                    aria-label={a.label}
-                    title={a.label}
-                  >
-                    <span
-                      className="block h-6 w-6 rounded-sm"
-                      style={{ backgroundColor: hslFromToken(mapEntry.base) }}
-                    />
-                    {selected && (
-                    <span className="absolute -right-1 -top-1">
-                      <Check
-                        className="text-black dark:text-white h-4 w-4"
-                      />
-                    </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Backgrounds */}
-          <div className="space-y-3">
-            <div className="flex items-start justify-between gap-4">
+        <div
+          className={[
+            "grid",
+            livePreviewEnabled
+              ? "grid-cols-1 lg:grid-cols-[1fr_520px]"
+              : "grid-cols-1"
+          ].join(" ")}
+        >
+          {/* LEFT: Controls (scrolls) */}
+          <div className="max-h-[calc(90vh-6px)] min-w-[400px] w-full overflow-y-auto px-6 py-4 space-y-4">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-1">
               <div>
-                <p className="text-sm font-medium">Backgrounds</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Enable and choose a background style for your voting table
+                <h2 className="text-lg font-semibold tracking-tight">
+                  Appearance Settings
+                </h2>
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  Choose the appearance of your voting experience
+                </p>
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  *Changes apply when you save.
                 </p>
               </div>
 
-              <ThumbSwitch
-                checked={previewBackgroundsEnabled}
-                onCheckedChange={(next: boolean) => setPreviewBackgroundsEnabled(next)}
-                label="Enable backgrounds"
-              />
+              <div className="flex flex-col items-center rounded-lg border border-border/60 bg-background/40 p-2">
+                <p className="text-sm tracking-tight mb-2">
+                  Live Preview
+                </p>
+
+                <div className="hidden lg:flex">
+                  <Switch
+                    id="live-preview"
+                    checked={livePreviewEnabled}
+                    onCheckedChange={setLivePreviewEnabled}
+                    className="flex-shrink-0"
+                    size="sm"
+                  />
+                </div>
+
+                <div className="lg:hidden text-lg text-muted-foreground">
+                  N/A
+                </div>
+              </div>
             </div>
 
-            {/* Album-style selection */}
-            <div
-              className={[
-                "rounded-md border p-3 transition-opacity",
-                previewBackgroundsEnabled
-                  ? "opacity-100"
-                  : "opacity-50 pointer-events-none select-none",
-                "border-border/60 bg-background/40"
-              ].join(" ")}
-            >
-              <div className="grid grid-cols-2 gap-3">
-                {BACKGROUNDS.map((bg) => {
-                  const selected = previewBackgroundId === bg.id;
+            {/* Mode + Accent */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+              {/* Mode picker */}
+              <div className="rounded-lg border border-border/60 bg-background/40 p-4">
+                <p className="mb-2 text-sm font-medium">Mode</p>
 
-                  return (
-                    <div
-                      key={bg.id}
-                      className={[
-                        "group relative overflow-hidden rounded-lg border transition-all",
-                        "hover:-translate-y-[1px] hover:shadow-md",
-                        selected
-                          ? "border-accent/60 ring-2 ring-accent/40"
-                          : "border-border/60 hover:border-accent/40"
-                      ].join(" ")}
-                    >
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: "light", icon: <Sun className="h-4 w-4" />, label: "Light" },
+                    { id: "dark", icon: <Moon className="h-4 w-4" />, label: "Dark" },
+                    { id: "system", icon: <Laptop className="h-4 w-4" />, label: "System" }
+                  ].map(({ id, icon, label }) => {
+                    const selected = previewTheme === id;
+
+                    return (
                       <button
-                        type="button"
-                        className="absolute inset-0 z-10 pointer-events-none"
-                        onClick={() => {
-                          setPreviewBackgroundId(bg.id);
+                        key={id}
+                        onClick={() => setPreviewTheme(id as "light" | "dark" | "system")}
+                        className={[
+                          "flex flex-col items-center justify-center gap-1 rounded-md py-2 text-xs font-medium transition-all",
+                          selected
+                            ? "bg-accent/15 ring-2 ring-accent/40 dark:ring-accent/50"
+                            : "hover:bg-accent/5 dark:hover:bg-accent/10"
+                        ].join(" ")}
+                      >
+                        {icon}
+                        <span>{label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-                          if (bg.options?.length) {
-                            const defaults = Object.fromEntries(
-                              bg.options.map(opt => [opt.id, true])
-                            );
-                            setPreviewBackgroundOptions(defaults);
-                          } else {
-                            setPreviewBackgroundOptions({});
-                          }
-                        }}
-                        aria-label={`Select ${bg.label} background`}
-                      />
+              {/* Accent swatches */}
+              <div className="rounded-lg border border-border/60 bg-background/40 p-4">
+                <p className="mb-4 text-sm font-medium">Accent color</p>
 
-                      {selected && bg.options?.length && (
-                        <Popover modal={false}>
-                          <PopoverTrigger asChild>
-                            <button
-                              type="button"
-                              className="absolute top-2 right-2 z-20 inline-flex h-7 w-7
-                                         items-center justify-center rounded-md
-                                         bg-background/80 backdrop-blur
-                                         border border-border/50
-                                         text-muted-foreground hover:text-foreground"
-                              aria-label="Background options"
+                <div className="flex items-center justify-start gap-3 lg:gap-1">
+                  {ACCENTS.map((a) => {
+                    const selected = a.id === previewAccent;
+                    const mapEntry = ACCENT_MAP[a.id];
+
+                    return (
+                      <button
+                        key={a.id}
+                        onClick={() => setPreviewAccent(a.id)}
+                        aria-label={a.label}
+                        title={a.label}
+                        className="
+                          relative h-9 w-9 flex items-center justify-center
+                          rounded-md transition-transform
+                          hover:-translate-y-[1px]
+                        "
+                      >
+                        {/* Glow wrapper */}
+                        <span
+                          className={[
+                            "flex items-center justify-center rounded-md",
+                            "h-8 w-8",
+                            selected
+                              ? "bg-accent/15 ring-2 ring-accent/40 dark:ring-accent/50"
+                              : "hover:bg-accent/5 dark:hover:bg-accent/10"
+                          ].join(" ")}
+                        >
+                          {/* Actual color swatch */}
+                          <span
+                            className="block h-6 w-6 rounded-sm"
+                            style={{ backgroundColor: hslFromToken(mapEntry.base) }}
+                          />
+                        </span>
+
+                        {selected && (
+                          <span className="absolute right-0 top-0.5">
+                            <Check className="h-4 w-4 text-black dark:text-white" />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Backgrounds */}
+            <div className="rounded-lg border border-border/60 bg-background/40 p-4 space-y-3">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium">Backgrounds</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Enable and choose a background style for your voting table
+                  </p>
+                </div>
+
+                <ThumbSwitch
+                  checked={previewBackgroundsEnabled}
+                  onCheckedChange={(next: boolean) => setPreviewBackgroundsEnabled(next)}
+                  label="Enable backgrounds"
+                />
+              </div>
+
+              {/* Album-style selection */}
+              <div
+                className={[
+                  "rounded-md border p-3 transition-opacity",
+                  previewBackgroundsEnabled
+                    ? "opacity-100"
+                    : "opacity-50 pointer-events-none select-none",
+                  "border-border/60 bg-background/40"
+                ].join(" ")}
+              >
+                <div
+                  className="
+                    grid grid-cols-1 lg:grid-cols-2 gap-3
+                    max-w-[250px] lg:max-w-[400px] overflow-auto
+                  "
+                >
+                {BACKGROUNDS.map((bg) => {
+                    const selected = previewBackgroundId === bg.id;
+
+                    return (
+                      <div
+                        key={bg.id}
+                        className={[
+                          "group relative overflow-hidden rounded-lg border transition-all",
+                          "hover:-translate-y-[1px] hover:shadow-md",
+                          "flex flex-col lg:block w-[70%]",
+                          selected
+                            ? "border-accent/60 ring-2 ring-accent/40"
+                            : "border-border/60 hover:border-accent/40"
+                        ].join(" ")}
+                      >
+                        <button
+                          type="button"
+                          className="absolute inset-0 z-10 pointer-events-auto"
+                          onClick={() => {
+                            setPreviewBackgroundId(bg.id);
+
+                            if (bg.options?.length) {
+                              const defaults = Object.fromEntries(
+                                bg.options.map((opt) => [opt.id, true])
+                              );
+                              setPreviewBackgroundOptions(defaults);
+                            } else {
+                              setPreviewBackgroundOptions({});
+                            }
+                          }}
+                          aria-label={`Select ${bg.label} background`}
+                        />
+
+                        {selected && bg.options?.length && (
+                          <Popover modal={false}>
+                            <PopoverTrigger asChild>
+                              <button
+                                type="button"
+                                className="
+                                absolute top-2 right-2 z-20 inline-flex h-7 w-7
+                                items-center justify-center rounded-md
+                                bg-background/80 backdrop-blur
+                                border border-border/50
+                                text-muted-foreground hover:text-foreground
+                              "
+                                aria-label="Background options"
+                                onPointerDown={(e) => e.stopPropagation()}
+                              >
+                                <Settings className="h-4 w-4" />
+                              </button>
+                            </PopoverTrigger>
+
+                            <PopoverContent
+                              side="right"
+                              align="start"
+                              className="w-72 p-3 space-y-2 pointer-events-auto"
                               onPointerDown={(e) => e.stopPropagation()}
+                              onFocusOutside={(e) => e.preventDefault()}
                             >
-                              <Settings className="h-4 w-4" />
-                            </button>
-                          </PopoverTrigger>
+                              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                {bg.label} options
+                              </div>
 
-                          <PopoverContent
-                            side="right"
-                            align="start"
-                            className="w-64 p-3 space-y-2 pointer-events-auto"
-                            onPointerDown={(e) => e.stopPropagation()}
-                            onFocusOutside={(e) => e.preventDefault()}
-                          >
-                            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                              {bg.label} options
-                            </div>
+                              <div className="space-y-2">
+                                {bg.options.map((option) => {
+                                  const enabled = previewBackgroundOptions[option.id] ?? true;
 
-                            <div className="space-y-2">
-                              {bg.options.map((option) => {
-                                const enabled = previewBackgroundOptions[option.id] ?? true;
-
-                                return (
-                                  <div
-                                    key={option.id}
-                                    className="flex items-start justify-between gap-3"
-                                  >
-                                    <div className="min-w-0">
-                                      <p className="text-sm font-medium leading-none">
-                                        {option.label}
-                                      </p>
-                                      {option.description && (
-                                        <p className="text-xs text-muted-foreground mt-0.5">
-                                          {option.description}
+                                  return (
+                                    <div
+                                      key={option.id}
+                                      className="flex items-start justify-between gap-3"
+                                    >
+                                      <div className="min-w-0">
+                                        <p className="text-sm font-medium leading-none">
+                                          {option.label}
                                         </p>
-                                      )}
+                                        {option.description && (
+                                          <p className="text-xs text-muted-foreground mt-0.5">
+                                            {option.description}
+                                          </p>
+                                        )}
+                                      </div>
+
+                                      <div onPointerDown={(e) => e.stopPropagation()}>
+                                        <ThumbSwitch
+                                          checked={enabled}
+                                          onCheckedChange={(next: boolean) =>
+                                            setPreviewBackgroundOptions((prev) => ({
+                                              ...prev,
+                                              [option.id]: next
+                                            }))
+                                          }
+                                          label={option.label}
+                                        />
+                                      </div>
                                     </div>
+                                  );
+                                })}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        )}
 
-                                    <div onPointerDown={(e) => e.stopPropagation()}>
-                                      <ThumbSwitch
-                                        checked={enabled}
-                                        onCheckedChange={(next: boolean) =>
-                                          setPreviewBackgroundOptions((prev) => ({
-                                            ...prev,
-                                            [option.id]: next
-                                          }))
-                                        }
-                                        label={option.label}
-                                      />
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      )}
-
-                      {/* Thumbnail */}
-                      <img
-                        src={bg.previewThumbnail}
-                        alt="Starry Sky"
-                        className="h-20 w-full"
-                      />
-
-                      {/* Label strip */}
-                      <div className="flex items-center justify-between gap-2 px-2 py-2 bg-background/70 backdrop-blur-sm">
+                        {/* Thumbnail */}
+                        <img
+                          src={bg.previewThumbnail}
+                          alt={bg.label}
+                          className="w-full object-cover"
+                        />
+                        {/* Label strip */}
+                        <div
+                          className="
+                            flex items-center justify-between gap-2
+                            px-3 py-3 lg:px-2 lg:py-2
+                            bg-background/70 backdrop-blur-sm
+                          "
+                        >
                         <div className="min-w-0">
-                          <div className="text-sm font-semibold leading-none truncate">
-                            {bg.label}
-                          </div>
-                          {bg.subtitle && (
-                            <div className="text-xs text-muted-foreground truncate mt-0.5">
-                              {bg.subtitle}
+                            <div className="text-sm font-semibold leading-none truncate">
+                              {bg.label}
                             </div>
-                          )}
-                          {bg.description && (
-                            <div className="text-[8px] text-muted-foreground break-words mt-0.5">
-                              {bg.description}
+                            {bg.subtitle && (
+                              <div className="text-xs text-muted-foreground truncate mt-0.5">
+                                {bg.subtitle}
+                              </div>
+                            )}
+                            {bg.description && (
+                              <div className="text-[8px] text-muted-foreground break-words mt-0.5">
+                                {bg.description}
+                              </div>
+                            )}
+                          </div>
+
+                          {selected && (
+                            <div className="shrink-0 inline-flex items-center justify-center h-6 w-6 rounded-full bg-accent/15">
+                              <Check className="h-4 w-4 text-accent" />
                             </div>
                           )}
                         </div>
-
-                        {selected && (
-                          <div className="shrink-0 inline-flex items-center justify-center h-6 w-6 rounded-full bg-accent/15">
-                            <Check className="h-4 w-4 text-accent" />
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Integrated, cohesive skeleton preview */}
-          <div className="rounded-md border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-200 dark:bg-zinc-900">
-            <p className="mb-2">
-              <span className="text-sm font-medium">Preview</span>{" "}
-              <span className="text-xs font-light">
-              - your window will look like this
-            </span>
-            </p>
-
-            <div
-              className="p-4 rounded-md"
-              style={{
-                background: hslFromToken(previewTokens.background),
-                color: hslFromToken(previewTokens.foreground),
-                borderRadius: 8
-              }}
-            >
-              {/* skeleton header with tiny accent chips integrated */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  marginBottom: 12
-                }}
-              >
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  <div
-                    style={{
-                      height: 10,
-                      width: 120,
-                      borderRadius: 6,
-                      background: skeletonStrokeColor
-                    }}
-                  />
-                  {/* tiny integrated chips to the right of header */}
-                  <div style={{ display: "flex", gap: 6, marginLeft: 8 }}>
-                    <div
-                      style={{
-                        width: 12,
-                        height: 12,
-                        borderRadius: 4,
-                        background: hslFromToken(accentPreview.base)
-                      }}
-                    />
-                    <div
-                      style={{
-                        width: 12,
-                        height: 12,
-                        borderRadius: 4,
-                        background: adjustLightness(accentPreview.base, -6)
-                      }}
-                    />
-                    <div
-                      style={{
-                        width: 12,
-                        height: 12,
-                        borderRadius: 4,
-                        background: adjustLightness(accentPreview.base, 6)
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* main skeleton card */}
-              <div
-                style={{ display: "flex", gap: 12, alignItems: "flex-start" }}
-              >
-                <div
-                  className="relative overflow-hidden"
-                  style={{
-                    flex: 1,
-                    minHeight: 64,
-                    borderRadius: 8,
-                    background: isStarryPreviewActive
-                      ? "#030712"
-                      : hslFromToken(previewTokens.card),
-                    padding: 12,
-                    boxShadow: "0 8px 20px rgba(0,0,0,0.04)"
-                  }}
-                >
-                  {isStarryPreviewActive && bgOpt("gradient") && (
-                    <div
-                      className="absolute inset-0"
-                      style={{
-                        background: `linear-gradient(
-                                      to top,
-                                      hsl(${accentPreview.base} / 0.25),
-                                      transparent 60%
-                                    )`
-                      }}
-                    />
-                  )}
-                  {isStarryPreviewActive && (
-                    <div className="absolute inset-0 pointer-events-none z-0">
-                      {starFieldRef.current.map((star, i) => (
-                        <div
-                          key={i}
-                          style={{
-                            position: "absolute",
-                            top: `${star.top}%`,
-                            left: `${star.left}%`,
-                            width: star.size,
-                            height: star.size,
-                            background: "#fff",
-                            opacity: star.opacity,
-                            borderRadius: 9999
-                          }}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  {isStarryPreviewActive && bgOpt("shooting-stars") && (
-                    <div
-                      className="absolute pointer-events-none"
-                      style={{
-                        top: "28%",
-                        left: "65%",
-                        width: 75,
-                        height: 2,
-                        transform: "rotate(45deg)",
-                        zIndex: 0,
-                        filter: "blur(0.2px)",
-                        background: `
-                                    linear-gradient(
-                                      to right,
-                                      rgba(255,255,255,0) 0%,
-                                      rgba(255,255,255,0.15) 25%,
-                                      rgba(255,255,255,0.9) 100%
-                                    )
-                                  `
-                      }}
-                    >
-                      {/* bright head */}
-                      <div
-                        style={{
-                          position: "absolute",
-                          right: -2,
-                          top: "50%",
-                          width: 6,
-                          height: 6,
-                          transform: "translateY(-50%)",
-                          borderRadius: "50%",
-                          background: "white",
-                          boxShadow: "0 0 6px 2px rgba(255,255,255,0.8)"
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  {isStarryPreviewActive && bgOpt("mountains") && (
-                    <img
-                      src={Mountain}
-                      alt=""
-                      className="absolute bottom-0 left-0 w-full -mb-16 pointer-events-none -z-1"
-                      style={{
-                        opacity: 0.9
-                      }}
-                    />
-                  )}
-                  {/* title line with accent underline integrated */}
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: 8, zIndex: 1 }}
-                  >
-                    <div
-                      style={{
-                        height: 12,
-                        width: "45%",
-                        borderRadius: 6,
-                        background: skeletonStrokeColor,
-                        zIndex: 1
-                      }}
-                    />
-                    {/* inline accent pill next to title */}
-                    <div
-                      style={{
-                        width: 32,
-                        height: 12,
-                        borderRadius: 9999,
-                        background: hslFromToken(accentPreview.base),
-                        zIndex: 1
-                      }}
-                    />
-                  </div>
-
-                  <div style={{ height: 8 }} />
-
-                  {/* two short lines (muted lines) */}
-                  <div
-                    style={{
-                      height: 8,
-                      width: "70%",
-                      borderRadius: 6,
-                      background: skeletonStrokeColor,
-                      zIndex: 1
-                    }}
-                  />
-                  <div style={{ height: 6 }} />
-                  <div
-                    style={{
-                      height: 8,
-                      width: "40%",
-                      borderRadius: 6,
-                      background: skeletonStrokeColor,
-                      zIndex: 1
-                    }}
-                  />
-
-                  <div style={{ height: 12 }} />
-
-                  {/* explicit small text-sample lines to show real text colors and subtle accent row */}
-                  <div
-                    style={{ display: "flex", gap: 8, alignItems: "center", zIndex: 1 }}
-                  >
-                    <div
-                      style={{
-                        height: 10,
-                        width: 140,
-                        borderRadius: 6,
-                        background: hslFromToken(previewTokens.card),
-                        zIndex: 1
-                      }}
-                    >
-                      <div
-                        style={{
-                          height: 10,
-                          width: 120,
-                          background: hslFromToken(
-                              previewTokens.cardForeground
-                          ),
-                          borderRadius: 4,
-                          zIndex: 1
-                        }}
-                      />
-                    </div>
-
-                    <div
-                      style={{
-                        height: 10,
-                        width: 80,
-                        borderRadius: 6,
-                        background: hslFromToken(previewTokens.card),
-                        zIndex: 1
-                      }}
-                    >
-                      <div
-                        style={{
-                          height: 10,
-                          width: 60,
-                          background: hslFromToken(previewTokens.muted),
-                          borderRadius: 4,
-                          zIndex: 1
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* integrated accent row — feels like part of the card */}
-                  <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-                    <div
-                      style={{
-                        height: 8,
-                        flex: 1,
-                        borderRadius: 6,
-                        background: hslFromToken(accentPreview.base),
-                        zIndex: 1
-                      }}
-                    />
-                    <div
-                      style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: 9999,
-                        background: adjustLightness(accentPreview.base, 6),
-                        zIndex: 1
-                      }}
-                    />
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Footer */}
-          <DialogFooter className="flex justify-end gap-2 pt-3">
+            {/* Footer */}
+          <DialogFooter className="flex flex-row justify-end gap-2 pb-1">
             <Button
-              variant="ghost"
-              className="text-sm font-medium px-3 py-1.5"
-              onClick={handleCancel}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSave}
-              className="
+                variant="ghost"
+                className="text-sm font-medium px-3 py-1.5"
+                onClick={handleCancel}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSave}
+                className="
                 text-sm font-semibold px-4 py-1.5
                 transition-all duration-200
                 hover:shadow-[0_0_10px_var(--accent)]
                 hover:-translate-y-[1px]
               "
-            >
-              Save
-            </Button>
-          </DialogFooter>
+              >
+                Save
+              </Button>
+            </DialogFooter>
+          </div>
+
+          {/* RIGHT: Preview (sticky, no scroll) */}
+          {livePreviewEnabled && (
+            <div className="hidden lg:flex flex-col border-l border-border/40 bg-muted/10">
+              <div className="flex flex-col h-full p-6 gap-4">
+                {/* Header */}
+                <div className="shrink-0">
+                  <h2 className="text-lg font-semibold tracking-tight">
+                    Live Preview
+                  </h2>
+                  <p className="mt-1.5 text-sm text-muted-foreground">
+                    Updates as you change settings
+                  </p>
+                </div>
+
+                {/* Preview container */}
+                <div className="flex-1 min-h-0">
+                  <div className="h-full rounded-xl border border-border/60 bg-background/40 p-4 flex flex-col">
+                    <p className="mb-3 shrink-0">
+                      <span className="text-sm font-medium">Preview</span>{" "}
+                      <span className="text-xs text-muted-foreground font-light">
+                        – your window will look like this
+                      </span>
+                    </p>
+
+                    {/* Preview surface */}
+                    <div
+                      className="flex-1 min-h-0 rounded-lg overflow-hidden relative"
+                      style={{
+                        background: hslFromToken(previewTokens.background),
+                        color: hslFromToken(previewTokens.foreground)
+                      }}
+                    >
+                      <div
+                        className="absolute inset-0 p-6"
+                        style={{
+                          background: isStarryPreviewActive
+                            ? "#030712"
+                            : hslFromToken(previewTokens.card)
+                        }}
+                      >
+                        {/* Accent gradient */}
+                        {isStarryPreviewActive && bgOpt("gradient") && (
+                          <div
+                            className="absolute inset-0"
+                            style={{
+                              background: `linear-gradient(
+                                to top,
+                                hsl(${accentPreview.base} / 0.25),
+                                transparent 60%
+                              )`
+                            }}
+                          />
+                        )}
+
+                        {/* Stars */}
+                        {isStarryPreviewActive && (
+                          <div className="absolute inset-0 pointer-events-none">
+                            {starFieldRef.current.map((star, i) => (
+                              <div
+                                key={i}
+                                style={{
+                                  position: "absolute",
+                                  top: `${star.top}%`,
+                                  left: `${star.left}%`,
+                                  width: star.size,
+                                  height: star.size,
+                                  background: "#fff",
+                                  opacity: star.opacity,
+                                  borderRadius: 9999
+                                }}
+                              />
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Shooting star */}
+                        {isStarryPreviewActive && bgOpt("shooting-stars") && (
+                          <div
+                            className="absolute pointer-events-none"
+                            style={{
+                              top: "30%",
+                              left: "60%",
+                              width: 90,
+                              height: 2,
+                              transform: "rotate(45deg)",
+                              filter: "blur(0.2px)",
+                              background: `linear-gradient(
+                                to right,
+                                rgba(255,255,255,0) 0%,
+                                rgba(255,255,255,0.2) 30%,
+                                rgba(255,255,255,0.9) 100%
+                              )`
+                            }}
+                          >
+                            <div
+                              style={{
+                                position: "absolute",
+                                right: -3,
+                                top: "50%",
+                                width: 7,
+                                height: 7,
+                                transform: "translateY(-50%)",
+                                borderRadius: "50%",
+                                background: "white",
+                                boxShadow: "0 0 8px 3px rgba(255,255,255,0.8)"
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        {/* Mountains */}
+                        {isStarryPreviewActive && bgOpt("mountains") && (
+                          <img
+                            src={Mountain}
+                            alt=""
+                            className="absolute bottom-0 left-0 w-full pointer-events-none"
+                            style={{ opacity: 0.9 }}
+                          />
+                        )}
+
+                        {/* ===== Mock content to fill negative space ===== */}
+                        <div className="absolute inset-0 pointer-events-none z-[1] p-4">
+                          {(() => {
+                            const surface = hslFromToken(previewTokens.card);
+                            const surfaceMuted = hslFromToken(previewTokens.muted);
+                            const stroke = `hsl(${previewTokens.foreground} / 0.12)`;
+                            const accent = hslFromToken(accentPreview.base);
+
+                            return (
+                              <div className="h-full w-full grid grid-rows-[auto_1fr_auto] gap-4">
+                                {/* ───────── Top row ───────── */}
+                                <div className="flex items-start justify-between gap-3">
+                                  {/* Summary card */}
+                                  <div
+                                    style={{
+                                      width: "min(260px, 68%)",
+                                      padding: 10,
+                                      background: surface,
+                                      borderRadius: 12,
+                                      border: `1px solid ${stroke}`
+                                    }}
+                                  >
+                                    <div className="space-y-1.5">
+                                      <div
+                                        style={{
+                                          height: 8,
+                                          width: "60%",
+                                          borderRadius: 6,
+                                          background: skeletonStrokeColor
+                                        }}
+                                      />
+                                      <div
+                                        style={{
+                                          height: 6,
+                                          width: "90%",
+                                          borderRadius: 6,
+                                          background: skeletonStrokeColor,
+                                          opacity: 0.6
+                                        }}
+                                      />
+                                      <div
+                                        style={{
+                                          height: 6,
+                                          width: "50%",
+                                          borderRadius: 6,
+                                          background: skeletonStrokeColor,
+                                          opacity: 0.4
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+
+                                  {/* Accent status pill */}
+                                  <div
+                                    style={{
+                                      height: 26,
+                                      padding: "6px 12px",
+                                      background: accent,
+                                      borderRadius: 9999,
+                                      boxShadow: `0 0 0 3px hsl(${accentPreview.base} / 0.25)`
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        height: 6,
+                                        width: 64,
+                                        borderRadius: 9999,
+                                        background: "#fff"
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* ───────── Middle row ───────── */}
+                                <div className="min-h-0 grid grid-cols-[minmax(100px,150px)_1fr] gap-3 items-center">
+                                  {/* Left info card */}
+                                  <div
+                                    style={{
+                                      minHeight: 140,
+                                      padding: 10,
+                                      background: surfaceMuted,
+                                      borderRadius: 12,
+                                      border: `1px solid ${stroke}`
+                                    }}
+                                  >
+                                    <div className="space-y-1.5">
+                                      <div
+                                        style={{
+                                          height: 8,
+                                          width: "70%",
+                                          borderRadius: 6,
+                                          background: skeletonStrokeColor
+                                        }}
+                                      />
+                                      <div
+                                        style={{
+                                          height: 26,
+                                          width: "100%",
+                                          borderRadius: 8,
+                                          background: skeletonStrokeColor,
+                                          opacity: 0.45
+                                        }}
+                                      />
+                                      <div
+                                        style={{
+                                          height: 6,
+                                          width: "85%",
+                                          borderRadius: 6,
+                                          background: skeletonStrokeColor,
+                                          opacity: 0.5
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+
+                                  {/* Center voting board (accent outline) */}
+                                  <div className="min-w-0 flex justify-end">
+                                    <div
+                                      style={{
+                                        width: "min(100%, 420px)",
+                                        height: 120,
+                                        background: surface,
+                                        borderRadius: 9999,
+                                        border: `2px solid ${accent}`,
+                                        boxShadow: `0 0 0 6px hsl(${accentPreview.base} / 0.15)`
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* ───────── Bottom row ───────── */}
+                                <div className="flex justify-center gap-2 flex-wrap">
+                                  {[0, 1, 2, 3, 5, 8, 13].map((_, i) => {
+                                    const selected = i === 3;
+
+                                    return (
+                                      <div
+                                        key={i}
+                                        style={{
+                                          width: 40,
+                                          height: 58,
+                                          background: selected ? accent : surfaceMuted,
+                                          borderRadius: 10,
+                                          border: selected
+                                            ? `2px solid ${accent}`
+                                            : `1px solid ${stroke}`,
+                                          boxShadow: selected
+                                            ? `0 0 0 4px hsl(${accentPreview.base} / 0.25)`
+                                            : undefined
+                                        }}
+                                      />
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

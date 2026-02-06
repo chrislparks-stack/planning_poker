@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/chart";
 import { Room } from "@/types";
 import {clamp} from "@/utils/messageUtils.ts";
+import {useBackgroundConfig} from "@/contexts/BackgroundContext.tsx";
 
 interface VoteDistributionChartProps {
   room: Room;
@@ -17,6 +18,10 @@ interface VoteDistributionChartProps {
 export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
   room
 }) => {
+  const { background } = useBackgroundConfig();
+
+  const isStarry = background.enabled && background.id === "starry";
+
   const voteCount = useMemo(() => {
     const voteCount: { [key: string]: number } = {};
     room.game.table.forEach((userCard) => {
@@ -225,7 +230,15 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
         </svg>
 
         <div className="absolute bottom-0 flex flex-col items-center justify-center text-center">
-          <CardTitle className="text-[clamp(1rem,3vw,2rem)] tabular-nums text-foreground dark:text-accent-foreground drop-shadow-[0_0_6px_rgba(var(--accent-rgb),0.4)]">
+          <CardTitle
+            className={[
+              "text-[clamp(1rem,3vw,2rem)] tabular-nums",
+              isStarry
+                ? "text-accent-foreground"
+                : "text-foreground dark:text-accent-foreground",
+              "drop-shadow-[0_0_6px_rgba(var(--accent-rgb),0.4)]"
+            ].join(" ")}
+          >
             {averageVote.toFixed(1)}
           </CardTitle>
           <span className="text-[clamp(0.45rem,1.2vw,0.75rem)] text-muted-foreground tracking-tight text-nowrap">

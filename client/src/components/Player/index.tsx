@@ -15,6 +15,7 @@ import {useTheme} from "@/components";
 import {Ban, Crown, DoorOpen, MessageSquareText} from "lucide-react";
 import {ChatInputWrapper} from "@/components/ui/chat-input-wrapper.tsx";
 import {useCardPosition} from "@/utils/cardPositionContext.tsx";
+import {useBackgroundConfig} from "@/contexts/BackgroundContext.tsx";
 
 interface PlayerProps {
   user: User;
@@ -41,6 +42,9 @@ export function Player({
 }: PlayerProps) {
   const { toast } = useToast();
   const { theme } = useTheme();
+  const { background } = useBackgroundConfig();
+
+  const isStarry = background.enabled && background.id === "starry";
 
   const { registerCardRef } = useCardPosition();
   const cardRef = useRef<HTMLDivElement>(null);
@@ -144,7 +148,12 @@ export function Player({
       if (isGameOver) {
         return (
           <div
-            className="text-3xl font-semibold text-gray-900 dark:text-gray-300"
+            className={[
+              "text-3xl font-semibold",
+              isStarry
+                ? "text-gray-300"
+                : "text-gray-900 dark:text-gray-300"
+            ].join(" ")}
           >
             {card}
           </div>

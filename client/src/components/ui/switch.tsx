@@ -1,11 +1,48 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
+const SWITCH_SIZES = {
+  sm: {
+    trackWidth: 91,
+    trackHeight: 35,
+    knobSize: 25,
+  },
+  md: {
+    trackWidth: 118,
+    trackHeight: 48,
+    knobSize: 38,
+  },
+  lg: {
+    trackWidth: 140,
+    trackHeight: 56,
+    knobSize: 44,
+  },
+} as const;
+
+const LABEL_GEOMETRY = {
+  sm: {
+    fontClass: "text-[12px]",
+    inset: "13%",
+    translate: 23,
+  },
+  md: {
+    fontClass: "text-xs",
+    inset: "20%",
+    translate: 34,
+  },
+  lg: {
+    fontClass: "text-sm",
+    inset: "22%",
+    translate: 40,
+  },
+} as const;
+
 export interface SwitchProps
     extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onChange"> {
     checked: boolean;
     onCheckedChange: (checked: boolean) => void;
     labels?: [string, string];
+    size?: "sm" | "md" | "lg";
 }
 
 /**
@@ -19,15 +56,16 @@ export const Switch = React.forwardRef<HTMLInputElement, SwitchProps>(
       className,
       disabled,
       labels = ["Disabled", "Enabled"],
+      size = "lg",
       ...props
     },
     ref
   ) => {
-    const trackWidth = 140;
-    const trackHeight = 56;
-    const knobSize = 44;
+    const { trackWidth, trackHeight, knobSize } = SWITCH_SIZES[size];
     const padding = (trackHeight - knobSize) / 2;
     const knobTravel = trackWidth - knobSize - padding * 2 - 2;
+
+    const { fontClass, inset, translate } = LABEL_GEOMETRY[size];
 
     const handleClick = () => {
         if (!disabled) {
@@ -61,28 +99,37 @@ export const Switch = React.forwardRef<HTMLInputElement, SwitchProps>(
       >
         {/* Cross-fading labels */}
         <span
-          className="absolute z-0 text-background text-sm font-medium transition-all duration-500 ease-in-out select-none pointer-events-none"
+          className={cn(
+            "absolute z-0 text-background font-medium select-none pointer-events-none",
+            fontClass
+          )}
           style={{
             opacity: checked ? 0 : 1,
-            transform: `translateX(${checked ? '-40px' : '40px'})`,
-            left: '22%',
-            transition: 'opacity 0.45s ease, transform 0.6s cubic-bezier(0.22,1,0.36,1)',
+            transform: `translateX(${checked ? -translate : translate}px)`,
+            left: inset,
+            transition:
+              "opacity 0.45s ease, transform 0.6s cubic-bezier(0.22,1,0.36,1)",
           }}
         >
           {labels[0]}
         </span>
 
         <span
-          className="absolute z-0 text-background text-sm font-medium transition-all duration-500 ease-in-out select-none pointer-events-none"
+          className={cn(
+            "absolute z-0 text-background font-medium select-none pointer-events-none",
+            fontClass
+          )}
           style={{
             opacity: checked ? 1 : 0,
-            transform: `translateX(${checked ? '-40px' : '40px'})`,
-            right: '22%',
-            transition: 'opacity 0.45s ease, transform 0.6s cubic-bezier(0.22,1,0.36,1)',
+            transform: `translateX(${checked ? -translate : translate}px)`,
+            right: inset,
+            transition:
+              "opacity 0.45s ease, transform 0.6s cubic-bezier(0.22,1,0.36,1)",
           }}
         >
           {labels[1]}
         </span>
+
 
         {/* Knob container handles clipping cleanly */}
           <span
