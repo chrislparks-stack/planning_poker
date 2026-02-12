@@ -118,7 +118,7 @@ export const ChatPanel: React.FC<{
             />
           );
         }
-        return undefined; // keep normal rendering
+        return undefined;
       },
     });
   };
@@ -441,10 +441,11 @@ export const ChatPanel: React.FC<{
                               fontSize: "3rem",
                               lineHeight: "1",
                               textAlign: "center",
-                              fontFamily:
-                                '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',
+                              fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'
                             }
-                            : undefined
+                            : {
+                              wordBreak: "break-word"
+                            }
                         }
                       >
                         {renderMessage(msg.formattedContent || msg.content)}

@@ -36,28 +36,37 @@ export function PageLayout({ children, room, users, showChat }: {
 
   return (
     <CardPositionProvider cardRefs={cardRefs}>
-      <Header room={room} users={users} onMenuOpenChange={setMenuOpen} chatOpen={chatVisible}/>
-      <ChatRevealPrompt onClick={() => setChatVisible(true)} menuOpen={menuOpen} />
-
-      <main className="flex flex-col flex-grow h-[calc(100vh-56px)] overflow-hidden relative">
-        {children}
-        <ChatPanel
+      <div className="h-dvh flex flex-col">
+        <Header
           room={room}
-          user={
-            (() => {
-              try {
-                const raw = localStorage.getItem("user");
-                if (!raw) return undefined;
-                return JSON.parse(raw);
-              } catch {
-                return users?.[0];
-              }
-            })()
-          }
-          visible={chatVisible}
-          onClose={() => setChatVisible(false)}
+          users={users}
+          onMenuOpenChange={setMenuOpen}
+          chatOpen={chatVisible}
         />
-      </main>
+        <ChatRevealPrompt
+          onClick={() => setChatVisible(true)}
+          menuOpen={menuOpen}
+        />
+        <main className="flex flex-1 min-h-0 flex-col overflow-hidden relative">
+          {children}
+          <ChatPanel
+            room={room}
+            user={
+              (() => {
+                try {
+                  const raw = localStorage.getItem("user");
+                  if (!raw) return undefined;
+                  return JSON.parse(raw);
+                } catch {
+                  return users?.[0];
+                }
+              })()
+            }
+            visible={chatVisible}
+            onClose={() => setChatVisible(false)}
+          />
+        </main>
+      </div>
     </CardPositionProvider>
   );
 }

@@ -24,19 +24,15 @@ export interface Position {
   height?: number;
 }
 
-function handlePromote(userId: string, room: RoomType) {
-  useSetRoomOwnerMutation({ variables: { roomId: room["id"] || "", userId } });
-}
-
 export function Room({ room, onShowInChat, roomRef}: RoomProps) {
   const tableRef = useRef<HTMLDivElement | null>(null);
   const playerRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [tableRect, setTableRect] = useState<DOMRect | null>(null);
   const [senderName, setSenderName] = useState<string | null>(null);
   const [lastChats, setLastChats] = useState<Record<string, string | null>>({});
-  const [chatPositionMap, setChatPositionMap] = useState<
-    Record<string, Position | null>
-  >({});
+  const [chatPositionMap, setChatPositionMap] = useState<Record<string, Position | null>>({});
+  const [setRoomOwner] = useSetRoomOwnerMutation({errorPolicy: "none"});
+
   const users = useMemo(
     () => withTestUsers(0, room?.users),
     [room?.users]
@@ -116,7 +112,7 @@ export function Room({ room, onShowInChat, roomRef}: RoomProps) {
 
     const TB_MIN_GAP = CARD_WIDTH + 24;
 
-    // Allow top/bottom second row only if viewport is tall enough
+    // Allow top/bottom second row only if the viewport is tall enough
     const allowTBSecondRow = window.innerHeight / 5.5 > CARD_HEIGHT * 2;
     const MAX_TB_ROWS = allowTBSecondRow ? 2 : 1;
     const TB_PER_ROW = Math.max(1, Math.floor(width / TB_MIN_GAP));
@@ -130,7 +126,7 @@ export function Room({ room, onShowInChat, roomRef}: RoomProps) {
 
     let remaining = totalPlayers;
 
-    // First row top & bottom
+    // First row top and bottom
     const baseTB = Math.min(TB_PER_ROW, Math.floor(remaining / 4));
     sideCounts.top = baseTB;
     sideCounts.bottom = baseTB;
@@ -404,7 +400,7 @@ export function Room({ room, onShowInChat, roomRef}: RoomProps) {
 
     const { topRows, bottomRows } = seatLayout;
 
-    const heightRows = tableRect.height + ((topRows + bottomRows) * CARD_HEIGHT)
+    const heightRows = tableRect.height + ((topRows + bottomRows) * CARD_HEIGHT);
     const singleRowHeight = Math.max(((window.innerHeight / 1.8) - heightRows), ((heightRows - TB_ROW_OFFSET) / (topRows + bottomRows)));
     const doubleRowHeight = Math.max(((window.innerHeight / 1.35) - heightRows), ((heightRows - TB_ROW_OFFSET) / (topRows + bottomRows)));
 
@@ -414,9 +410,22 @@ export function Room({ room, onShowInChat, roomRef}: RoomProps) {
     };
   }, [containerSize, tableRect, seatLayout]);
 
+  const handlePromote = async (userId: string, room: RoomType) => {
+    const res = await setRoomOwner({
+      variables: {
+        roomId: room.id,
+        userId,
+      },
+    });
+
+    if (res.errors?.length) {
+      throw new Error(res.errors[0].message);
+    }
+  };
+
   return (
     <div
-      className="relative flex items-center justify-center min-h-screen w-full overflow-hidden"
+      className="relative w-full flex justify-center"
       style={{
         minWidth: containerSize ? containerSize.width - 30 : 100,
         minHeight: totalHeight["minHeight"]
@@ -447,11 +456,11 @@ export function Room({ room, onShowInChat, roomRef}: RoomProps) {
                 playerRefs.current[user.id] = el;
               }}
               data-player-id={user.id}
-              className="absolute transform -translate-x-1/2 -translate-y-1/2"
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 pt-[max(2vh,8px)] pb-[max(2vh,8px)]"
               style={{
                 left: `${position.x}px`,
                 top: `${position.y}px`,
-                zIndex: 10,
+                zIndex: 10
               }}
             >
               <Player

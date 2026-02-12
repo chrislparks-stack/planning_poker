@@ -86,18 +86,18 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room, onOpenChange }) => {
   async function handleLogout() {
     if (!user) return;
 
-    await logoutMutation({ variables: { userId: user.id } });
-
-    if (room && room.id) {
+    if (room && room.id && user.id === room.roomOwnerId) {
       const nextOwner = room.users.find(u => u.id !== user.id);
 
       await setRoomOwner({
         variables: {
           roomId: room.id,
-          userId: nextOwner?.id ?? null, // use null when no next owner
+          userId: nextOwner?.id ?? null,
         },
       });
     }
+
+    await logoutMutation({ variables: { userId: user.id } });
 
     localStorage.removeItem("Room");
   }

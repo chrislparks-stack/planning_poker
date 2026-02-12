@@ -567,11 +567,10 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                 </p>
               </div>
 
-              <div className="flex flex-col items-center rounded-lg border border-border/60 bg-background/40 p-2">
+              <div className="flex flex-col items-center rounded-lg border border-border/60 bg-background/40 p-2 w-32">
                 <p className="text-sm tracking-tight mb-2">
                   Live Preview
                 </p>
-
                 <div className="hidden lg:flex">
                   <Switch
                     id="live-preview"
@@ -953,8 +952,8 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                           <div
                             className="absolute pointer-events-none"
                             style={{
-                              top: "30%",
-                              left: "60%",
+                              top: "20%",
+                              left: "70%",
                               width: 90,
                               height: 2,
                               transform: "rotate(45deg)",

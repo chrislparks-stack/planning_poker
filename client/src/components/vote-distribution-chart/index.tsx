@@ -1,5 +1,5 @@
-import {FC, useEffect, useMemo, useState} from "react";
-import {Bar, BarChart, Cell, LabelList, XAxis} from "recharts";
+import {FC, useEffect, useMemo, useRef, useState} from "react";
+import {Bar, BarChart, Cell, XAxis} from "recharts";
 
 import { CardTitle } from "@/components/ui/card";
 import {
@@ -8,8 +8,8 @@ import {
   ChartTooltipContent
 } from "@/components/ui/chart";
 import { Room } from "@/types";
-import {clamp} from "@/utils/messageUtils.ts";
 import {useBackgroundConfig} from "@/contexts/BackgroundContext.tsx";
+import {VoteLabel} from "@/components/ui/vote-label.tsx";
 
 interface VoteDistributionChartProps {
   room: Room;
@@ -18,8 +18,10 @@ interface VoteDistributionChartProps {
 export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
   room
 }) => {
-  const { background } = useBackgroundConfig();
+  const [chartKey, setChartKey] = useState(0);
+  const chartRef = useRef<HTMLDivElement | null>(null);
 
+  const { background } = useBackgroundConfig();
   const isStarry = background.enabled && background.id === "starry";
 
   const voteCount = useMemo(() => {
@@ -31,10 +33,8 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
     });
 
     // const testVotes: Record<string, number> = {
-    //   2: 3,
+    //   2: 20,
     //   3: 1,
-    //   5: 4,
-    //   8: 1,
     // };
     //
     // Object.assign(voteCount, testVotes);
@@ -42,12 +42,33 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
     return voteCount;
   }, [room.game.table]);
 
+  const voteSignature = useMemo(() => {
+    const counts: Record<string, number> = {};
+
+    room.game.table.forEach((userCard) => {
+      if (userCard.card) {
+        counts[userCard.card] = (counts[userCard.card] || 0) + 1;
+      }
+    });
+
+    return Object.entries(counts)
+      .sort(([a], [b]) => parseFloat(a) - parseFloat(b))
+      .map(([card, n]) => `${card}:${n}`)
+      .join("|");
+  }, [room.game.table]);
+
   const chartData = useMemo(() => {
-    return Object.entries(voteCount).map(([card, Votes]) => ({
-      card,
-      Votes
-    }));
-  }, [voteCount]);
+    if (!voteSignature) return [];
+
+    return voteSignature.split("|").map((entry) => {
+      const [card, count] = entry.split(":");
+      return {
+        card,
+        cardValue: parseFloat(card),
+        Votes: Number(count),
+      };
+    });
+  }, [voteSignature]);
 
   const maxCardCount = useMemo(() => {
     return Math.max(...chartData.map((card) => card.Votes));
@@ -79,17 +100,49 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
     minHeight: "170px"
   };
 
-  const [showLabels, setShowLabels] = useState(false);
-
   useEffect(() => {
-    if(room.isGameOver && !showLabels) {
-      setShowLabels(true);
-    }
-  }, [room, showLabels, chartData]);
+    if (!room.isGameOver) return;
+    if (!chartRef.current) return;
+
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 8;
+
+    const verify = () => {
+      if (cancelled) return;
+      if (!chartRef.current) return;
+
+      const labels =
+        chartRef.current.querySelectorAll("text");
+
+      const expected = chartData.length;
+
+      if (labels.length < expected && attempts < maxAttempts) {
+        attempts++;
+
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            setChartKey((k) => k + 1);
+            setTimeout(verify, 120);
+          });
+        });
+      }
+    };
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        verify();
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [chartData, room]);
 
   return (
     <div
-      className="flex flex-col items-center justify-center overflow-hidden"
+      className="flex flex-col items-center justify-center overflow-visible"
       data-testid="vote-distribution-chart"
     >
       {chartData.length === 0 && (
@@ -99,10 +152,11 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
           </span>
         </div>
       )}
-
       <ChartContainer
+        key={chartKey}
+        ref={chartRef}
         style={chartContainerStyle}
-        className="-mb-5 h-[15vh]"
+        className="-mb-5 h-[15vh] min-h-[170px]"
         config={{
           card: {
             label: "Votes",
@@ -110,81 +164,32 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
           }
         }}
       >
-        <BarChart
-          accessibilityLayer
-          margin={{top: 10}}
-          data={chartData}
-        >
+        <BarChart data={chartData}>
           <Bar
             dataKey="Votes"
             radius={10}
-            fillOpacity={0.9}
+            minPointSize={24}
+            fillOpacity={0.5}
             isAnimationActive
+            animationBegin={0}
             animationDuration={500}
-            onAnimationStart={() => setShowLabels(false)}
-            onAnimationEnd={() => setShowLabels(true)}
+            label={<VoteLabel max={maxCardCount} barCount={chartData.length} />}
           >
-            {chartData.map((entry, index) => {
+            {chartData.map((entry) => {
               const isMajority = entry.Votes === maxCardCount;
               return (
                 <Cell
-                  key={`cell-${index}`}
+                  key={entry.card}
                   fill="hsl(var(--accent))"
                   style={{
                     filter: isMajority
                       ? "drop-shadow(0 0 10px hsl(var(--accent))) drop-shadow(0 0 24px rgba(var(--accent-rgb),0.4))"
                       : "drop-shadow(0 0 10px rgba(var(--accent-rgb),0.3))",
                     animation: isMajority ? "pulseGlow 3s ease-in-out infinite" : undefined,
-                    transformOrigin: "center"
                   }}
                 />
               );
             })}
-            <LabelList
-              dataKey="Votes"
-              position="center"
-              content={(props: any) => {
-                const { x, y, width, height, value, index } = props;
-
-                if (x == null || y == null || index == null) return null;
-
-                const entry = chartData[index];
-                if (!entry) return null;
-
-                const isMajority = entry.Votes === maxCardCount;
-                const safeWidth = Math.max(width ?? 0, 1);
-                const safeHeight = Math.max(height ?? 0, 1);
-                const centerX = x + safeWidth / 2;
-                const centerY = y + safeHeight / 2;
-                const numBars = chartData.length;
-                const labelWidthValue= 0.9 / (numBars / 2);
-                const majorityWidthValue = 0.75 / (numBars / 2);
-                const labelFontSize = clamp(5, `${labelWidthValue}vw`, 18);
-                const majorityFontSize =  clamp(4, `${majorityWidthValue}vw`, 15);
-
-                return (
-                  <text
-                    x={centerX}
-                    y={centerY}
-                    fill="white"
-                    textAnchor="middle"
-                    fontSize={labelFontSize}
-                    dominantBaseline="middle"
-                    className="tabular-nums"
-                  >
-                    <tspan x={centerX} fontWeight={isMajority ? "bold" : "normal"}>
-                      Votes: {value}
-                    </tspan>
-
-                    {isMajority && (
-                      <tspan x={centerX} dy="1.6em" fontSize={majorityFontSize}>
-                        MAJORITY
-                      </tspan>
-                    )}
-                  </text>
-                );
-              }}
-            />
           </Bar>
           <XAxis
             dataKey="card"
@@ -193,12 +198,12 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
             tickMargin={4}
           />
           <ChartTooltip
+            cursor={false}
             content={
               <ChartTooltipContent
-                labelFormatter={(value) => `Points: ${value}`}
+                labelFormatter={(value) => `Story Points | ${value}`}
               />
             }
-            cursor={false}
           />
         </BarChart>
       </ChartContainer>

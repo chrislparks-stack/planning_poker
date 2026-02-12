@@ -63,6 +63,7 @@ export function Player({
   const roomName = room?.name ?? "this room";
   const [kickUser] = useKickUserMutation();
   const [banUser] = useBanUserMutation();
+  const previousOwnerRef = useRef<string | null | undefined>(null);
   const [showChatInput, setShowChatInput] = useState(false);
 
   // --- Local state ---
@@ -272,6 +273,29 @@ export function Player({
     };
   }, [menuPos]);
 
+  useEffect(() => {
+    if (!room || !currentUserId) return;
+
+    const currentOwnerId = room.roomOwnerId;
+    const previousOwnerId = previousOwnerRef.current;
+
+    if (
+      previousOwnerId &&
+      previousOwnerId !== currentOwnerId &&
+      currentOwnerId === currentUserId
+    ) {
+      const previousOwnerUsername =
+        room.users.find(u => u.id === previousOwnerId)?.username ?? "The previous owner";
+
+      toast({
+        title: "Control transferred 👑",
+        description: `${previousOwnerUsername} has passed you room owner status\nYou now control ${roomName}`,
+      });
+    }
+
+    previousOwnerRef.current = currentOwnerId;
+  }, [room?.roomOwnerId, room?.users, currentUserId, toast, roomName]);
+
   // --- Actions ---
   const handleMakeOwner = async () => {
     closeMenu();
@@ -280,9 +304,10 @@ export function Player({
       await onMakeOwner(user.id, room);
       toast({
         title: "Ownership transferred",
-        description: `${user.username} is now the room owner.`
+        description: `${user.username} is now the room owner`
       });
-    } catch {
+    } catch(e) {
+      console.error(e);
       toast({
         title: "Error",
         description: "Failed to make owner",

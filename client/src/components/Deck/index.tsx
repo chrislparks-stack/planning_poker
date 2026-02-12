@@ -49,7 +49,7 @@ export function Deck({ roomId, isGameOver: isGameOverProp, cards }: DeckProps) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const shouldTwoRowLayout = cards.length > 5 && windowWidth < (500 + 75 * cards.length);
+  const shouldTwoRowLayout = cards.length > 5 && windowWidth < (250 + 75 * cards.length);
   const cardsPerRow = shouldTwoRowLayout ? Math.ceil(cards.length / 2) : cards.length;
 
   useEffect(() => {
