@@ -28,7 +28,7 @@ export const Header: FC<HeaderProps> = ({ room, users, onMenuOpenChange, chatOpe
   const { user } = useAuth();
   const { copyRoomUrlToClipboard } = useCopyRoomUrlToClipboard();
   const displayUsers = useMemo(
-    () => withTestUsers(20, users),
+    () => withTestUsers(0, users),
     [users]
   );
 
@@ -92,10 +92,10 @@ export const Header: FC<HeaderProps> = ({ room, users, onMenuOpenChange, chatOpe
         <div className="flex items-center space-x-4">
           {displayUsers && (
             <div className="hidden md:flex items-center gap-3">
-              <AvatarCarousel users={displayUsers} chatOpen={chatOpen || false} className="w-[450px]" />
+              <AvatarCarousel users={displayUsers} chatOpen={chatOpen || false}/>
+              <Separator orientation="vertical" className="h-6" />
             </div>
           )}
-          <Separator orientation="vertical" className="h-6" />
           <AccountMenu room={room} onOpenChange={handleOpenChange} />
         </div>
       )}

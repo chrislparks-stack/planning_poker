@@ -82,26 +82,19 @@ export default function AvatarCarousel({ users, chatOpen, className }: AvatarCar
     truncate: (name: string) => string
   }) => (
     <div className="relative flex justify-center">
-      {chatOpen ? (
-        <Avatar className="border-2 border-background cursor-default">
-          <AvatarFallback>
-            {u.username[0].toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-      ) : (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Avatar className="border-2 border-background cursor-default">
-              <AvatarFallback>
-                {u.username[0].toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-          </TooltipTrigger>
-          <TooltipContent sideOffset={15}>
-            {u.username}
-          </TooltipContent>
-        </Tooltip>
-      )}
+      <Tooltip disabled={chatOpen}>
+        <TooltipTrigger asChild>
+          <Avatar className="border-2 border-background cursor-default">
+            <AvatarFallback>
+              {u.username[0].toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+        </TooltipTrigger>
+
+        <TooltipContent sideOffset={15}>
+          {u.username}
+        </TooltipContent>
+      </Tooltip>
 
       <div
         className="
@@ -125,34 +118,40 @@ export default function AvatarCarousel({ users, chatOpen, className }: AvatarCar
   )
 
   return (
-    <div className={["flex items-center gap-3", className].filter(Boolean).join(" ")}>
-
+    <div
+      className={[
+        "flex items-center gap-3",
+        isCarousel ? "min-w-[340px] max-w-[435px]" : "w-auto",
+        className
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <div className="flex items-center gap-2 flex-1 min-w-0">
-
         {/* Left Arrow */}
         {users.length > show && (
           <div className="flex flex-row items-center gap-1">
-            <Tooltip>
+            <Tooltip disabled={chatOpen} delayDuration={2000}>
               <TooltipTrigger asChild>
                 <button
                   onClick={() => jump(-show)}
-                  className="shrink-0 h-7 w-7 flex items-center justify-center rounded-full bg-accent/60 hover:bg-accent transition"
+                  className="shrink-0 h-7 w-7 flex items-center justify-center transition text-accent hover:text-accent/50"
                 >
-                  <ChevronLeft className="h-4 w-4 text-foreground -mr-2.5" />
-                  <ChevronLeft className="h-4 w-4 text-foreground" />
+                  <ChevronLeft className="h-4 w-4 -mr-2.5" />
+                  <ChevronLeft className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
               <TooltipContent sideOffset={15}>
                 Skip Previous
               </TooltipContent>
             </Tooltip>
-            <Tooltip>
+            <Tooltip disabled={chatOpen} delayDuration={2000}>
               <TooltipTrigger asChild>
                 <button
                   onClick={() => sliderRef.current?.slickPrev()}
-                  className="shrink-0 h-7 w-7 flex items-center justify-center rounded-full bg-accent/60 hover:bg-accent transition"
+                  className="shrink-0 h-7 w-7 -ml-3 flex items-center justify-center transition text-accent hover:text-accent/50"
                 >
-                  <ChevronLeft className="h-4 w-4 text-foreground" />
+                  <ChevronLeft className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
               <TooltipContent sideOffset={15}>
@@ -188,27 +187,27 @@ export default function AvatarCarousel({ users, chatOpen, className }: AvatarCar
         {/* Right Arrow */}
         {users.length > show && (
           <div className="flex flex-row items-center gap-1">
-            <Tooltip>
+            <Tooltip disabled={chatOpen} delayDuration={2000}>
               <TooltipTrigger asChild>
                 <button
                   onClick={() => sliderRef.current?.slickNext()}
-                  className="shrink-0 h-7 w-7 flex items-center justify-center rounded-full bg-accent/60 hover:bg-accent transition"
+                  className="shrink-0 h-7 w-7 -mr-3 flex items-center justify-center transition text-accent hover:text-accent/50"
                 >
-                  <ChevronRight className="h-4 w-4 text-foreground" />
+                  <ChevronRight className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
               <TooltipContent sideOffset={15}>
                 Next Player
               </TooltipContent>
             </Tooltip>
-            <Tooltip>
+            <Tooltip disabled={chatOpen} delayDuration={2000}>
               <TooltipTrigger asChild>
                 <button
                   onClick={() => jump(show)}
-                  className="shrink-0 h-7 w-7 flex items-center justify-center rounded-full bg-accent/60 hover:bg-accent transition"
+                  className="shrink-0 h-7 w-7 flex items-center justify-center transition text-accent hover:text-accent/50"
                 >
-                  <ChevronRight className="h-4 w-4 text-foreground -mr-2.5" />
-                  <ChevronRight className="h-4 w-4 text-foreground" />
+                  <ChevronRight className="h-4 w-4 -mr-2.5" />
+                  <ChevronRight className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
               <TooltipContent sideOffset={15}>
@@ -220,22 +219,28 @@ export default function AvatarCarousel({ users, chatOpen, className }: AvatarCar
       </div>
 
       {/* Count */}
-      <div
-        className="
-          shrink-0
-          flex items-center gap-1.5
-          px-3 py-1
-          rounded-full
-          bg-accent/10
-          border border-accent/20
-          text-xs font-medium
-          text-accent
-        "
-      >
-        <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
-        {users.length} {users.length === 1 ? "Player" : "Players"}
-      </div>
-
+      <Tooltip disabled={chatOpen}>
+        <TooltipTrigger asChild>
+          <div
+            className="
+              shrink-0
+              flex items-center gap-1.5
+              px-3 py-1
+              rounded-full
+              bg-accent/10
+              border border-accent/20
+              text-xs font-medium
+              text-accent cursor-default
+            "
+          >
+            <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
+            {users.length} {users.length === 1 ? "Player" : "Players"}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent sideOffset={15}>
+          {users.length} {users.length === 1 ? "Player" : "Players"} Currently In Room
+        </TooltipContent>
+      </Tooltip>
     </div>
   )
 }
