@@ -1,10 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { Copy } from "lucide-react";
 import {FC, useMemo} from "react";
-import * as Popover from "@radix-ui/react-popover";
 
 import { AccountMenu } from "@/components/AccountMenu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -17,6 +15,7 @@ import { useAuth } from "@/contexts";
 import { useCopyRoomUrlToClipboard } from "@/hooks";
 import { Room, User } from "@/types";
 import SummitIcon from "@/assets/SummitIcon.png";
+import AvatarCarousel from "@/components/ui/carousel.tsx";
 
 interface HeaderProps {
   room?: Room;
@@ -29,7 +28,7 @@ export const Header: FC<HeaderProps> = ({ room, users, onMenuOpenChange, chatOpe
   const { user } = useAuth();
   const { copyRoomUrlToClipboard } = useCopyRoomUrlToClipboard();
   const displayUsers = useMemo(
-    () => withTestUsers(0, users),
+    () => withTestUsers(20, users),
     [users]
   );
 
@@ -92,88 +91,11 @@ export const Header: FC<HeaderProps> = ({ room, users, onMenuOpenChange, chatOpe
       {user && (
         <div className="flex items-center space-x-4">
           {displayUsers && (
-            <div className="hidden md:flex items-center -space-x-2">
-              {displayUsers.slice(0, 5).map((user) =>
-                chatOpen ? (
-                  <Avatar
-                    key={user.id}
-                    className="border-2 border-background cursor-default"
-                  >
-                    <AvatarFallback>
-                      {user.username[0].toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                ) : (
-                  <Tooltip key={user.id}>
-                    <TooltipTrigger asChild>
-                      <Avatar className="border-2 border-background cursor-default">
-                        <AvatarFallback>
-                          {user.username[0].toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                    </TooltipTrigger>
-
-                    <TooltipContent sideOffset={15}>
-                      <p>{user.username}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                )
-              )}
-              {displayUsers.length > 5 && (
-                chatOpen ? (
-                  <Avatar className="border-2 border-background cursor-default">
-                    <AvatarFallback>
-                      +{displayUsers.length - 5}
-                    </AvatarFallback>
-                  </Avatar>
-                ) : (
-                  <Popover.Root>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Popover.Trigger asChild>
-                          <Avatar className="border-2 border-background cursor-pointer">
-                            <AvatarFallback>
-                              +{displayUsers.length - 5}
-                            </AvatarFallback>
-                          </Avatar>
-                        </Popover.Trigger>
-                      </TooltipTrigger>
-
-                      <TooltipContent sideOffset={15}>
-                        <p>Click to show more players</p>
-                      </TooltipContent>
-                    </Tooltip>
-
-                    <Popover.Portal>
-                      <Popover.Content
-                        side="bottom"
-                        align="center"
-                        sideOffset={8}
-                        className="z-50 rounded-md bg-background border shadow-lg p-2 min-w-[180px]"
-                      >
-                        <div className="flex flex-col gap-1">
-                          {displayUsers.slice(5).map((user) => (
-                            <div
-                              key={user.id}
-                              className="flex items-center gap-2 text-sm"
-                            >
-                              <Avatar className="h-6 w-6">
-                                <AvatarFallback>
-                                  {user.username[0].toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span>{user.username}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </Popover.Content>
-                    </Popover.Portal>
-                  </Popover.Root>
-                )
-              )}
-              <Separator orientation="vertical" className="h-6" />
+            <div className="hidden md:flex items-center gap-3">
+              <AvatarCarousel users={displayUsers} chatOpen={chatOpen || false} className="w-[450px]" />
             </div>
           )}
+          <Separator orientation="vertical" className="h-6" />
           <AccountMenu room={room} onOpenChange={handleOpenChange} />
         </div>
       )}

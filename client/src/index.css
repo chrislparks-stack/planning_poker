@@ -234,6 +234,61 @@
       1px 2px 0 rgba(0, 0, 0, 1),
       -1px 0 0 hsla(var(--accent)/0.5);
   }
+
+  .starry .text-glass {
+    --glass-ink: hsla(var(--accent)/1);
+
+    text-shadow:
+            -1px -1px 1px rgba(0, 0, 0, 1),
+            1px 2px 0 rgba(0, 0, 0, 1),
+            -1px 0 0 hsla(var(--accent)/0.5);
+  }
+
+  .avatar-slick .slick-list {
+    margin-bottom: 15px;
+  }
+
+  .avatar-slick .slick-slide {
+    opacity: 0.6;
+    transform: scale(0.7);
+    transition:
+            transform 300ms cubic-bezier(.4,0,.2,1),
+            opacity 300ms ease;
+    will-change: transform, opacity;
+  }
+
+  .avatar-slick .slick-center {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .avatar-slick .slick-track {
+    display: flex !important;
+    align-items: center;
+  }
+
+  .avatar-slick .slick-slide > div {
+    display: flex;
+    justify-content: center;
+  }
+
+  .avatar-slick .slick-prev:before,
+  .avatar-slick .slick-next:before {
+    display: none;
+  }
+
+  .avatar-slick .slick-prev,
+  .avatar-slick .slick-next {
+    z-index: 30;
+  }
+
+  .avatar-slick .slick-prev {
+    left: 0.25rem;
+  }
+
+  .avatar-slick .slick-next {
+    right: 0.25rem;
+  }
 }
 
 /* ---------- Countdown Overlay Animations ---------- */

@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { Room } from "@/types";
 import { NewGameDialog } from "@/components/NewGameDialog";
 import {createPortal} from "react-dom";
+import {useBackgroundConfig} from "@/contexts/BackgroundContext.tsx";
 
 interface TableProps {
   room: Room;
@@ -33,6 +34,8 @@ export const Table: FC<TableProps> = ({
   roomOverlayRef
 }) => {
   const { toast } = useToast();
+  const { background } = useBackgroundConfig();
+  const isStarry = background.enabled && background.id === "starry";
   const [openNewGameDialog, setOpenNewGameDialog] = useState(false);
 
   const [showCardsMutation, { loading: showCardLoading }] =
@@ -233,147 +236,178 @@ export const Table: FC<TableProps> = ({
   return (
     <div
       ref={innerRef}
-      className="relative flex justify-center items-center w-[25vw] max-w-72 min-w-48
-      h-36 rounded-full border-2 border-s-4 border-e-4
-      border-gray-500 bg-background"
+      className="
+      relative flex justify-center items-center
+      w-[25vw] max-w-72 min-w-48
+      h-36 rounded-full
+      isolate
+    "
     >
-      {(() => {
-        // === ROUND OVER ===
-        if (isGameOver) {
-          if (currentIsRoomOwner) {
-            return (
-              <Button
-                onClick={() =>
-                  room.confirmNewGame
-                    ? setOpenNewGameDialog(true)
-                    : handleResetGame()
-                }
-                disabled={resetGameLoading}
-                className="w-36"
-                size="lg"
-              >
-                {resetGameLoading && (
-                  <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Start New Game
-              </Button>
-            );
-          } else if (userHasSubmitted) {
-            return (
-              <div className="flex flex-col items-center text-center">
-              <span className="text-sm font-semibold">
-                You voted:{" "}
-                <span className="ml-1 font-mono tabular-nums">
-                  {selectedCardLabel}
-                </span>
-              </span>
-                <span className="text-xs text-accent mt-1">
-                Waiting to start new game...
-              </span>
-              </div>
-            );
-          } else {
-            return (
-              <div className="flex flex-col items-center text-center">
-                <span className="text-sm text-muted-foreground">No vote yet</span>
-                <span className="text-xs text-accent mt-1">
-                Waiting to start new game...
-              </span>
-              </div>
-            );
-          }
-        }
+      {/* Accent Glow Halo */}
+      <div
+        className="absolute inset-0 rounded-full blur-md pointer-events-none"
+        style={{
+          boxShadow: `0 0 30px 8px hsl(var(--accent) / 0.35)`,
+          background: `
+            radial-gradient(
+              circle at 50% 50%,
+              hsl(var(--accent) / 0.25) 0%,
+              transparent 65%
+            )
+          `,
+        }}
+      >
+        <div className="absolute inset-0 rounded-full border border-white/20 dark:border-white/10" />
+      </div>
 
-        // === ROUND IN PROGRESS ===
-        if (currentIsRoomOwner) {
-          if (voteCount > 0) {
-            return (
-              <Button
-                onClick={handleReveal}
-                disabled={showCardLoading || countdownLoading}
-                size="lg"
-              >
-                {(showCardLoading || countdownLoading) && (
-                  <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Reveal Cards
-              </Button>
-            );
-          } else {
-            return (
-              <div className="flex flex-col items-center text-center">
-              <span className="text-sm text-muted-foreground">
-                No votes yet
-              </span>
-                <span className="text-xs text-accent mt-1">
-                Waiting for players to vote...
-              </span>
-              </div>
-            );
-          }
-        } else {
-          if (userHasSubmitted) {
-            return (
-              <div className="flex flex-col items-center text-center">
-              <span className="text-sm font-semibold text-accent">
-                Waiting to reveal cards...
-              </span>
-                <span className="text-xs text-muted-foreground mt-1">
-                The owner will reveal when ready.
-              </span>
-              </div>
-            );
-          } else {
-            return (
-              <div className="flex flex-col items-center text-center">
-              <span className="text-sm text-muted-foreground">
-                Select card to vote
-              </span>
-                {voteCount > 0 && (
+      {/* Glass Surface */}
+      <div
+        className={[
+          "relative w-full h-full rounded-full",
+          "backdrop-blur-[3px] shadow-[inset_0_0_12px_rgba(0,0,0,0.35),inset_0_0_40px_rgba(0,0,0,0.15)]",
+          "border border-white/10 flex items-center justify-center",
+          isStarry
+            ? "bg-black/40 dark:bg-background/40"
+            : "bg-background/40"
+        ].join(" ")}
+      >
+        {(() => {
+          // === ROUND OVER ===
+          if (isGameOver) {
+            if (currentIsRoomOwner) {
+              return (
+                <Button
+                  onClick={() =>
+                    room.confirmNewGame
+                      ? setOpenNewGameDialog(true)
+                      : handleResetGame()
+                  }
+                  disabled={resetGameLoading}
+                  className="w-36"
+                  size="lg"
+                >
+                  {resetGameLoading && (
+                    <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Start New Game
+                </Button>
+              );
+            } else if (userHasSubmitted) {
+              return (
+                <div className="flex flex-col items-center text-center">
+                <span className="text-sm font-semibold">
+                  You voted:{" "}
+                  <span className="ml-1 font-mono tabular-nums">
+                    {selectedCardLabel}
+                  </span>
+                </span>
                   <span className="text-xs text-accent mt-1">
+                  Waiting to start new game...
+                </span>
+                </div>
+              );
+            } else {
+              return (
+                <div className="flex flex-col items-center text-center">
+                  <span className="text-sm text-muted-foreground">No vote yet</span>
+                  <span className="text-xs text-accent mt-1">
+                  Waiting to start new game...
+                </span>
+                </div>
+              );
+            }
+          }
+
+          // === ROUND IN PROGRESS ===
+          if (currentIsRoomOwner) {
+            if (voteCount > 0) {
+              return (
+                <Button
+                  onClick={handleReveal}
+                  disabled={showCardLoading || countdownLoading}
+                  size="lg"
+                >
+                  {(showCardLoading || countdownLoading) && (
+                    <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Reveal Cards
+                </Button>
+              );
+            } else {
+              return (
+                <div className="flex flex-col items-center text-center">
+                <span className="text-sm text-muted-foreground">
+                  No votes yet
+                </span>
+                  <span className="text-xs text-accent mt-1">
+                  Waiting for players to vote...
+                </span>
+                </div>
+              );
+            }
+          } else {
+            if (userHasSubmitted) {
+              return (
+                <div className="flex flex-col items-center text-center">
+                <span className="text-sm font-semibold text-accent">
                   Waiting to reveal cards...
                 </span>
-                )}
-              </div>
-            );
+                  <span className="text-xs text-muted-foreground mt-1">
+                  The owner will reveal when ready.
+                </span>
+                </div>
+              );
+            } else {
+              return (
+                <div className="flex flex-col items-center text-center">
+                <span className="text-sm text-muted-foreground">
+                  Select card to vote
+                </span>
+                  {voteCount > 0 && (
+                    <span className="text-xs text-accent mt-1">
+                    Waiting to reveal cards...
+                  </span>
+                  )}
+                </div>
+              );
+            }
           }
-        }
-      })()}
+        })()}
 
-      {showCountdownOverlay && localCountdown !== null && roomOverlayRef && roomOverlayRef.current &&
-        createPortal(
-          <div className="absolute inset-0 z-50 pointer-events-none">
-            {/* Backdrop */}
-            <div
-              className="absolute inset-0"
-              style={{
-                background:
-                  "radial-gradient(circle at center, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.45) 20%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0) 100%)",
-              }}
-            />
-            {/* Countdown */}
-            <div className="relative z-10 flex h-full w-full items-center justify-center pointer-events-auto">
-              <CountdownOverlay
-                seconds={localCountdown}
-                isRoomOwner={currentIsRoomOwner}
-                onCancel={() =>
-                  cancelRevealCountdownMutation({
-                    variables: { roomId: room.id, userId: currentUserId },
-                  })
-                }
+        {showCountdownOverlay && localCountdown !== null && roomOverlayRef && roomOverlayRef.current &&
+          createPortal(
+            <div className="absolute inset-0 z-50 pointer-events-none">
+              {/* Backdrop */}
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    "radial-gradient(circle at center, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.45) 20%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0) 100%)",
+                }}
               />
-            </div>
-          </div>,
-          roomOverlayRef.current
-        )
-      }
-
-      <NewGameDialog
-        open={openNewGameDialog}
-        setOpen={setOpenNewGameDialog}
-        room={room}
-        onConfirm={handleResetGame}
-      />
+              {/* Countdown */}
+              <div className="relative z-10 flex h-full w-full items-center justify-center pointer-events-auto">
+                <CountdownOverlay
+                  seconds={localCountdown}
+                  isRoomOwner={currentIsRoomOwner}
+                  onCancel={() =>
+                    cancelRevealCountdownMutation({
+                      variables: { roomId: room.id, userId: currentUserId },
+                    })
+                  }
+                />
+              </div>
+            </div>,
+            roomOverlayRef.current
+          )
+        }
+        <NewGameDialog
+          open={openNewGameDialog}
+          setOpen={setOpenNewGameDialog}
+          room={room}
+          onConfirm={handleResetGame}
+        />
+      </div>
     </div>
   );
 };
