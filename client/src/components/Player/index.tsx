@@ -587,7 +587,7 @@ export function Player({
             onSend={(plain, formatted) => handleSendChat(plain, formatted)}
             onClose={() => setShowChatInput(false)}
             isOpen={showChatInput}
-            className={`${isLeftSide ? "right-[20px] -top-0.5" : "-right-[280px] -top-0.5"}`}
+            className={`${isLeftSide ? "right-[20px] top-4" : "-right-[280px] top-4"}`}
             isLeftSide={isLeftSide}
             isTopSide={isTopSide}
           />
