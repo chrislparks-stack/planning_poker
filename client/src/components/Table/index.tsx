@@ -12,7 +12,6 @@ import { useToast } from "@/hooks/use-toast";
 import type { Room } from "@/types";
 import { NewGameDialog } from "@/components/NewGameDialog";
 import {createPortal} from "react-dom";
-import {useBackgroundConfig} from "@/contexts/BackgroundContext.tsx";
 
 interface TableProps {
   room: Room;
@@ -34,8 +33,6 @@ export const Table: FC<TableProps> = ({
   roomOverlayRef
 }) => {
   const { toast } = useToast();
-  const { background } = useBackgroundConfig();
-  const isStarry = background.enabled && background.id === "starry";
   const [openNewGameDialog, setOpenNewGameDialog] = useState(false);
 
   const [showCardsMutation, { loading: showCardLoading }] =
@@ -112,9 +109,14 @@ export const Table: FC<TableProps> = ({
     )
     : undefined;
 
+  const totalPlayers = room.users?.length ?? 0;
   const voteCount = table.length;
   const userHasSubmitted = currentEntry !== undefined;
   const selectedCardLabel = currentEntry?.card ?? "";
+  const votePercentage =
+    totalPlayers > 0
+      ? Math.round((voteCount / totalPlayers) * 100)
+      : 0;
 
   // ===== Countdown Overlay state =====
   const [showCountdownOverlay, setShowCountdownOverlay] =
@@ -232,16 +234,40 @@ export const Table: FC<TableProps> = ({
       });
   }
 
+  const [animatedProgress, setAnimatedProgress] = useState(0);
+
+  useEffect(() => {
+    let frame: number;
+
+    const animate = () => {
+      setAnimatedProgress(prev => {
+        const diff = votePercentage - prev;
+
+        if (Math.abs(diff) < 0.5) {
+          return votePercentage;
+        }
+
+        return prev + diff * 0.1;
+      });
+
+      frame = requestAnimationFrame(animate);
+    };
+
+    frame = requestAnimationFrame(animate);
+
+    return () => cancelAnimationFrame(frame);
+  }, [votePercentage]);
+
   // ===== Render =====
   return (
     <div
       ref={innerRef}
       className="
-      relative flex justify-center items-center
-      w-[25vw] max-w-72 min-w-48
-      h-36 rounded-full
-      isolate
-    "
+        relative flex justify-center items-center
+        w-[25vw] max-w-72 min-w-48
+        h-36 rounded-full
+        isolate
+      "
     >
       {/* Accent Glow Halo */}
       <div
@@ -260,15 +286,28 @@ export const Table: FC<TableProps> = ({
         <div className="absolute inset-0 rounded-full border border-white/20 dark:border-white/10" />
       </div>
 
+      {/* Progress Accent */}
+      <div
+        className="absolute inset-0 rounded-full pointer-events-none p-[15px]"
+        style={{
+          background: `
+            conic-gradient(
+              hsl(var(--accent)) ${animatedProgress * 3.6}deg,
+              transparent 0deg
+            )
+          `,
+          WebkitMask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+          WebkitMaskComposite: "xor",
+          maskComposite: "exclude"
+        }}
+      />
+
       {/* Glass Surface */}
       <div
         className={[
           "relative w-full h-full rounded-full",
           "backdrop-blur-[3px] shadow-[inset_0_0_12px_rgba(0,0,0,0.35),inset_0_0_40px_rgba(0,0,0,0.15)]",
-          "border border-white/10 flex items-center justify-center",
-          isStarry
-            ? "bg-black/40 dark:bg-background/40"
-            : "bg-background/40"
+          "border border-white/10 flex items-center justify-center"
         ].join(" ")}
       >
         {(() => {
@@ -283,8 +322,7 @@ export const Table: FC<TableProps> = ({
                       : handleResetGame()
                   }
                   disabled={resetGameLoading}
-                  className="w-36"
-                  size="lg"
+                  className="w-[60%] h-[35%]"
                 >
                   {resetGameLoading && (
                     <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
@@ -295,22 +333,22 @@ export const Table: FC<TableProps> = ({
             } else if (userHasSubmitted) {
               return (
                 <div className="flex flex-col items-center text-center">
-                <span className="text-sm font-semibold">
-                  You voted:{" "}
-                  <span className="ml-1 font-mono tabular-nums">
-                    {selectedCardLabel}
+                  <span className="text-[clamp(10px,1.5vw,16px)]font-semibold">
+                    You voted:{" "}
+                    <span className="ml-1 font-mono tabular-nums">
+                      {selectedCardLabel}
+                    </span>
                   </span>
-                </span>
-                  <span className="text-xs text-accent mt-1">
-                  Waiting to start new game...
-                </span>
+                    <span className="text-[clamp(9px,1vw,12px)] text-accent mt-1">
+                    Waiting to start new game...
+                  </span>
                 </div>
               );
             } else {
               return (
                 <div className="flex flex-col items-center text-center">
-                  <span className="text-sm text-muted-foreground">No vote yet</span>
-                  <span className="text-xs text-accent mt-1">
+                  <span className="text-[clamp(10px,1.5vw,16px)]">You did not select vote</span>
+                  <span className="text-[clamp(9px,1vw,12px)] text-accent mt-1">
                   Waiting to start new game...
                 </span>
                 </div>
@@ -325,21 +363,25 @@ export const Table: FC<TableProps> = ({
                 <Button
                   onClick={handleReveal}
                   disabled={showCardLoading || countdownLoading}
-                  size="lg"
+                  className="flex flex-col items-center justify-center w-[65%] h-[40%] text-base"
                 >
-                  {(showCardLoading || countdownLoading) && (
-                    <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Reveal Cards
+                  <span className="font-semibold text-[clamp(10px,1.4vw,18px)] mt-2">
+                    Reveal Votes
+                  </span>
+
+                  <span className="text-[clamp(8px,0.6vw,11px)] font-mono opacity-60 -mt-1.5">
+                    {voteCount}/{totalPlayers} voted ({votePercentage}%)
+                  </span>
                 </Button>
+
               );
             } else {
               return (
                 <div className="flex flex-col items-center text-center">
-                <span className="text-sm text-muted-foreground">
+                <span className="text-[clamp(10px,1.5vw,16px)] text-muted-foreground">
                   No votes yet
                 </span>
-                  <span className="text-xs text-accent mt-1">
+                  <span className="text-[clamp(9px,1vw,12px)] text-accent mt-1">
                   Waiting for players to vote...
                 </span>
                 </div>
@@ -349,65 +391,71 @@ export const Table: FC<TableProps> = ({
             if (userHasSubmitted) {
               return (
                 <div className="flex flex-col items-center text-center">
-                <span className="text-sm font-semibold text-accent">
+                <span className="text-[clamp(10px,1.5vw,16px)] font-semibold text-accent">
                   Waiting to reveal cards...
                 </span>
-                  <span className="text-xs text-muted-foreground mt-1">
-                  The owner will reveal when ready.
+                <span className="text-[clamp(9px,1vw,12px)] mt-1">
+                  The owner will reveal when ready
                 </span>
                 </div>
               );
             } else {
               return (
                 <div className="flex flex-col items-center text-center">
-                <span className="text-sm text-muted-foreground">
+                <span className="text-[clamp(10px,1.5vw,16px)]">
                   Select card to vote
                 </span>
-                  {voteCount > 0 && (
-                    <span className="text-xs text-accent mt-1">
+                {voteCount > 0 && (
+                  <span className="text-[clamp(9px,1vw,12px)] text-accent mt-1">
                     Waiting to reveal cards...
                   </span>
-                  )}
+                )}
                 </div>
               );
             }
           }
         })()}
-
-        {showCountdownOverlay && localCountdown !== null && roomOverlayRef && roomOverlayRef.current &&
-          createPortal(
-            <div className="absolute inset-0 z-50 pointer-events-none">
-              {/* Backdrop */}
-              <div
-                className="absolute inset-0"
-                style={{
-                  background:
-                    "radial-gradient(circle at center, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.45) 20%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0) 100%)",
-                }}
-              />
-              {/* Countdown */}
-              <div className="relative z-10 flex h-full w-full items-center justify-center pointer-events-auto">
-                <CountdownOverlay
-                  seconds={localCountdown}
-                  isRoomOwner={currentIsRoomOwner}
-                  onCancel={() =>
-                    cancelRevealCountdownMutation({
-                      variables: { roomId: room.id, userId: currentUserId },
-                    })
-                  }
-                />
-              </div>
-            </div>,
-            roomOverlayRef.current
-          )
-        }
-        <NewGameDialog
-          open={openNewGameDialog}
-          setOpen={setOpenNewGameDialog}
-          room={room}
-          onConfirm={handleResetGame}
-        />
       </div>
+
+      {showCountdownOverlay && localCountdown !== null && roomOverlayRef && roomOverlayRef.current &&
+        createPortal(
+          <div
+            className="absolute left-0 right-0 z-50 pointer-events-none"
+            style={{
+              top: 0,
+              height: roomOverlayRef.current.clientHeight
+            }}
+          >
+          {/* Backdrop */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "radial-gradient(circle at center, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.45) 20%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0) 100%)",
+              }}
+            />
+            {/* Countdown */}
+            <div className="relative z-10 flex h-full w-full items-center justify-center pointer-events-auto">
+              <CountdownOverlay
+                seconds={localCountdown}
+                isRoomOwner={currentIsRoomOwner}
+                onCancel={() =>
+                  cancelRevealCountdownMutation({
+                    variables: { roomId: room.id, userId: currentUserId },
+                  })
+                }
+              />
+            </div>
+          </div>,
+          roomOverlayRef.current
+        )
+      }
+      <NewGameDialog
+        open={openNewGameDialog}
+        setOpen={setOpenNewGameDialog}
+        room={room}
+        onConfirm={handleResetGame}
+      />
     </div>
   );
 };

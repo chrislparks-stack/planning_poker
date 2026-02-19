@@ -460,7 +460,7 @@ export function RoomPage() {
             )}
             <div className="flex flex-1 min-h-0 w-full flex-col">
               <div ref={roomRef} className="flex-1 min-h-0 overflow-auto">
-                <div className="flex justify-center px-4 mt-[max(8vh,25px)]">
+                <div className="flex justify-center px-4 pt-[8px]">
                   <Room
                     room={room}
                     onShowInChat={handleShowInChat}

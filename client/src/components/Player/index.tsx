@@ -463,6 +463,35 @@ export function Player({
         }
       : { tabIndex: 0 };
 
+  const truncateUsername = (name: string) =>
+    name.length < 30 ? name : `${name.slice(0, 26)}...`
+
+  const title = useMemo(() => {
+    if (isTargetSelf) {
+      return "Click to chat"
+    }
+
+    const name = truncateUsername(user.username)
+
+    if (!isGameOver) {
+      return user.lastCardPicked == null
+        ? `${name} is thinking...`
+        : `${name} has voted`
+    }
+
+    return user.lastCardPicked == null
+      ? `${name} did not vote`
+      : `${name} voted ${user.lastCardValue}`
+  }, [
+    isTargetSelf,
+    room?.roomOwnerId,
+    user.id,
+    user.username,
+    user.lastCardPicked,
+    user.lastCardValue,
+    isGameOver
+  ])
+
   return (
     <div className="flex flex-col items-center" data-testid="player">
       <div
@@ -470,10 +499,7 @@ export function Player({
           isTargetSelf ? "cursor-pointer" : "cursor-default"
         }`}
         ref={cardRef}
-        title={
-          isTargetSelf ? "Click to chat" : room?.roomOwnerId === user.id ? `Room Owner: ${user.username}`
-          : user.username.length < 30 ? user.username : `${user.username.slice(0, 26)}...`
-        }
+        title={title}
         onClick={() => {
           if (isTargetSelf) setShowChatInput(!showChatInput);
         }}

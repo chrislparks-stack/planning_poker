@@ -39,8 +39,13 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({ onClick, men
       }
     };
 
+    const EDGE_VW = 0.10;
+    const EDGE_MAX = 250;
+
     const handleMouseMove = (e: MouseEvent) => {
-      const nearRight = window.innerWidth - e.clientX < 80;
+      const edgeWidth = Math.min(window.innerWidth * EDGE_VW, EDGE_MAX);
+
+      const nearRight = window.innerWidth - e.clientX < edgeWidth;
       const belowHeader = e.clientY > HEADER_HEIGHT + HEADER_PADDING;
       const shouldShow = nearRight && belowHeader && !menuOpen;
 
@@ -74,7 +79,7 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({ onClick, men
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
-            className="absolute right-0 bottom-0 w-[160px] z-40"
+            className="absolute right-0 bottom-0 w-[10vw] max-w-[250px] z-40"
             style={{
               top: HEADER_HEIGHT,
               background: `
@@ -91,7 +96,7 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({ onClick, men
             {/* Clickable inner layer — inset a bit from the right to avoid scrollbar overlap */}
             <div
               onClick={onClick}
-              className="absolute inset-y-0 right-[6px] w-[154px] cursor-pointer"
+              className="absolute inset-y-0 right-[6px] w-[9.8vw] max-w-[245px] cursor-pointer"
               style={{ pointerEvents: "auto" }}
             >
               <motion.div
@@ -100,7 +105,7 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({ onClick, men
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 60 }}
                 transition={{ type: "spring", stiffness: 100, damping: 18 }}
-                className="absolute top-[45%] right-3 z-50 -translate-y-1/2 select-none will-change-transform group"
+                className="absolute top-[45%] z-50 right-[0.5vw] -translate-y-1/2 select-none will-change-transform group"
                 style={{
                   display: "flex",
                   flexDirection: "column",

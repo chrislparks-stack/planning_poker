@@ -81,40 +81,39 @@ export default function AvatarCarousel({ users, chatOpen, className }: AvatarCar
     chatOpen: boolean
     truncate: (name: string) => string
   }) => (
-    <div className="relative flex justify-center">
-      <Tooltip disabled={chatOpen}>
-        <TooltipTrigger asChild>
+    <Tooltip disabled={chatOpen} delayDuration={1000}>
+      <TooltipTrigger asChild>
+        <div className="relative flex justify-center">
           <Avatar className="border-2 border-background cursor-default">
             <AvatarFallback>
               {u.username[0].toUpperCase()}
             </AvatarFallback>
           </Avatar>
-        </TooltipTrigger>
-
-        <TooltipContent sideOffset={15}>
-          {u.username}
-        </TooltipContent>
-      </Tooltip>
-
-      <div
-        className="
-        absolute
-        -bottom-[6px]
-        px-2 py-[2px]
-        text-[8px]
-        rounded-full
-        bg-background/80
-        backdrop-blur
-        border
-        border-border
-        text-foreground
-        shadow-sm
-        whitespace-nowrap
-      "
-      >
-        {truncate(u.username)}
-      </div>
-    </div>
+          <div
+            className="
+            absolute
+            -bottom-[6px]
+            px-2 py-[2px]
+            text-[8px]
+            rounded-full
+            bg-background/80
+            backdrop-blur
+            border
+            border-border
+            text-foreground
+            shadow-sm
+            whitespace-nowrap
+            cursor-default
+          "
+          >
+            {truncate(u.username)}
+          </div>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent sideOffset={15}>
+        {u.username}
+      </TooltipContent>
+    </Tooltip>
   )
 
   return (
@@ -127,6 +126,30 @@ export default function AvatarCarousel({ users, chatOpen, className }: AvatarCar
         .filter(Boolean)
         .join(" ")}
     >
+      {/* Count */}
+      <Tooltip disabled={chatOpen}>
+        <TooltipTrigger asChild>
+          <div
+            className="
+              shrink-0
+              flex items-center gap-1.5
+              px-3 py-1
+              rounded-full
+              bg-accent/10
+              border border-accent/20
+              text-xs font-medium
+              text-accent cursor-default
+            "
+          >
+            <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
+            {users.length} {users.length === 1 ? "Player" : "Players"}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent sideOffset={15}>
+          {users.length} {users.length === 1 ? "Player" : "Players"} Currently In Room
+        </TooltipContent>
+      </Tooltip>
+
       <div className="flex items-center gap-2 flex-1 min-w-0">
         {/* Left Arrow */}
         {users.length > show && (
@@ -217,30 +240,6 @@ export default function AvatarCarousel({ users, chatOpen, className }: AvatarCar
           </div>
         )}
       </div>
-
-      {/* Count */}
-      <Tooltip disabled={chatOpen}>
-        <TooltipTrigger asChild>
-          <div
-            className="
-              shrink-0
-              flex items-center gap-1.5
-              px-3 py-1
-              rounded-full
-              bg-accent/10
-              border border-accent/20
-              text-xs font-medium
-              text-accent cursor-default
-            "
-          >
-            <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
-            {users.length} {users.length === 1 ? "Player" : "Players"}
-          </div>
-        </TooltipTrigger>
-        <TooltipContent sideOffset={15}>
-          {users.length} {users.length === 1 ? "Player" : "Players"} Currently In Room
-        </TooltipContent>
-      </Tooltip>
     </div>
   )
 }
