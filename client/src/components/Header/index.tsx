@@ -22,9 +22,10 @@ interface HeaderProps {
   users?: User[];
   onMenuOpenChange?: (open: boolean) => void;
   chatOpen?: boolean;
+  highlightAppearance?: boolean;
 }
 
-export const Header: FC<HeaderProps> = ({ room, users, onMenuOpenChange, chatOpen }) => {
+export const Header: FC<HeaderProps> = ({ room, users, onMenuOpenChange, chatOpen, highlightAppearance }) => {
   const { user } = useAuth();
   const { copyRoomUrlToClipboard } = useCopyRoomUrlToClipboard();
   const displayUsers = useMemo(
@@ -96,7 +97,7 @@ export const Header: FC<HeaderProps> = ({ room, users, onMenuOpenChange, chatOpe
               <Separator orientation="vertical" className="h-6" />
             </div>
           )}
-          <AccountMenu room={room} onOpenChange={handleOpenChange} />
+          <AccountMenu room={room} onOpenChange={handleOpenChange} highlightAppearance={highlightAppearance} />
         </div>
       )}
     </header>

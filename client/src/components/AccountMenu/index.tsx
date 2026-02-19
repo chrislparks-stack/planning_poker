@@ -8,7 +8,7 @@ import {
   Sun,
   User
 } from "lucide-react";
-import {FC, useRef, useState} from "react";
+import {FC, useEffect, useRef, useState} from "react";
 
 import { useLogoutMutation, useSetRoomOwnerMutation } from "@/api";
 import { ConfirmLogoutDialog } from "@/components/ConfirmLogoutDialog";
@@ -35,13 +35,15 @@ import { useAuth } from "@/contexts";
 import { useToast } from "@/hooks/use-toast";
 import { Room } from "@/types";
 import {SupportDialog} from "@/components/SupportDialog";
+import {cn} from "@/lib/utils.ts";
 
 interface AccountMenuProps {
   room?: Room;
   onOpenChange?: (open: boolean) => void;
+  highlightAppearance?: boolean;
 }
 
-export const AccountMenu: FC<AccountMenuProps> = ({ room, onOpenChange }) => {
+export const AccountMenu: FC<AccountMenuProps> = ({ room, onOpenChange, highlightAppearance }) => {
   const { user, logout } = useAuth();
   const { toast } = useToast();
   const hoverTimerRef = useRef<number | null>(null);
@@ -52,6 +54,9 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room, onOpenChange }) => {
   const [openToggleModeDialog, setOpenToggleModeDialog] = useState(false);
   const [openConfirmLogoutDialog, setOpenConfirmLogoutDialog] = useState(false);
   const [openSupportDialog, setOpenSupportDialog] = useState(false);
+  const [flashAppearance, setFlashAppearance] = useState(false);
+  const hasFlashedRef = useRef(false);
+
   const [setRoomOwner] = useSetRoomOwnerMutation();
   const [logoutMutation] = useLogoutMutation({
     onCompleted: async () => {
@@ -102,6 +107,22 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room, onOpenChange }) => {
     localStorage.removeItem("Room");
   }
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    if (!highlightAppearance) return;
+    if (hasFlashedRef.current) return;
+
+    hasFlashedRef.current = true;
+
+    setFlashAppearance(true);
+
+    const timer = setTimeout(() => {
+      setFlashAppearance(false);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [menuOpen, highlightAppearance]);
+
   return (
     <>
       {user && (
@@ -145,8 +166,15 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room, onOpenChange }) => {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem onClick={() => setOpenToggleModeDialog(true)} className="cursor-pointer">
-                  {localStorage.getItem("vite-ui-theme") == "light" ? (
+                <DropdownMenuItem
+                  onClick={() => setOpenToggleModeDialog(true)}
+                  className={cn(
+                    "cursor-pointer transition-all duration-500",
+                    flashAppearance &&
+                    "relative bg-accent/15 ring-1 ring-accent/80 shadow-[0_0_12px_hsl(var(--accent)/0.8)]"
+                  )}
+                >
+                {localStorage.getItem("vite-ui-theme") == "light" ? (
                     <Sun className="mr-2 h-4 w-4" />
                   ) : localStorage.getItem("vite-ui-theme") == "dark" ? (
                     <Moon className="mr-2 h-4 w-4" />

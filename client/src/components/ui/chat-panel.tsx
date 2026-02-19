@@ -308,10 +308,13 @@ export const ChatPanel: React.FC<{
             {/* Info tooltip icon */}
             <div className="relative group">
               <div
-                className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-accent/40
+                className="inline-flex items-center justify-center w-2 h-2 mt-3
                    text-accent/70 bg-background/60 backdrop-blur-sm cursor-help hover:text-accent transition-colors duration-200"
               >
-                <Info className="w-3.5 h-3.5" strokeWidth={1.8} />
+                <Info
+                  className="w-3.5 h-3.5 block flex-shrink-0"
+                  strokeWidth={1.8}
+                />
               </div>
 
               {/* Tooltip box */}
