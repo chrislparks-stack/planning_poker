@@ -16,8 +16,12 @@ import { routeTree } from "./routeTree.gen";
 
 import "./index.css";
 
+import "slick-carousel/slick/slick.css"
+import "slick-carousel/slick/slick-theme.css"
+
 import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
+import {BackgroundConfigProvider} from "@/contexts/BackgroundContext.tsx";
 
 try {
   if (typeof document !== "undefined") {
@@ -69,15 +73,17 @@ root.render(
     {import.meta.env.PROD ? <SpeedInsights /> : null}
     <Toaster />
     <ThemeProvider defaultTheme="dark">
-      <ApolloProvider client={client}>
-        <TooltipProvider>
-          <AuthProvider>
-            <ConfirmationDialogProvider>
-              <RouterProvider router={router} />
-            </ConfirmationDialogProvider>
-          </AuthProvider>
-        </TooltipProvider>
-      </ApolloProvider>
+      <BackgroundConfigProvider>
+        <ApolloProvider client={client}>
+          <TooltipProvider>
+            <AuthProvider>
+              <ConfirmationDialogProvider>
+                <RouterProvider router={router} />
+              </ConfirmationDialogProvider>
+            </AuthProvider>
+          </TooltipProvider>
+        </ApolloProvider>
+      </BackgroundConfigProvider>
     </ThemeProvider>
   </StrictMode>
 );

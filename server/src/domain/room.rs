@@ -12,6 +12,7 @@ use super::{
 };
 
 #[derive(Clone, Debug, SimpleObject)]
+#[graphql(complex)]
 pub struct Room {
     pub id: EntityId,
     pub name: Option<String>,
@@ -186,6 +187,7 @@ impl Room {
         self.last_active_instant.elapsed() > ttl
     }
 
+    // === Chat functions ===
     pub fn push_chat(&mut self, msg: crate::domain::chat::ChatMessage) {
         self.chat_history.push(msg);
         if self.chat_history.len() > 100 {
@@ -198,5 +200,43 @@ impl Room {
         let before = self.chat_history.len();
         self.chat_history.retain(|msg| (now - msg.timestamp) < max_age);
         before - self.chat_history.len()
+    }
+
+    pub fn has_unread_chat_internal(&self, user_id: EntityId) -> bool {
+        let user = match self.users.iter().find(|u| u.id == user_id) {
+            Some(u) => u,
+            None => return false,
+        };
+
+        let latest_message = match self.chat_history.last() {
+            Some(msg) => msg,
+            None => return false,
+        };
+
+        match user.last_seen_chat_message_id {
+            Some(seen_id) => seen_id != latest_message.id,
+            None => true,
+        }
+    }
+
+    pub fn mark_chat_seen(&mut self, user_id: EntityId) {
+        let latest_id = match self.chat_history.last() {
+            Some(msg) => msg.id,
+            None => return,
+        };
+
+        if let Some(user) = self.users.iter_mut().find(|u| u.id == user_id) {
+            user.last_seen_chat_message_id = Some(latest_id);
+        }
+    }
+}
+
+#[async_graphql::ComplexObject]
+impl Room {
+    async fn has_unread_chat(
+        &self,
+        user_id: EntityId,
+    ) -> bool {
+        self.has_unread_chat_internal(user_id)
     }
 }

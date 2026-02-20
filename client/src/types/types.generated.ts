@@ -70,6 +70,7 @@ export type MutationRoot = {
   joinRoom: Room;
   kickUser: Room;
   logout: Scalars['Boolean']['output'];
+  markChatSeen: Room;
   pickCard: Room;
   renameRoom: Room;
   resetGame: Room;
@@ -129,6 +130,12 @@ export type MutationRootKickUserArgs = {
 
 export type MutationRootLogoutArgs = {
   userId?: InputMaybe<Scalars['UUID']['input']>;
+};
+
+
+export type MutationRootMarkChatSeenArgs = {
+  roomId: Scalars['UUID']['input'];
+  userId: Scalars['UUID']['input'];
 };
 
 
@@ -220,12 +227,18 @@ export type Room = {
   countdownValue?: Maybe<Scalars['Int']['output']>;
   deck: Deck;
   game: Game;
+  hasUnreadChat: Scalars['Boolean']['output'];
   id: Scalars['UUID']['output'];
   isGameOver: Scalars['Boolean']['output'];
   name?: Maybe<Scalars['String']['output']>;
   revealStage?: Maybe<Scalars['String']['output']>;
   roomOwnerId?: Maybe<Scalars['UUID']['output']>;
   users: Array<User>;
+};
+
+
+export type RoomHasUnreadChatArgs = {
+  userId: Scalars['UUID']['input'];
 };
 
 export type RoomEvent = {
@@ -278,6 +291,7 @@ export type User = {
   id: Scalars['UUID']['output'];
   lastCardPicked?: Maybe<Scalars['String']['output']>;
   lastCardValue?: Maybe<Scalars['Float']['output']>;
+  lastSeenChatMessageId?: Maybe<Scalars['UUID']['output']>;
   username: Scalars['String']['output'];
 };
 

@@ -28,7 +28,7 @@ export type GameFieldPolicy = {
 	id?: FieldPolicy<any> | FieldReadFunction<any>,
 	table?: FieldPolicy<any> | FieldReadFunction<any>
 };
-export type MutationRootKeySpecifier = ('banUser' | 'cancelRevealCountdown' | 'createRoom' | 'createUser' | 'editUser' | 'joinRoom' | 'kickUser' | 'logout' | 'pickCard' | 'renameRoom' | 'resetGame' | 'sendChatMessage' | 'setRoomOwner' | 'showCards' | 'startRevealCountdown' | 'toggleConfirmNewGame' | 'toggleCountdownOption' | 'unbanUser' | 'updateDeck' | MutationRootKeySpecifier)[];
+export type MutationRootKeySpecifier = ('banUser' | 'cancelRevealCountdown' | 'createRoom' | 'createUser' | 'editUser' | 'joinRoom' | 'kickUser' | 'logout' | 'markChatSeen' | 'pickCard' | 'renameRoom' | 'resetGame' | 'sendChatMessage' | 'setRoomOwner' | 'showCards' | 'startRevealCountdown' | 'toggleConfirmNewGame' | 'toggleCountdownOption' | 'unbanUser' | 'updateDeck' | MutationRootKeySpecifier)[];
 export type MutationRootFieldPolicy = {
 	banUser?: FieldPolicy<any> | FieldReadFunction<any>,
 	cancelRevealCountdown?: FieldPolicy<any> | FieldReadFunction<any>,
@@ -38,6 +38,7 @@ export type MutationRootFieldPolicy = {
 	joinRoom?: FieldPolicy<any> | FieldReadFunction<any>,
 	kickUser?: FieldPolicy<any> | FieldReadFunction<any>,
 	logout?: FieldPolicy<any> | FieldReadFunction<any>,
+	markChatSeen?: FieldPolicy<any> | FieldReadFunction<any>,
 	pickCard?: FieldPolicy<any> | FieldReadFunction<any>,
 	renameRoom?: FieldPolicy<any> | FieldReadFunction<any>,
 	resetGame?: FieldPolicy<any> | FieldReadFunction<any>,
@@ -56,7 +57,7 @@ export type QueryRootFieldPolicy = {
 	rooms?: FieldPolicy<any> | FieldReadFunction<any>,
 	userRooms?: FieldPolicy<any> | FieldReadFunction<any>
 };
-export type RoomKeySpecifier = ('bannedUsers' | 'chatHistory' | 'confirmNewGame' | 'countdownEnabled' | 'countdownValue' | 'deck' | 'game' | 'id' | 'isGameOver' | 'name' | 'revealStage' | 'roomOwnerId' | 'users' | RoomKeySpecifier)[];
+export type RoomKeySpecifier = ('bannedUsers' | 'chatHistory' | 'confirmNewGame' | 'countdownEnabled' | 'countdownValue' | 'deck' | 'game' | 'hasUnreadChat' | 'id' | 'isGameOver' | 'name' | 'revealStage' | 'roomOwnerId' | 'users' | RoomKeySpecifier)[];
 export type RoomFieldPolicy = {
 	bannedUsers?: FieldPolicy<any> | FieldReadFunction<any>,
 	chatHistory?: FieldPolicy<any> | FieldReadFunction<any>,
@@ -65,6 +66,7 @@ export type RoomFieldPolicy = {
 	countdownValue?: FieldPolicy<any> | FieldReadFunction<any>,
 	deck?: FieldPolicy<any> | FieldReadFunction<any>,
 	game?: FieldPolicy<any> | FieldReadFunction<any>,
+	hasUnreadChat?: FieldPolicy<any> | FieldReadFunction<any>,
 	id?: FieldPolicy<any> | FieldReadFunction<any>,
 	isGameOver?: FieldPolicy<any> | FieldReadFunction<any>,
 	name?: FieldPolicy<any> | FieldReadFunction<any>,
@@ -85,11 +87,12 @@ export type SubscriptionRootFieldPolicy = {
 	roomChat?: FieldPolicy<any> | FieldReadFunction<any>,
 	roomEvents?: FieldPolicy<any> | FieldReadFunction<any>
 };
-export type UserKeySpecifier = ('id' | 'lastCardPicked' | 'lastCardValue' | 'username' | UserKeySpecifier)[];
+export type UserKeySpecifier = ('id' | 'lastCardPicked' | 'lastCardValue' | 'lastSeenChatMessageId' | 'username' | UserKeySpecifier)[];
 export type UserFieldPolicy = {
 	id?: FieldPolicy<any> | FieldReadFunction<any>,
 	lastCardPicked?: FieldPolicy<any> | FieldReadFunction<any>,
 	lastCardValue?: FieldPolicy<any> | FieldReadFunction<any>,
+	lastSeenChatMessageId?: FieldPolicy<any> | FieldReadFunction<any>,
 	username?: FieldPolicy<any> | FieldReadFunction<any>
 };
 export type UserCardKeySpecifier = ('card' | 'userId' | UserCardKeySpecifier)[];
