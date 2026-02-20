@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {useAuth} from "@/contexts";
-import {useMarkChatSeenMutation, useRoomUnreadSubscription} from "@/api";
+import {useMarkChatSeenMutation} from "@/api";
 import {Room} from "@/types";
 import {NotificationDot} from "@/components/ui/notification-dot.tsx";
 
@@ -17,14 +17,6 @@ interface ChatRevealPromptProps {
 
 export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({ onClick, menuOpen = false, room, chatOpen }) => {
   const { user } = useAuth();
-  const { data } = useRoomUnreadSubscription({
-    variables: {
-      roomId: room!.id,
-      userId: user?.id!,
-    },
-    skip: !room?.id || !user?.id,
-  });
-  const hasUnread = data?.room?.hasUnreadChat ?? false;
   const [markChatSeen] = useMarkChatSeenMutation();
   const [isNearEdge, setIsNearEdge] = useState(false);
 
@@ -122,6 +114,8 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({ onClick, men
       .length;
 
   }, [room?.chatHistory, room?.users, user?.id]);
+
+  const hasUnread = unreadCount > 0;
 
   return (
     <>
