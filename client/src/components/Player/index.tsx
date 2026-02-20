@@ -117,6 +117,33 @@ export function Player({
       ? room.roomOwnerId === currentUserId
       : false;
 
+  const hasUnreadFromUser = useMemo(() => {
+    if (!room || !currentUserId) return false
+
+    const currentUser = room.users.find(u => u.id === currentUserId)
+    const lastSeenId = currentUser?.lastSeenChatMessageId
+
+    if (!room.chatHistory?.length) return false
+
+    const history = room.chatHistory
+
+    if (!lastSeenId) {
+      // If never seen anything, unread if this user has sent anything
+      return history.some(m => m.userId === user.id && m.userId !== currentUserId)
+    }
+
+    const lastSeenIndex = history.findIndex(m => m.id === lastSeenId)
+
+    if (lastSeenIndex === -1) {
+      return history.some(m => m.userId === user.id && m.userId !== currentUserId)
+    }
+
+    return history
+      .slice(lastSeenIndex + 1)
+      .some(m => m.userId === user.id && m.userId !== currentUserId)
+
+  }, [room?.chatHistory, room?.users, currentUserId, user.id])
+
   // --- Track kick/ban status only (no toasts here) ---
   useEffect(() => {
     if (user.id !== currentUserId) return;
@@ -309,7 +336,7 @@ export function Player({
     closeMenu();
     if (!onMakeOwner || !room) return;
     try {
-      await onMakeOwner(user.id, room);
+      await onMakeOwner(user.id, room as Room);
       toast({
         title: "Ownership transferred",
         description: `${user.username} is now the room owner`
@@ -473,6 +500,10 @@ export function Player({
 
     const name = truncateUsername(user.username)
 
+    if (hasUnreadFromUser) {
+      return `${name} has a new message...\nCheck the chat panel!`
+    }
+
     if (!isGameOver) {
       return user.lastCardPicked == null
         ? `${name} is thinking...`
@@ -489,7 +520,8 @@ export function Player({
     user.username,
     user.lastCardPicked,
     user.lastCardValue,
-    isGameOver
+    isGameOver,
+    hasUnreadFromUser
   ])
 
   return (
@@ -600,8 +632,11 @@ export function Player({
                   className="flex flex-row items-center justify-center gap-[3px] break-all"
                   style={{fontSize: Math.max(7, Math.min(80 / user.username.length, 14))}}
                 >
-                  {room?.roomOwnerId === user.id && <Crown className="text-glass w-3 h-3"/>}
-                  {user.username.length < 30 ? user.username : `${user.username.slice(0, 26)}...`}
+                  {room?.roomOwnerId === user.id && <Crown className="text-glass w-3 h-3" />}
+                  <span>{user.username.length < 30 ? user.username : `${user.username.slice(0, 26)}...`}</span>
+                  {hasUnreadFromUser && (
+                    <MessageSquareText className="w-[10px] h-[10px] -ml-1 -mt-1 text-accent" />
+                  )}
                 </div>
               </div>
             </div>

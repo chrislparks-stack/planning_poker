@@ -18,8 +18,8 @@ interface VoteDistributionChartProps {
 export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
   room
 }) => {
-  const [chartKey, setChartKey] = useState(0);
   const chartRef = useRef<HTMLDivElement | null>(null);
+  const [showLabels, setShowLabels] = useState(false);
 
   const { background } = useBackgroundConfig();
   const isStarry = background.enabled && background.id === "starry";
@@ -122,7 +122,6 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
 
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
-            setChartKey((k) => k + 1);
             setTimeout(verify, 120);
           });
         });
@@ -140,6 +139,13 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
     };
   }, [chartData, room]);
 
+  useEffect(() => {
+    if (!room.isGameOver) return;
+    setShowLabels(false);
+    const t = setTimeout(() => setShowLabels(true), 750);
+    return () => clearTimeout(t);
+  }, [chartData]);
+
   return (
     <div
       className="flex flex-col items-center justify-center overflow-visible"
@@ -153,7 +159,6 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
         </div>
       )}
       <ChartContainer
-        key={chartKey}
         ref={chartRef}
         style={chartContainerStyle}
         className="-mb-5 h-[15vh] min-h-[170px]"
@@ -173,7 +178,7 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
             isAnimationActive
             animationBegin={0}
             animationDuration={500}
-            label={<VoteLabel max={maxCardCount} barCount={chartData.length} />}
+            label={showLabels && <VoteLabel max={maxCardCount} barCount={chartData.length} />}
           >
             {chartData.map((entry) => {
               const isMajority = entry.Votes === maxCardCount;

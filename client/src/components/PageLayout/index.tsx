@@ -46,7 +46,7 @@ export function PageLayout({ children, room, users, showChat }: {
 
     const timer = setTimeout(() => {
       setShowThemeHint(true);
-    }, 1000);
+    }, 5 * 60 * 1000);
 
     return () => clearTimeout(timer);
   }, []);
@@ -93,6 +93,8 @@ export function PageLayout({ children, room, users, showChat }: {
           <ChatRevealPrompt
             onClick={() => setChatVisible(true)}
             menuOpen={menuOpen}
+            room={room}
+            chatOpen={chatVisible}
           />
         }
         <main className="flex flex-1 min-h-0 flex-col overflow-hidden relative">

@@ -1,5 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import {useAuth} from "@/contexts";
+import {useMarkChatSeenMutation, useRoomUnreadSubscription} from "@/api";
+import {Room} from "@/types";
+import {NotificationDot} from "@/components/ui/notification-dot.tsx";
 
 const HEADER_HEIGHT = 56;
 const HEADER_PADDING = 30;
@@ -7,10 +11,33 @@ const HEADER_PADDING = 30;
 interface ChatRevealPromptProps {
   onClick: () => void;
   menuOpen?: boolean;
+  room?: Room;
+  chatOpen?: boolean;
 }
 
-export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({ onClick, menuOpen = false }) => {
+export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({ onClick, menuOpen = false, room, chatOpen }) => {
+  const { user } = useAuth();
+  const { data } = useRoomUnreadSubscription({
+    variables: {
+      roomId: room!.id,
+      userId: user?.id!,
+    },
+    skip: !room?.id || !user?.id,
+  });
+  const hasUnread = data?.room?.hasUnreadChat ?? false;
+  const [markChatSeen] = useMarkChatSeenMutation();
   const [isNearEdge, setIsNearEdge] = useState(false);
+
+  useEffect(() => {
+    if (!chatOpen || !room?.id || !user?.id) return;
+
+    markChatSeen({
+      variables: {
+        roomId: room.id,
+        userId: user.id,
+      },
+    });
+  }, [chatOpen]);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -69,10 +96,37 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({ onClick, men
     };
   }, []);
 
+  const unreadCount = React.useMemo(() => {
+    if (!room?.chatHistory || !user?.id) return 0;
+
+    const roomUser = room?.users.find(u => u.id === user?.id);
+    const lastSeenId = roomUser?.lastSeenChatMessageId;
+
+    // If user has never seen anything
+    if (!lastSeenId) {
+      return room.chatHistory.filter(m => m.userId !== user.id).length;
+    }
+
+    const lastSeenIndex = room.chatHistory.findIndex(
+      m => m.id === lastSeenId
+    );
+
+    // If last seen not found (pruned, edge case, etc.)
+    if (lastSeenIndex === -1) {
+      return room.chatHistory.filter(m => m.userId !== user.id).length;
+    }
+
+    return room.chatHistory
+      .slice(lastSeenIndex + 1)
+      .filter(m => m.userId !== user.id)
+      .length;
+
+  }, [room?.chatHistory, room?.users, user?.id]);
+
   return (
     <>
       <AnimatePresence>
-        {isNearEdge && (
+        {(isNearEdge || hasUnread) && (
           <motion.div
             key="chat-gradient"
             initial={{ opacity: 0 }}
@@ -118,15 +172,30 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({ onClick, men
                 }}
               >
                 <div
-                  className="font-mono text-[13px] uppercase tracking-[0.18em]
-                   text-accent/70 backdrop-blur-sm drop-shadow-[0_0_1px_rgba(0,0,0,0.4)]
-                   group-hover:text-accent transition-all duration-200"
+                  className={`flex flex-row font-mono text-[13px] uppercase tracking-[0.18em]
+                  backdrop-blur-sm transition-all duration-300
+                  ${
+                    hasUnread
+                      ? "text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]"
+                      : "text-accent/70 drop-shadow-[0_0_1px_rgba(0,0,0,0.4)] group-hover:text-accent"
+                  }`}
                 >
-                  SHOW CHAT
+                  {hasUnread
+                    ? unreadCount === 1
+                      ? "NEW CHAT MESSAGE"
+                      : "NEW CHAT MESSAGES"
+                    : "SHOW CHAT"}
+                  <NotificationDot count={unreadCount} className= "bg-red-500 text-white shadow-md -mr-[5px] -mt-[2px]" />
                 </div>
                 <div
-                  className="mt-2 text-accent/70 text-xl font-light transition-transform duration-300
-                   group-hover:translate-x-[1px]"
+                  className={`mt-2 text-accent/70 text-xl font-light transition-transform duration-300
+                   group-hover:translate-x-[1px]
+                   ${
+                    hasUnread
+                      ? "text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]"
+                      : "text-accent/70 drop-shadow-[0_0_1px_rgba(0,0,0,0.4)] group-hover:text-accent"
+                  }`
+                }
                 >
                   ◂
                 </div>

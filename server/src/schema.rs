@@ -339,22 +339,26 @@ impl MutationRoot {
             })
             .collect();
 
-        let (last_card_picked, last_card_value) = storage
+        let (last_card_picked, last_card_value, last_seen_chat_message_id) = storage
             .values()
             .find_map(|room| {
                 room.users
                     .iter()
                     .find(|u| u.id == user_id)
-                    .map(|u| (u.last_card_picked.clone(), u.last_card_value))
+                    .map(|u| (
+                        u.last_card_picked.clone(),
+                        u.last_card_value,
+                        u.last_seen_chat_message_id
+                    ))
             })
-            .map(|(a, b)| (a, b))
-            .unwrap_or((None, None));
+            .unwrap_or((None, None, None));
 
         Ok(User {
             id: user_id,
             username,
             last_card_picked,
             last_card_value,
+            last_seen_chat_message_id
         })
     }
 
@@ -560,36 +564,58 @@ impl MutationRoot {
     }
 
      async fn send_chat_message(
-            &self,
-            ctx: &Context<'_>,
-            input: SendChatInput,
-        ) -> Result<ChatMessage> {
-            let mut storage = get_storage(ctx).await;
-            let room = storage
-                .get_mut(&input.room_id)
-                .ok_or(Error::new("Room not found"))?;
+        &self,
+        ctx: &Context<'_>,
+        input: SendChatInput,
+     ) -> Result<ChatMessage> {
+        let mut storage = get_storage(ctx).await;
+        let room = storage
+            .get_mut(&input.room_id)
+            .ok_or(Error::new("Room not found"))?;
 
-            let msg = ChatMessage::new(
-                input.room_id,
-                input.user_id,
-                input.username.clone(),
-                input.content.clone(),
-                input.formatted_content.clone(),
-                input.content_type.clone(),
-                input.position.clone().map(|p| ChatPosition {
-                    x: p.x,
-                    y: p.y,
-                    width: p.width,
-                    height: p.height,
-                }),
-            );
+        let msg = ChatMessage::new(
+            input.room_id,
+            input.user_id,
+            input.username.clone(),
+            input.content.clone(),
+            input.formatted_content.clone(),
+            input.content_type.clone(),
+            input.position.clone().map(|p| ChatPosition {
+                x: p.x,
+                y: p.y,
+                width: p.width,
+                height: p.height,
+            }),
+        );
 
-            room.push_chat(msg.clone());
-            room.touch();
+        room.push_chat(msg.clone());
 
-            SimpleBroker::publish(msg.clone());
-            Ok(msg)
+        room.touch();
+        SimpleBroker::publish(msg.clone());
+        SimpleBroker::publish(room.get_room());
+
+        Ok(msg)
+    }
+
+    async fn mark_chat_seen(
+        &self,
+        ctx: &Context<'_>,
+        room_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<Room> {
+        let mut storage = get_storage(ctx).await;
+
+        match storage.get_mut(&room_id) {
+            Some(room) => {
+                room.mark_chat_seen(user_id);
+                room.touch();
+
+                SimpleBroker::publish(room.get_room());
+                Ok(room.get_room())
+            }
+            None => Err(Error::new("Room not found")),
         }
+    }
 }
 
 pub struct SubscriptionRoot;

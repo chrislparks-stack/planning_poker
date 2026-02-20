@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Room, ChatMessage, User } from "@/types";
 import { cn } from "@/lib/utils";
-import { useRoomChatSubscription, useSendChatMessageMutation } from "@/api";
+import {useMarkChatSeenMutation, useRoomChatSubscription, useSendChatMessageMutation} from "@/api";
 import { ChatInput } from "@/components/ui/chat-input";
 import { useToast } from "@/hooks/use-toast";
 import { useCardPosition } from "@/utils/cardPositionContext";
@@ -22,6 +22,8 @@ export const ChatPanel: React.FC<{
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [hasNewMessages, setHasNewMessages] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [freshMessageIds, setFreshMessageIds] = useState<Set<string>>(new Set());
+  const [markChatSeen] = useMarkChatSeenMutation();
   const { toast } = useToast();
   const { getCardRect } = useCardPosition();
   const [sendChatMessage] = useSendChatMessageMutation();
@@ -54,6 +56,19 @@ export const ChatPanel: React.FC<{
   }, [visible, room?.id, room?.chatHistory]);
 
   useEffect(() => {
+    if (visible && roomId && currentUserId) {
+      markChatSeen({
+        variables: {
+          roomId,
+          userId: currentUserId,
+        },
+      }).catch((err) => {
+        console.error("Failed to mark chat seen:", err)
+      })
+    }
+  }, [visible, messages, roomId, currentUserId]);
+
+  useEffect(() => {
     if (!visible) return;
     const el = scrollRef.current;
     if (!el) return;
@@ -65,6 +80,46 @@ export const ChatPanel: React.FC<{
       el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
     });
   }, [visible]);
+
+  useEffect(() => {
+    if (!currentUserId || !room?.users) return;
+
+    const roomUser = room.users.find(u => u.id === currentUserId);
+    const lastSeenId = roomUser?.lastSeenChatMessageId;
+
+    let unread: string[];
+
+    if (!lastSeenId) {
+      // Never seen anything
+      unread = messages
+        .filter(m => m.userId !== currentUserId)
+        .map(m => m.id);
+    } else {
+      const lastSeenIndex = messages.findIndex(m => m.id === lastSeenId);
+
+      if (lastSeenIndex === -1) {
+        unread = messages
+          .filter(m => m.userId !== currentUserId)
+          .map(m => m.id);
+      } else {
+        unread = messages
+          .slice(lastSeenIndex + 1)
+          .filter(m => m.userId !== currentUserId)
+          .map(m => m.id);
+      }
+    }
+
+    if (!unread.length) return;
+
+    const freshSet = new Set(unread);
+    setFreshMessageIds(freshSet);
+
+    const timeout = window.setTimeout(() => {
+      setFreshMessageIds(new Set());
+    }, 5000);
+
+    return () => clearTimeout(timeout);
+  }, [visible, messages]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -93,15 +148,17 @@ export const ChatPanel: React.FC<{
             m.id === message.id ||
             (m.userId === message.userId &&
               Math.abs(
-                new Date(m.timestamp).getTime() - new Date(message.timestamp).getTime()
+                new Date(m.timestamp).getTime() -
+                new Date(message.timestamp).getTime()
               ) < 2000 &&
               m.content === message.content)
-        );
+        )
 
-        if (exists) return prev;
+        if (exists) return prev
 
-        if (!autoScroll) setHasNewMessages(true);
-        return [...prev, message];
+        if (!autoScroll) setHasNewMessages(true)
+
+        return [...prev, message]
       });
     },
   });
@@ -367,6 +424,7 @@ export const ChatPanel: React.FC<{
             messages.map((msg) => {
               const isSelf = msg.userId === currentUserId;
               const time = formatMessageTime(msg.timestamp, now);
+              const isFresh = freshMessageIds.has(msg.id);
               const initials = msg.username
                 .split(" ")
                 .map((n) => n[0])
@@ -424,15 +482,17 @@ export const ChatPanel: React.FC<{
                   <div className={cn("flex flex-col", isSelf && "items-end")}>
                     <div
                       className={cn(
-                        "px-4 py-2.5 rounded-2xl leading-relaxed backdrop-blur-[3px] border transition-all duration-200",
+                        "px-4 py-2.5 rounded-2xl leading-relaxed backdrop-blur-[3px] border transition-all duration-1000 ease-out",
                         isSelf
                           ? "bg-accent/35 dark:bg-accent/25 border-accent/40 text-[color:hsl(var(--foreground-soft))] dark:text-[color:hsl(var(--accent-foreground))]"
                           : "bg-muted/35 dark:bg-muted/25 border-border text-[color:hsl(var(--foreground-soft))] dark:text-[color:hsl(var(--foreground))]",
+                        !isSelf && isFresh &&
+                        "ring-2 ring-accent/70 bg-accent/15 shadow-[0_0_18px_rgba(var(--accent-rgb),0.45)]",
                         isEmojiOnly &&
                         "bg-transparent border-none shadow-none p-0 leading-none text-[3rem] sm:text-[3.5rem] md:text-[4rem]"
                       )}
                     >
-                      <div
+                    <div
                         className={cn(
                           "chat-bubble-content leading-snug break-words break-all whitespace-pre-wrap overflow-hidden",
                           isEmojiOnly &&
@@ -457,13 +517,15 @@ export const ChatPanel: React.FC<{
 
                     <div
                       className={cn(
-                        "text-[10px] mt-1 font-mono tracking-tight flex items-center gap-1",
+                        "text-[10px] mt-1 font-mono tracking-tight flex items-center gap-1 transition-all duration-1000 ease-out",
                         isSelf
-                          ? "text-accent-foreground/50 flex-row-reverse"
-                          : "text-muted-foreground/60"
+                          ? "flex-row-reverse text-accent-foreground/50"
+                          : isFresh
+                            ? "text-accent drop-shadow-[0_0_6px_rgba(var(--accent-rgb),0.7)]"
+                            : "text-muted-foreground/60"
                       )}
                     >
-                      <span>{msg.username}</span>
+                    <span>{msg.username}</span>
                       <span className="opacity-60">•</span>
                       <span>{time}</span>
                     </div>

@@ -20,13 +20,13 @@ export const VoteLabel: FC<VoteLabelProps> = ({
   max,
   barCount,
 }) => {
-  if (x == null || y == null || width == null || height == null || value == null) return null;
-
   const isMajority = value === max;
 
-  const cx = x + width / 2;
-  const safeY =
-    Number.isFinite(y) ? Math.max(y + (height / 2.2)) : 16;
+  const cx = x && width ? x + width / 2 : 65;
+  const centerY = y && height ? y + height / 2 : 75;
+
+  const minPadding = 12;
+  const safeY = y ? Math.max(centerY - 8, y + minPadding) : 65;
 
   const labelWidthValue = 0.7 / (barCount / 2);
   const majorityWidthValue = 0.55 / (barCount / 2);
@@ -37,7 +37,7 @@ export const VoteLabel: FC<VoteLabelProps> = ({
       y={safeY}
       fill="white"
       textAnchor="middle"
-      dominantBaseline="hanging"
+      dominantBaseline="middle"
       className="tabular-nums"
       fontSize={clamp(5, `${labelWidthValue}vw`, 18)}
       pointerEvents="none"
