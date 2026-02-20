@@ -484,8 +484,8 @@ export const ChatPanel: React.FC<{
                       className={cn(
                         "px-4 py-2.5 rounded-2xl leading-relaxed backdrop-blur-[3px] border transition-all duration-1000 ease-out",
                         isSelf
-                          ? "bg-accent/35 dark:bg-accent/25 border-accent/40 text-[color:hsl(var(--foreground-soft))] dark:text-[color:hsl(var(--accent-foreground))]"
-                          : "bg-muted/35 dark:bg-muted/25 border-border text-[color:hsl(var(--foreground-soft))] dark:text-[color:hsl(var(--foreground))]",
+                          ? "bg-accent/45 dark:bg-accent/25 border-accent/40 text-[color:hsl(var(--foreground))] dark:text-[color:hsl(var(--foreground))]"
+                          : "bg-background/45 dark:bg-background/25 border-border text-[color:hsl(var(--foreground))] dark:text-[color:hsl(var(--foreground))]",
                         !isSelf && isFresh &&
                         "ring-2 ring-accent/70 bg-accent/15 shadow-[0_0_18px_rgba(var(--accent-rgb),0.45)]",
                         isEmojiOnly &&
@@ -525,9 +525,9 @@ export const ChatPanel: React.FC<{
                             : "text-muted-foreground/60"
                       )}
                     >
-                    <span>{msg.username}</span>
-                      <span className="opacity-60">•</span>
-                      <span>{time}</span>
+                    <span className="text-foreground/75">{msg.username}</span>
+                      <span className="text-foreground/30">•</span>
+                      <span className="text-foreground/50">{time}</span>
                     </div>
                   </div>
 
