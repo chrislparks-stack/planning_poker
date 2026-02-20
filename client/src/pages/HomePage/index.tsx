@@ -18,6 +18,7 @@ import {ChevronCascade, ScrollHint} from "@/components/ui/spinners.tsx";
 
 import type { Variants } from "framer-motion";
 import {useTouchInput} from "@/utils/mobileUtils.tsx";
+import {ArrowDownToLine} from "lucide-react";
 
 const beginClimbVariants: Variants = {
   hidden: {
@@ -78,6 +79,27 @@ export const HomePage: FC = () => {
 
   const touchStartY = useRef<number | null>(null);
   const touchStartX = useRef<number | null>(null);
+
+  const [viewportHeight, setViewportHeight] = useState<number>(window.innerHeight);
+  const FADE_START = 720;
+  const FADE_END = 620;
+
+  const footerOpacity = useMemo(() => {
+    if (viewportHeight >= FADE_START) return 1;
+    if (viewportHeight <= FADE_END) return 0;
+
+    return (viewportHeight - FADE_END) / (FADE_START - FADE_END);
+  }, [viewportHeight]);
+
+
+  useEffect(() => {
+    function handleResize() {
+      setViewportHeight(window.innerHeight);
+    }
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     if (scene === 2) {
@@ -308,7 +330,7 @@ export const HomePage: FC = () => {
                     <img
                       src={SummitLogo}
                       alt="Summit"
-                      className="w-auto h-auto max-h-[20svmin]"
+                      className="w-[clamp(200px,50svh,600px)] h-auto"
                     />
                   </div>
 
@@ -358,12 +380,11 @@ export const HomePage: FC = () => {
 
                   {/* Route Map */}
                   <section className="relative px-2 py-[5svh]">
-                    <div className="absolute left-1/2 top-0 h-[32svh] w-px bg-gradient-to-b from-transparent via-accent/30 to-transparent" />
-
+                    <div className="absolute left-1/2 top-0 h-[32svh] w-[2px] bg-gradient-to-b from-transparent via-accent/30 to-transparent" />
                     <div className="space-y-[0.5svh]">
                       {[
                         ["Basecamp", "Start Together", "Create a room in seconds and bring your whole team into the same space", "left"],
-                        ["The Climb", "Surface Assumptions", "Vote simultaneously to reveal gaps, spark discussion, and build shared understanding", "right"],
+                        ["The Climb", "Surface Challenges", "Vote simultaneously to reveal gaps, spark discussion, and build shared understanding", "right"],
                         ["The Summit", "Reach Alignment", "Lock in estimates with confidence and move forward as one team", "left"]
                       ].map(([label, title, desc, side], i) => (
                         <div key={i} className="relative flex items-start">
@@ -372,7 +393,7 @@ export const HomePage: FC = () => {
                             <p className="text-[clamp(7px,1.5svmin,13px)] uppercase tracking-widest text-accent/80 mb-0.5">
                               {label}
                             </p>
-                            <h3 className="text-[clamp(8px,2.3svmin,16px)] font-semibold text-gray-700 dark:text-white">
+                            <h3 className="text-[clamp(8px,2.3svh,16px)] font-semibold text-gray-700 dark:text-white">
                               {title}
                             </h3>
                             <p className={`${side === "left" ? "text-left" : " text-right float-right"} mt-0.5 text-[clamp(7px,2svmin,15px)] w-[clamp(100px,30svmin,300px)]  text-gray-600 dark:text-gray-400`}>
@@ -415,8 +436,13 @@ export const HomePage: FC = () => {
           </AnimatePresence>
         </div>
 
-        {/* ================= FIXED FOOTER (restored + mobile-safe) ================= */}
-        <div className="fixed left-1/2 bottom-0 -translate-x-1/2 z-50 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
+        {/* ================= FIXED FOOTER  ================= */}
+        <motion.div
+          className="fixed left-1/2 bottom-0 -translate-x-1/2 z-50 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]"
+          animate={{ opacity: isTouch ? 1 : footerOpacity }}
+          transition={{ duration: 0.25 }}
+          style={{ pointerEvents: isTouch ? "auto" : footerOpacity < 0.1 ? "none" : "auto" }}
+        >
           <div className="mx-auto w-full max-w-3xl">
             <div className="relative h-[6svh] min-h-[48px]">
               <AnimatePresence mode="wait">
@@ -520,7 +546,35 @@ export const HomePage: FC = () => {
               )}
             </div>
           </div>
-        </div>
+        </motion.div>
+        {!isTouch && viewportHeight <= 610 && viewportHeight > 350 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{
+              opacity: { duration: 2 },
+              y: { duration: 2 }
+            }}
+            className="fixed bottom-3 left-0 right-0 z-40 pointer-events-none"
+          >
+            <div className="mx-auto w-full max-w-3xl flex justify-center">
+              <p
+                className="
+                  flex items-center gap-2
+                  text-[clamp(9px,1.6svmin,14px)]
+                  text-gray-500 dark:text-gray-400
+                  tracking-wide
+                  whitespace-nowrap
+                "
+              >
+                <ArrowDownToLine className="w-[clamp(10px,1.6svmin,16px)] h-[clamp(10px,1.6svmin,16px)]" />
+                Expand window to start your climb
+                <ArrowDownToLine className="w-[clamp(10px,1.6svmin,16px)] h-[clamp(10px,1.6svmin,16px)]" />
+              </p>
+            </div>
+          </motion.div>
+        )}
       </div>
     </div>
   );
