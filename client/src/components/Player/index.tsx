@@ -11,7 +11,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {Room, User} from "@/types";
 import {useTheme} from "@/components";
-import {Ban, Crown, DoorOpen, MessageSquareText} from "lucide-react";
+import {Ban, Crown, DoorOpen, MessageSquareText, MessagesSquare} from "lucide-react";
 import {ChatInputWrapper} from "@/components/ui/chat-input-wrapper.tsx";
 import {useCardPosition} from "@/utils/cardPositionContext.tsx";
 import {useBackgroundConfig} from "@/contexts/BackgroundContext.tsx";
@@ -501,7 +501,7 @@ export function Player({
     const name = truncateUsername(user.username)
 
     if (hasUnreadFromUser) {
-      return `${name} has a new message...\nCheck the chat panel!`
+      return `${name} has a new message...`
     }
 
     if (!isGameOver) {
@@ -635,7 +635,7 @@ export function Player({
                   {room?.roomOwnerId === user.id && <Crown className="text-glass w-3 h-3" />}
                   <span>{user.username.length < 30 ? user.username : `${user.username.slice(0, 26)}...`}</span>
                   {hasUnreadFromUser && (
-                    <MessageSquareText className="w-[10px] h-[10px] -ml-1 -mt-1 text-accent" />
+                    <MessagesSquare className="w-[10px] h-[10px] -ml-1 -mt-1 text-accent" />
                   )}
                 </div>
               </div>
