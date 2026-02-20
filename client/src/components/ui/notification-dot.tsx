@@ -12,7 +12,6 @@ export const NotificationDot: React.FC<NotificationDotProps> = ({
   className,
   max = 9
 }) => {
-  console.log("Count:", count);
   if (!count || count <= 0) return null
 
   const display = count > max ? `${max}+` : count
