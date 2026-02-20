@@ -3,6 +3,7 @@ fragment UserFragment on User {
     username
     lastCardPicked
     lastCardValue
+    lastSeenChatMessageId
 }
 
 fragment DeckFragment on Deck {
@@ -206,17 +207,23 @@ mutation SendChatMessage(
     }
 }
 
-subscription RoomChat($roomId: UUID!) {
-    roomChat(roomId: $roomId) {
-        ...ChatMessageFragment
+mutation MarkChatSeen($roomId: UUID!, $userId: UUID!) {
+    markChatSeen(roomId: $roomId, userId: $userId) {
+        id
+        hasUnreadChat(userId: $userId)
     }
 }
 
 # === Subscriptions & Queries ===
-
 subscription Room($roomId: UUID!) {
     room(roomId: $roomId) {
         ...RoomFragment
+    }
+}
+
+subscription RoomChat($roomId: UUID!) {
+    roomChat(roomId: $roomId) {
+        ...ChatMessageFragment
     }
 }
 
@@ -226,8 +233,22 @@ subscription RoomEvents($roomId: UUID!) {
     }
 }
 
+subscription RoomUnread($roomId: UUID!, $userId: UUID!) {
+    room(roomId: $roomId) {
+        id
+        hasUnreadChat(userId: $userId)
+    }
+}
+
 query GetRoom($roomId: UUID!) {
     roomById(roomId: $roomId) {
         ...RoomFragment
+    }
+}
+
+query GetRoomUnread($roomId: UUID!, $userId: UUID!) {
+    roomById(roomId: $roomId) {
+        id
+        hasUnreadChat(userId: $userId)
     }
 }

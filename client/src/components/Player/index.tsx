@@ -10,11 +10,16 @@ import {
 } from "@/api";
 import { useToast } from "@/hooks/use-toast";
 import {Room, User} from "@/types";
-import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import {useTheme} from "@/components";
 import {Ban, Crown, DoorOpen, MessageSquareText} from "lucide-react";
 import {ChatInputWrapper} from "@/components/ui/chat-input-wrapper.tsx";
 import {useCardPosition} from "@/utils/cardPositionContext.tsx";
+import {useBackgroundConfig} from "@/contexts/BackgroundContext.tsx";
+import darkModeDiscussion from "@/assets/dark-mode-discussion.gif";
+import lightModeDiscussion from "@/assets/light-mode-discussion.gif";
+import noVoteGif from "@/assets/no-vote.gif";
+import pickedGif from "@/assets/picked.gif";
+
 
 interface PlayerProps {
   user: User;
@@ -41,6 +46,9 @@ export function Player({
 }: PlayerProps) {
   const { toast } = useToast();
   const { theme } = useTheme();
+  const { background } = useBackgroundConfig();
+
+  const isStarry = background.enabled && background.id === "starry";
 
   const { registerCardRef } = useCardPosition();
   const cardRef = useRef<HTMLDivElement>(null);
@@ -59,6 +67,7 @@ export function Player({
   const roomName = room?.name ?? "this room";
   const [kickUser] = useKickUserMutation();
   const [banUser] = useBanUserMutation();
+  const previousOwnerRef = useRef<string | null | undefined>(null);
   const [showChatInput, setShowChatInput] = useState(false);
 
   // --- Local state ---
@@ -108,6 +117,33 @@ export function Player({
       ? room.roomOwnerId === currentUserId
       : false;
 
+  const hasUnreadFromUser = useMemo(() => {
+    if (!room || !currentUserId) return false
+
+    const currentUser = room.users.find(u => u.id === currentUserId)
+    const lastSeenId = currentUser?.lastSeenChatMessageId
+
+    if (!room.chatHistory?.length) return false
+
+    const history = room.chatHistory
+
+    if (!lastSeenId) {
+      // If never seen anything, unread if this user has sent anything
+      return history.some(m => m.userId === user.id && m.userId !== currentUserId)
+    }
+
+    const lastSeenIndex = history.findIndex(m => m.id === lastSeenId)
+
+    if (lastSeenIndex === -1) {
+      return history.some(m => m.userId === user.id && m.userId !== currentUserId)
+    }
+
+    return history
+      .slice(lastSeenIndex + 1)
+      .some(m => m.userId === user.id && m.userId !== currentUserId)
+
+  }, [room?.chatHistory, room?.users, currentUserId, user.id])
+
   // --- Track kick/ban status only (no toasts here) ---
   useEffect(() => {
     if (user.id !== currentUserId) return;
@@ -134,32 +170,40 @@ export function Player({
   }, [room, currentUserId, user.id, roomId]);
 
   const cardIcon = useMemo(() => {
-    const waitingIcon = () =>{
-      if (theme === "dark" || (theme === "system" && systemPrefersDark)) {
-        return ("https://lottie.host/5f503f6d-b4fa-448b-8fe0-3a45c1e69a21/baw3omE5jy.json");
+    const waitingIcon = () => {
+      if (theme === "dark" || (theme === "system" && systemPrefersDark) || isStarry) {
+        return darkModeDiscussion;
       }
-      return ("https://lottie.host/3e8b13ae-fcf0-4059-86e5-da5c00d47aed/ZdfJuColeq.json");
-    }
+      return lightModeDiscussion;
+    };
+
     if (isCardPicked) {
       if (isGameOver) {
         return (
           <div
-            className="text-3xl font-semibold text-gray-900 dark:text-gray-300"
+            className={[
+              "text-3xl font-semibold",
+              isStarry
+                ? "text-gray-300"
+                : "text-gray-900 dark:text-gray-300"
+            ].join(" ")}
           >
             {card}
           </div>
         );
       } else {
         return (
-          <DotLottieReact
+          <img
             key="picked"
-            src="https://lottie.host/8e391350-aac4-4a10-82a8-f15bbb520ebc/TRA06YDEQc.json"
-            autoplay
-            style={{width: 80, height: 60, margin: -25}}
+            src={pickedGif}
+            alt="Card picked"
+            className="max-w-none max-h-none"
+            style={{ width: 90, height: 70 }}
           />
         );
       }
     }
+
     if (isGameOver) {
       return (
         <div
@@ -167,12 +211,12 @@ export function Player({
             width: 80,
             height: 100,
             background: `
-                radial-gradient(
-                  circle at 50% 50%,
-                  white 20%,
-                  transparent 40%
-                )
-              `,
+            radial-gradient(
+              circle at 50% 50%,
+              white 20%,
+              transparent 40%
+            )
+          `,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -180,26 +224,27 @@ export function Player({
             backdropFilter: "blur(2px)"
           }}
         >
-        <DotLottieReact
+          <img
             key="gameover"
-            src="https://lottie.host/407d17f3-a83c-46ca-ab4c-981dcbc77919/TKjtavdeuG.json"
-            loop
-            autoplay
-            style={{ width: 50, height: 35 }}
+            src={noVoteGif}
+            alt="Game over"
+            className="max-w-none max-h-none"
+            style={{ width: 35, height: 30 }}
           />
         </div>
       );
     }
+
     return (
-      <DotLottieReact
+      <img
         key="waiting"
         src={waitingIcon()}
-        autoplay
-        loop
-        style={{ width: 65, height: 50, margin: -25 }}
+        alt="Waiting"
+        className="max-w-none max-h-none"
+        style={{ width: 50, height: 50}}
       />
     );
-  }, [isCardPicked, isGameOver, theme, systemPrefersDark, card]);
+  }, [isCardPicked, isGameOver, theme, systemPrefersDark, card, isStarry]);
 
   // --- Context menu logic ---
   const closeMenu = () => setMenuPos(null);
@@ -263,17 +308,41 @@ export function Player({
     };
   }, [menuPos]);
 
+  useEffect(() => {
+    if (!room || !currentUserId) return;
+
+    const currentOwnerId = room.roomOwnerId;
+    const previousOwnerId = previousOwnerRef.current;
+
+    if (
+      previousOwnerId &&
+      previousOwnerId !== currentOwnerId &&
+      currentOwnerId === currentUserId
+    ) {
+      const previousOwnerUsername =
+        room.users.find(u => u.id === previousOwnerId)?.username ?? "The previous owner";
+
+      toast({
+        title: "Control transferred 👑",
+        description: `${previousOwnerUsername} has passed you room owner status\nYou now control ${roomName}`,
+      });
+    }
+
+    previousOwnerRef.current = currentOwnerId;
+  }, [room?.roomOwnerId, room?.users, currentUserId, toast, roomName]);
+
   // --- Actions ---
   const handleMakeOwner = async () => {
     closeMenu();
     if (!onMakeOwner || !room) return;
     try {
-      await onMakeOwner(user.id, room);
+      await onMakeOwner(user.id, room as Room);
       toast({
         title: "Ownership transferred",
-        description: `${user.username} is now the room owner.`
+        description: `${user.username} is now the room owner`
       });
-    } catch {
+    } catch(e) {
+      console.error(e);
       toast({
         title: "Error",
         description: "Failed to make owner",
@@ -421,6 +490,40 @@ export function Player({
         }
       : { tabIndex: 0 };
 
+  const truncateUsername = (name: string) =>
+    name.length < 30 ? name : `${name.slice(0, 26)}...`
+
+  const title = useMemo(() => {
+    if (isTargetSelf) {
+      return "Click to chat"
+    }
+
+    const name = truncateUsername(user.username)
+
+    if (hasUnreadFromUser) {
+      return `${name} has a new message...\nCheck the chat panel!`
+    }
+
+    if (!isGameOver) {
+      return user.lastCardPicked == null
+        ? `${name} is thinking...`
+        : `${name} has voted`
+    }
+
+    return user.lastCardPicked == null
+      ? `${name} did not vote`
+      : `${name} voted ${user.lastCardValue}`
+  }, [
+    isTargetSelf,
+    room?.roomOwnerId,
+    user.id,
+    user.username,
+    user.lastCardPicked,
+    user.lastCardValue,
+    isGameOver,
+    hasUnreadFromUser
+  ])
+
   return (
     <div className="flex flex-col items-center" data-testid="player">
       <div
@@ -428,10 +531,7 @@ export function Player({
           isTargetSelf ? "cursor-pointer" : "cursor-default"
         }`}
         ref={cardRef}
-        title={
-          isTargetSelf ? "Click to chat" : room?.roomOwnerId === user.id ? `Room Owner: ${user.username}`
-          : user.username.length < 30 ? user.username : `${user.username.slice(0, 26)}...`
-        }
+        title={title}
         onClick={() => {
           if (isTargetSelf) setShowChatInput(!showChatInput);
         }}
@@ -520,21 +620,24 @@ export function Player({
                 {cardIcon}
               </div>
             </div>
-            <div
-              className="
-                absolute bottom-[4px] w-full
-                text-center text-[14px]
-                font-semibold tracking-wide
-                pointer-events-none select-none
-                text-glass
-              "
-            >
+            <div className={isStarry ? "starry" : undefined}>
               <div
-                className="flex flex-row items-center justify-center gap-[3px] break-all"
-                style={{fontSize: Math.max(7, Math.min(80 / user.username.length, 14))}}
+                className="
+                  absolute bottom-[4px] w-full text-center text-[14px]
+                  font-semibold tracking-wide pointer-events-none select-none
+                  text-glass
+                "
               >
-                {room?.roomOwnerId === user.id && <Crown className="text-glass w-3 h-3"/>}
-                {user.username.length < 30 ? user.username : `${user.username.slice(0, 26)}...`}
+                <div
+                  className="flex flex-row items-center justify-center gap-[3px] break-all"
+                  style={{fontSize: Math.max(7, Math.min(80 / user.username.length, 14))}}
+                >
+                  {room?.roomOwnerId === user.id && <Crown className="text-glass w-3 h-3" />}
+                  <span>{user.username.length < 30 ? user.username : `${user.username.slice(0, 26)}...`}</span>
+                  {hasUnreadFromUser && (
+                    <MessageSquareText className="w-[10px] h-[10px] -ml-1 -mt-1 text-accent" />
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -545,7 +648,7 @@ export function Player({
             onSend={(plain, formatted) => handleSendChat(plain, formatted)}
             onClose={() => setShowChatInput(false)}
             isOpen={showChatInput}
-            className={`${isLeftSide ? "right-[20px] -top-0.5" : "-right-[280px] -top-0.5"}`}
+            className={`${isLeftSide ? "right-[20px] top-4" : "-right-[280px] top-4"}`}
             isLeftSide={isLeftSide}
             isTopSide={isTopSide}
           />

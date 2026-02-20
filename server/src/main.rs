@@ -39,6 +39,14 @@ fn spawn_room_cleanup_task(
     rooms_total_bytes_estimate: IntGauge,
     rooms_avg_bytes_estimate: IntGauge,
 ) {
+    #[derive(Debug, Clone)]
+    struct RoomScanInfo {
+        id: Uuid,
+        name: Option<String>,
+        last_active: chrono::DateTime<chrono::Utc>,
+        estimated_bytes: usize
+    }
+
     tokio::spawn(async move {
         let mut ticker = tokio::time::interval(check_interval);
 
@@ -54,6 +62,7 @@ fn spawn_room_cleanup_task(
             // Snapshot and analyze under lock
             let mut total_estimated_bytes: usize = 0;
             let mut stale_ids: Vec<Uuid> = Vec::new();
+            let mut scan_infos: Vec<RoomScanInfo> = Vec::new();
             let total_seen;
 
             {
@@ -76,7 +85,15 @@ fn spawn_room_cleanup_task(
                     let est = BASE_PER_ROOM
                         + room.users.len().saturating_mul(PER_USER_BYTES)
                         + room.deck.cards.len().saturating_mul(PER_DECK_CARD_BYTES);
+
                     total_estimated_bytes = total_estimated_bytes.saturating_add(est);
+
+                    scan_infos.push(RoomScanInfo {
+                        id: *id,
+                        name: room.name.clone(),
+                        last_active: room.last_active,
+                        estimated_bytes: est
+                    });
 
                     if room.is_safe_to_remove() && room.is_inactive(room_ttl) {
                         stale_ids.push(*id);
@@ -89,6 +106,43 @@ fn spawn_room_cleanup_task(
                 } else {
                     0
                 });
+            }
+
+            if !scan_infos.is_empty() {
+                let now = chrono::Utc::now();
+                let ttl = chrono::Duration::from_std(room_ttl)
+                    .unwrap_or_else(|_| chrono::Duration::zero());
+
+                info!("Room cleanup scan report ({} rooms):", scan_infos.len());
+
+                for info in &scan_infos {
+                    // --- inactive_for (days + hours) ---
+                    let inactive_for = now.signed_duration_since(info.last_active);
+                    let inactive_hours_total = inactive_for.num_hours().max(0);
+                    let inactive_days = inactive_hours_total / 24;
+                    let inactive_hours = inactive_hours_total % 24;
+
+                    // --- removed_in (days + hours) ---
+                    let removed_in = (info.last_active + ttl) - now;
+                    let removed_str = if removed_in <= chrono::Duration::zero() {
+                        "NOW".to_string()
+                    } else {
+                        let hours_total = removed_in.num_hours();
+                        let days = hours_total / 24;
+                        let hours = hours_total % 24;
+                        format!("{}d {}h", days, hours)
+                    };
+
+                    info!(
+                        "  • {:<36} | name={:<20} | inactive_for={}d {}h | size={:>6.1} KB | removed_in={}",
+                        info.id,
+                        info.name.as_deref().unwrap_or("<unnamed>"),
+                        inactive_days,
+                        inactive_hours,
+                        info.estimated_bytes as f64 / 1024.0,
+                        removed_str,
+                    );
+                }
             }
 
             if stale_ids.is_empty() {
@@ -239,15 +293,17 @@ fn spawn_heartbeat_task(
             process_cpu_percent_x100.set(cpu_pct_x100);
 
             info!(
-                "[heartbeat] rooms={} users={} chat_msgs={} chat_mem={}B (~{:.2}KB/room) room_est={}B proc_mem={}MiB cpu_x100={}",
-                room_count,
-                total_users,
-                total_chat_messages,
-                total_chat_bytes,
-                avg_chat_memory_per_room / 1024.0,
-                total_estimated_room_bytes,
-                mem_mib,
-                cpu_pct_x100
+              "[heartbeat] \
+                CPU: {:.2}% | MEM: {} MiB | \
+                Rooms: {} | Users: {} ({:.1}/room) | \
+                Chat: {} msgs | Avg Room Size: {:.1} KB",
+              cpu_pct_x100 as f64 / 100.0,
+              mem_mib,
+              room_count,
+              total_users,
+              avg_users_per_room,
+              total_chat_messages,
+              avg_room_bytes as f64 / 1024.0,
             );
         }
     });

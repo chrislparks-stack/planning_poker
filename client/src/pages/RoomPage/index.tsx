@@ -21,6 +21,8 @@ import { useToast } from "@/hooks/use-toast";
 import { User } from "@/types";
 import { validate as validateUUID } from "uuid";
 import {ResultsTag} from "@/components/ui/results-tag.tsx";
+import {StarrySky} from "@/components/StarrySky";
+import {useBackgroundConfig} from "@/contexts/BackgroundContext.tsx";
 
 export function RoomPage() {
   const { roomId } = useParams({ from: "/room/$roomId" });
@@ -37,8 +39,9 @@ export function RoomPage() {
   const [openCreateUserDialog, setOpenCreateUserDialog] = useState(false);
   const [openRoomOptionsDialog, setOpenRoomOptionsDialog] = useState(false);
 
+  const { background } = useBackgroundConfig();
+
   const [chatVisible, setChatVisible] = useState(false);
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
   const handleShowInChat = () => {
     setChatVisible(true);
@@ -247,8 +250,6 @@ export function RoomPage() {
         if (isNewRoom) {
           setOpenCreateUserDialog(true);
           sessionStorage.removeItem("NEW_ROOM_CREATED");
-        } else if ((room.deck.cards as unknown as never[]).length < 1) {
-          setOpenRoomOptionsDialog(true);
         }
       });
 
@@ -354,6 +355,28 @@ export function RoomPage() {
     };
   }, [room, openCreateUserDialog]);
 
+  useEffect(() => {
+    if (!room || !user) return;
+
+    const storedRoom = localStorage.getItem("Room");
+    const storedCards = storedRoom ? JSON.parse(storedRoom).Cards : null;
+
+    const hasEverConfiguredDeck =
+      Array.isArray(storedCards) && storedCards.length > 0;
+
+    const isCreationFlow =
+      sessionStorage.getItem("NEW_ROOM_CREATED") === "true";
+
+    if (
+      room.roomOwnerId === user.id &&
+      room.deck.cards.length === 0 &&
+      !hasEverConfiguredDeck &&
+      !isCreationFlow
+    ) {
+      setOpenRoomOptionsDialog(true);
+    }
+  }, [room, user]);
+
   const isMissingRoom =
     roomData && roomData.roomById === null && !joinRoomData && !subscriptionData;
 
@@ -412,15 +435,6 @@ export function RoomPage() {
     }
   }, [roomEventsError, toast]);
 
-  useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  const shouldTwoRowLayout =
-    room && room.deck.cards.length > 5 && windowWidth < (500 + 75 * room.deck.cards.length);
-
   return (
     <div>
       {!room ? (
@@ -435,45 +449,35 @@ export function RoomPage() {
             showChat={chatVisible}
             setShowChat={() => setChatVisible(true)}
           >
-            <div className="relative h-[calc(100vh-80px)] w-[calc(100vw-120px)] overflow-hidden">
-              {/* Scrollable Room container */}
-              <div
-                ref={roomRef}
-                className="absolute inset-0 overflow-auto"
-                style={{
-                  height: room.isGameOver || shouldTwoRowLayout
-                    ? "calc(100% - 245px)"
-                    : "calc(100% - 105px)",
-                  scrollbarGutter: "stable both-edges"
-                }}
-              >
-                <div className="relative">
-                  <Room room={room} onShowInChat={handleShowInChat} roomRef={roomRef}/>
+            {background.enabled && background.id === "starry" && (
+              <div className="absolute inset-0 pointer-events-none opacity-100 dark:opacity-60 -z-10">
+                <StarrySky
+                  gradient={background.options.gradient ?? true}
+                  fallingStars={background.options["shooting-stars"] ?? true}
+                  mountains={background.options.mountains ?? true}
+                />
+              </div>
+            )}
+            <div className="flex flex-1 min-h-0 w-full flex-col">
+              <div ref={roomRef} className="flex-1 min-h-0 overflow-auto">
+                <div className="flex justify-center px-4 pt-[8px]">
+                  <Room
+                    room={room}
+                    onShowInChat={handleShowInChat}
+                    roomRef={roomRef}
+                  />
                 </div>
               </div>
 
-              <div className="absolute bottom-0 left-0 right-0 mx-auto w-[100%] max-w-4xl">
-                <div
-                  className={`flex ${
-                    room.isGameOver
-                      ? "sm:flex-row sm:justify-center"
-                      : "justify-center"
-                  }`}
-                >
-                  <div
-                    className={`flex ${
-                      room.isGameOver
-                        ? "sm:flex-row sm:justify-center"
-                        : "justify-center"
-                    }`}
-                  >
-                    <Deck
-                      roomId={roomId}
-                      isGameOver={room.isGameOver}
-                      cards={room.deck.cards}
-                      table={room.game.table}
-                    />
-                  </div>
+              {/* Deck area */}
+              <div className="sticky bottom-0 w-full pt-4 pb-4 backdrop-blur-sm">
+                <div className="mx-auto max-w-4xl flex justify-center">
+                  <Deck
+                    roomId={roomId}
+                    isGameOver={room.isGameOver}
+                    cards={room.deck.cards}
+                    table={room.game.table}
+                  />
                   {room.isGameOver && (
                     <div className="flex justify-center ml-5">
                       <ResultsTag active />

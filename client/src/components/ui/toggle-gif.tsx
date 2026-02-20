@@ -40,7 +40,7 @@ export const ToggleGif: React.FC<{ src: string; alt?: string }> = ({ src, alt })
         className={cn(
           "absolute inset-0 flex items-center justify-center",
           "opacity-0 group-hover:opacity-100 transition-opacity duration-200",
-          "bg-[rgba(0,0,0,0.35)] backdrop-blur-[2px]"
+          "bg-[rgba(0,0,0,0.35)] backdrop-blur-[1px]"
         )}
       >
         <div

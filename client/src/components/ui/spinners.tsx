@@ -1,20 +1,28 @@
 import { motion } from "framer-motion";
+import {cn} from "@/lib/utils.ts";
 
 type ChevronCascadeProps = {
-  overlap?: number; // px to pull chevrons upward (positive = tighter)
-  travel?: number;  // animation travel distance
+  overlap?: number;
+  travel?: number;
+  className?: string;
+  color?: string;
+  size?: number;
 };
 
 export const ChevronCascade = ({
   overlap = 0,
   travel = 3,
+  className,
+  color="text-gray-400 dark:text-gray-500",
+  size = 16,
 }: ChevronCascadeProps) => (
-  <div className="flex flex-col items-center leading-none">
+  <div className={cn("flex flex-col items-center leading-none", className)}>
     {[0, 1, 2].map((i) => (
       <motion.span
         key={i}
-        className="text-gray-400 dark:text-gray-500 text-sm leading-none"
+        className={cn("leading-none", color)}
         style={{
+          fontSize: size,
           marginTop: i === 0 ? 0 : -overlap,
         }}
         animate={{
