@@ -175,21 +175,74 @@ export const ChatPanel: React.FC<{
           })
       );
 
-    const finishScroll = () => {
+    const finish = () => {
       el.scrollTop = el.scrollHeight;
       isAtBottomRef.current = true;
       setShowScrollButton(false);
       setHasNewMessages(false);
     };
 
-    if (pending.length === 0) {
-      finishScroll();
-      return;
-    }
-
-    finishScroll();
-    Promise.all(pending).then(finishScroll);
+    finish();
+    if (pending.length) Promise.all(pending).then(finish);
   }, [messages.length]);
+
+  useLayoutEffect(() => {
+    if (!visible) return;
+
+    const el = scrollRef.current;
+    if (!el) return;
+
+    let raf = 0;
+    let lastClientHeight = el.clientHeight;
+
+    const apply = () => {
+      const s = scrollRef.current;
+      if (!s) return;
+
+      const anchoredBefore = isAtBottomRef.current;
+
+      const newClientHeight = s.clientHeight;
+      const delta = lastClientHeight - newClientHeight;
+
+      if (delta !== 0) {
+        if (anchoredBefore) {
+          s.scrollTop = s.scrollHeight;
+          isAtBottomRef.current = true;
+          setShowScrollButton(false);
+          setHasNewMessages(false);
+        } else {
+          s.scrollTop = Math.max(0, s.scrollTop + delta);
+
+          const anchoredNow = isNearBottom(s, 20);
+          isAtBottomRef.current = anchoredNow;
+          setShowScrollButton(!anchoredNow);
+          if (anchoredNow) setHasNewMessages(false);
+        }
+
+        lastClientHeight = newClientHeight;
+      } else {
+        lastClientHeight = newClientHeight;
+      }
+    };
+
+    const schedule = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(apply);
+    };
+
+    window.addEventListener("resize", schedule);
+    window.visualViewport?.addEventListener("resize", schedule);
+
+    const ro = new ResizeObserver(schedule);
+    ro.observe(el);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", schedule);
+      window.visualViewport?.removeEventListener("resize", schedule);
+      ro.disconnect();
+    };
+  }, [visible]);
 
   const handleScroll = () => {
     const el = scrollRef.current;
@@ -201,35 +254,6 @@ export const ChatPanel: React.FC<{
     setShowScrollButton(!anchored);
     if (anchored) setHasNewMessages(false);
   };
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-
-    const inputArea = el.parentElement?.querySelector(".chat-input-container") as HTMLElement | null;
-    if (!inputArea) return;
-
-    let lastInputHeight = inputArea.getBoundingClientRect().height;
-
-    const observer = new ResizeObserver(() => {
-      const newInputHeight = inputArea.getBoundingClientRect().height;
-      const delta = newInputHeight - lastInputHeight;
-      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-      const anchored = distanceFromBottom < 20;
-
-      if (anchored && delta !== 0) {
-        requestAnimationFrame(() => {
-          el.scrollTop = el.scrollTop + delta;
-        });
-      }
-
-      lastInputHeight = newInputHeight;
-    });
-
-    observer.observe(inputArea);
-
-    return () => observer.disconnect();
-  }, []);
 
   // Send chat (with optional position)
   const handleSendChat = async (plain: string, formatted: string) => {
