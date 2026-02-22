@@ -236,7 +236,7 @@ impl Room {
     async fn has_unread_chat(
         &self,
         user_id: EntityId,
-    ) -> bool {
-        self.has_unread_chat_internal(user_id)
+    ) -> Option<bool> {
+        Some(self.has_unread_chat_internal(user_id))
     }
 }

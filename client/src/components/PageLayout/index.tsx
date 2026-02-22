@@ -1,4 +1,4 @@
-import {RefObject, useEffect, useRef, useState} from "react";
+import {ReactNode, RefObject, useEffect, useRef, useState} from "react";
 import { Header } from "@/components/Header";
 import { ChatRevealPrompt } from "@/components/ui/chat-reveal";
 import { Room, User } from "@/types";
@@ -9,24 +9,16 @@ import { AnimatePresence } from "framer-motion";
 import {getCookie, setCookie} from "@/utils/cookies.ts";
 
 
-export function PageLayout({ children, room, users, showChat }: {
-  children: React.ReactNode;
+export function PageLayout({ children, room, users, showChat, setShowChat }: {
+  children: ReactNode;
   room?: Room;
   users?: User[];
   showChat?: boolean;
-  setShowChat?: () => void;
+  setShowChat?: (value: boolean) => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [chatVisible, setChatVisible] = useState(false);
   const [showThemeHint, setShowThemeHint] = useState(false);
   const [highlightAppearance, setHighlightAppearance] = useState(false);
-
-  useEffect(() => {
-    if (showChat) {
-      setChatVisible(true);
-    }
-  }, [showChat])
-
   const cardRefs = useRef<Record<string, RefObject<HTMLDivElement>>>({});
 
   useEffect(() => {
@@ -76,7 +68,7 @@ export function PageLayout({ children, room, users, showChat }: {
           room={room}
           users={users}
           onMenuOpenChange={setMenuOpen}
-          chatOpen={chatVisible}
+          chatOpen={showChat}
           highlightAppearance={highlightAppearance}
         />
         <AnimatePresence>
@@ -91,10 +83,10 @@ export function PageLayout({ children, room, users, showChat }: {
         </AnimatePresence>
         {!menuOpen &&
           <ChatRevealPrompt
-            onClick={() => setChatVisible(true)}
+            onClick={() => setShowChat?.(true)}
             menuOpen={menuOpen}
             room={room}
-            chatOpen={chatVisible}
+            chatOpen={showChat}
           />
         }
         <main className="flex flex-1 min-h-0 flex-col overflow-hidden relative">
@@ -112,8 +104,8 @@ export function PageLayout({ children, room, users, showChat }: {
                 }
               })()
             }
-            visible={chatVisible}
-            onClose={() => setChatVisible(false)}
+            visible={showChat ?? false}
+            onClose={() => setShowChat?.(false)}
           />
         </main>
       </div>

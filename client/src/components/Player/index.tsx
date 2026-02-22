@@ -635,7 +635,7 @@ export function Player({
                   {room?.roomOwnerId === user.id && <Crown className="text-glass w-3 h-3" />}
                   <span>{user.username.length < 30 ? user.username : `${user.username.slice(0, 26)}...`}</span>
                   {hasUnreadFromUser && (
-                    <MessagesSquare className="w-[10px] h-[10px] -ml-1 -mt-1 text-accent" />
+                    <MessagesSquare className="w-[10px] h-[10px] -ml-1 -mt-1 text-accent animate-pulse" />
                   )}
                 </div>
               </div>
@@ -648,7 +648,7 @@ export function Player({
             onSend={(plain, formatted) => handleSendChat(plain, formatted)}
             onClose={() => setShowChatInput(false)}
             isOpen={showChatInput}
-            className={`${isLeftSide ? "right-[20px] top-4" : "-right-[280px] top-4"}`}
+            className={`${isLeftSide ? "right-[20px] top-5" : "-right-[280px] top-5"}`}
             isLeftSide={isLeftSide}
             isTopSide={isTopSide}
           />

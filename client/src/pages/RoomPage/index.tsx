@@ -447,7 +447,7 @@ export function RoomPage() {
             room={room}
             users={room.users}
             showChat={chatVisible}
-            setShowChat={() => setChatVisible(true)}
+            setShowChat={(visible) => setChatVisible(visible)}
           >
             {background.enabled && background.id === "starry" && (
               <div className="absolute inset-0 pointer-events-none opacity-100 dark:opacity-60 -z-10">
@@ -460,11 +460,12 @@ export function RoomPage() {
             )}
             <div className="flex flex-1 min-h-0 w-full flex-col">
               <div ref={roomRef} className="flex-1 min-h-0 overflow-auto">
-                <div className="flex justify-center px-4 pt-[8px]">
+                <div className="flex justify-center px-4 pt-[25px]">
                   <Room
                     room={room}
                     onShowInChat={handleShowInChat}
                     roomRef={roomRef}
+                    chatVisible={chatVisible}
                   />
                 </div>
               </div>

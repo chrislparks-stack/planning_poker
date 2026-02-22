@@ -227,7 +227,7 @@ export type Room = {
   countdownValue?: Maybe<Scalars['Int']['output']>;
   deck: Deck;
   game: Game;
-  hasUnreadChat: Scalars['Boolean']['output'];
+  hasUnreadChat?: Maybe<Scalars['Boolean']['output']>;
   id: Scalars['UUID']['output'];
   isGameOver: Scalars['Boolean']['output'];
   name?: Maybe<Scalars['String']['output']>;

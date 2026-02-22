@@ -6,15 +6,16 @@ import {
 import { Player } from "@/components/Player";
 import { Table } from "@/components/Table";
 import { ChatBubble } from "@/components/ui/chat-bubble";
-import { Room as RoomType } from "@/types";
+import type { Room } from "@/types";
 import { getPickedUserCard } from "@/utils";
 import {decompressMessage} from "@/utils/messageUtils.ts";
 import {withTestUsers} from "@/utils/testUtils.tsx";
 
 interface RoomProps {
-  room?: RoomType;
+  room?: Room;
   onShowInChat?: () => void;
   roomRef?: RefObject<HTMLDivElement | null>;
+  chatVisible?: boolean;
 }
 
 export interface Position {
@@ -24,7 +25,7 @@ export interface Position {
   height?: number;
 }
 
-export function Room({ room, onShowInChat, roomRef}: RoomProps) {
+export function Room({ room, onShowInChat, roomRef, chatVisible}: RoomProps) {
   const tableRef = useRef<HTMLDivElement | null>(null);
   const playerRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [tableRect, setTableRect] = useState<DOMRect | null>(null);
@@ -53,6 +54,7 @@ export function Room({ room, onShowInChat, roomRef}: RoomProps) {
     variables: { roomId: room?.id ?? "" },
     skip: !room?.id,
     onData: ({ data }) => {
+      if (chatVisible) return;
       const msg = data?.data?.roomChat;
       if (!msg) return;
 
@@ -410,7 +412,7 @@ export function Room({ room, onShowInChat, roomRef}: RoomProps) {
     };
   }, [containerSize, tableRect, seatLayout]);
 
-  const handlePromote = async (userId: string, room: RoomType) => {
+  const handlePromote = async (userId: string, room: Room) => {
     const res = await setRoomOwner({
       variables: {
         roomId: room.id,
@@ -479,7 +481,7 @@ export function Room({ room, onShowInChat, roomRef}: RoomProps) {
 
         {/* Chat Bubbles */}
         {Object.entries(lastChats).map(([senderId, message]) => {
-          if (!message) return null;
+          if (!message || chatVisible) return null;
           const pos = chatPositionMap[senderId];
           return (
             <ChatBubble
