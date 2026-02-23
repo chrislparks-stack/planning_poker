@@ -369,7 +369,7 @@ export const Table: FC<TableProps> = ({
                     Reveal Votes
                   </span>
 
-                  <span className="text-[clamp(8px,0.6vw,11px)] font-mono opacity-60 -mt-1.5">
+                  <span className="text-[clamp(8px,0.7vw,11px)] font-mono opacity-60 -mt-1.5">
                     {voteCount}/{totalPlayers} voted ({votePercentage}%)
                   </span>
                 </Button>

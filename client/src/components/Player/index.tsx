@@ -523,7 +523,8 @@ export function Player({
     user.lastCardPicked,
     user.lastCardValue,
     isGameOver,
-    hasUnreadFromUser
+    hasUnreadFromUser,
+    chatVisible
   ])
 
   return (
