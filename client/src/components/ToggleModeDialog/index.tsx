@@ -541,7 +541,7 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
         </VisuallyHidden>
 
         {/* Accent bar */}
-        <div className="h-1.5 w-full bg-gradient-to-r from-accent to-accent/60" />
+        <div className="h-1.5 w-full bg-gradient-to-r from-accent to-accent/60 mb-5" />
 
         <div
           className={[
@@ -874,7 +874,7 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
 
           {/* RIGHT: Preview (sticky, no scroll) */}
           {livePreviewEnabled && (
-            <div className="hidden lg:flex flex-col border-l border-border/40 bg-muted/10">
+            <div className="hidden lg:flex flex-col border-l border-border/40 bg-background/20">
               <div className="flex flex-col h-full p-6 gap-4">
                 {/* Header */}
                 <div className="shrink-0">
