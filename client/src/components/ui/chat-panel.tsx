@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, {useEffect, useLayoutEffect, useRef, useState} from "react";
 import { motion } from "framer-motion";
 import { Room, ChatMessage, User } from "@/types";
 import { cn } from "@/lib/utils";
@@ -18,8 +18,17 @@ export const ChatPanel: React.FC<{
   visible: boolean;
 }> = ({ room, user, onClose, visible }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [autoScroll, setAutoScroll] = useState(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const isAtBottomRef = useRef(true);
+  const pendingScrollToBottomRef = useRef(false);
+
+  const isNearBottom = (el: HTMLDivElement, px = 16) =>
+    el.scrollHeight - el.scrollTop - el.clientHeight < px;
+  const scrollToBottomSmooth = (el: HTMLDivElement) => {
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  };
+
+  const wasVisibleRef = useRef(false);
   const [hasNewMessages, setHasNewMessages] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [freshMessageIds, setFreshMessageIds] = useState<Set<string>>(new Set());
@@ -39,87 +48,17 @@ export const ChatPanel: React.FC<{
   }, [roomId]);
 
   useEffect(() => {
-    const smoothScrollToBottom = () => {
-      const el = scrollRef.current;
-      if (!el) return;
-      el.scrollTo({
-        top: el.scrollHeight,
-        behavior: "smooth",
-      });
-    };
-
-    const timeout = setTimeout(() => {
-      requestAnimationFrame(smoothScrollToBottom);
-    }, 350);
-
-    return () => clearTimeout(timeout);
-  }, [visible, room?.id, room?.chatHistory]);
-
-  useEffect(() => {
-    if (visible && roomId && currentUserId) {
-      markChatSeen({
-        variables: {
-          roomId,
-          userId: currentUserId,
-        },
-      }).catch((err) => {
-        console.error("Failed to mark chat seen:", err)
-      })
-    }
-  }, [visible, messages, roomId, currentUserId]);
-
-  useEffect(() => {
-    if (!visible) return;
     const el = scrollRef.current;
     if (!el) return;
 
-    el.scrollTop = el.scrollHeight;
-    setShowScrollButton(false);
-
-    requestAnimationFrame(() => {
-      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-    });
-  }, [visible]);
-
-  useEffect(() => {
-    if (!currentUserId || !room?.users) return;
-
-    const roomUser = room.users.find(u => u.id === currentUserId);
-    const lastSeenId = roomUser?.lastSeenChatMessageId;
-
-    let unread: string[];
-
-    if (!lastSeenId) {
-      // Never seen anything
-      unread = messages
-        .filter(m => m.userId !== currentUserId)
-        .map(m => m.id);
-    } else {
-      const lastSeenIndex = messages.findIndex(m => m.id === lastSeenId);
-
-      if (lastSeenIndex === -1) {
-        unread = messages
-          .filter(m => m.userId !== currentUserId)
-          .map(m => m.id);
-      } else {
-        unread = messages
-          .slice(lastSeenIndex + 1)
-          .filter(m => m.userId !== currentUserId)
-          .map(m => m.id);
-      }
+    if (visible && !wasVisibleRef.current) {
+      requestAnimationFrame(() => {
+        el.scrollTop = el.scrollHeight;
+      });
     }
 
-    if (!unread.length) return;
-
-    const freshSet = new Set(unread);
-    setFreshMessageIds(freshSet);
-
-    const timeout = window.setTimeout(() => {
-      setFreshMessageIds(new Set());
-    }, 5000);
-
-    return () => clearTimeout(timeout);
-  }, [visible, messages]);
+    wasVisibleRef.current = visible;
+  }, [visible]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -139,29 +78,55 @@ export const ChatPanel: React.FC<{
       const msg = data?.data?.roomChat;
       if (!msg) return;
 
-      // Safely try to decompress (in case older messages are uncompressed)
       const message = safeDecompressMessage(msg);
 
+      const el = scrollRef.current;
+      const wasAnchored = el ? isNearBottom(el, 20) : isAtBottomRef.current;
+
       setMessages((prev) => {
-        const exists = prev.some(
-          (m) =>
-            m.id === message.id ||
-            (m.userId === message.userId &&
-              Math.abs(
-                new Date(m.timestamp).getTime() -
-                new Date(message.timestamp).getTime()
-              ) < 2000 &&
-              m.content === message.content)
-        )
+        if (prev.some((m) => m.id === message.id)) return prev;
 
-        if (exists) return prev
+        if (wasAnchored) {
+          pendingScrollToBottomRef.current = true;
+        } else {
+          // user is reading history, don't yank them
+          if (message.userId !== currentUserId) setHasNewMessages(true);
+        }
 
-        if (!autoScroll) setHasNewMessages(true)
+        if (message.userId !== currentUserId) {
+          setFreshMessageIds((prevFresh) => {
+            const next = new Set(prevFresh);
+            next.add(message.id);
+            return next;
+          });
+        }
 
-        return [...prev, message]
+        return [...prev, message];
       });
     },
   });
+
+  useEffect(() => {
+    if (!visible || freshMessageIds.size === 0) return;
+
+    if (roomId && currentUserId) {
+      markChatSeen({
+        variables: { roomId, userId: currentUserId }
+      }).catch(err => {
+        console.error("Failed to mark chat seen:", err);
+      });
+    }
+  }, [visible, freshMessageIds]);
+
+  useEffect(() => {
+    if (!visible || freshMessageIds.size === 0) return;
+
+    const timeout = setTimeout(() => {
+      setFreshMessageIds(new Set());
+    }, 5000);
+
+    return () => clearTimeout(timeout);
+  }, [visible, freshMessageIds]);
 
   const renderMessage = (html: string) => {
     return parse(html, {
@@ -194,89 +159,102 @@ export const ChatPanel: React.FC<{
     });
   };
 
-  // Auto-scroll on new message
-  useEffect(() => {
-    if (!scrollRef.current || !autoScroll) return;
-    queueMicrotask(() => {
-      const el = scrollRef.current;
-      if (!el || !autoScroll) return;
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    if (!pendingScrollToBottomRef.current) return;
 
-      // Wait for any images in the last message to load
-      const imgs = el.querySelectorAll("img");
-      const pending = Array.from(imgs)
-        .filter((img) => !img.complete)
-        .map(
-          (img) =>
-            new Promise((resolve) => {
-              img.onload = img.onerror = resolve;
-            })
-        );
+    pendingScrollToBottomRef.current = false;
 
-      Promise.all(pending).then(() => {
-        requestAnimationFrame(() => {
-          el.scrollTo({
-            top: el.scrollHeight,
-            behavior: "smooth",
-          });
-        });
-      });
-    });
-  }, [messages.length, autoScroll]);
+    const imgs = el.querySelectorAll("img");
+    const pending = Array.from(imgs)
+      .filter((img) => !img.complete)
+      .map(
+        (img) =>
+          new Promise<void>((resolve) => {
+            img.onload = img.onerror = () => resolve();
+          })
+      );
+
+    const finish = () => {
+      el.scrollTop = el.scrollHeight;
+      isAtBottomRef.current = true;
+      setShowScrollButton(false);
+      setHasNewMessages(false);
+    };
+
+    finish();
+    if (pending.length) Promise.all(pending).then(finish);
+  }, [messages.length]);
+
+  useLayoutEffect(() => {
+    if (!visible) return;
+
+    const el = scrollRef.current;
+    if (!el) return;
+
+    let raf = 0;
+    let lastClientHeight = el.clientHeight;
+
+    const apply = () => {
+      const s = scrollRef.current;
+      if (!s) return;
+
+      const anchoredBefore = isAtBottomRef.current;
+
+      const newClientHeight = s.clientHeight;
+      const delta = lastClientHeight - newClientHeight;
+
+      if (delta !== 0) {
+        if (anchoredBefore) {
+          s.scrollTop = s.scrollHeight;
+          isAtBottomRef.current = true;
+          setShowScrollButton(false);
+          setHasNewMessages(false);
+        } else {
+          s.scrollTop = Math.max(0, s.scrollTop + delta);
+
+          const anchoredNow = isNearBottom(s, 20);
+          isAtBottomRef.current = anchoredNow;
+          setShowScrollButton(!anchoredNow);
+          if (anchoredNow) setHasNewMessages(false);
+        }
+
+        lastClientHeight = newClientHeight;
+      } else {
+        lastClientHeight = newClientHeight;
+      }
+    };
+
+    const schedule = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(apply);
+    };
+
+    window.addEventListener("resize", schedule);
+    window.visualViewport?.addEventListener("resize", schedule);
+
+    const ro = new ResizeObserver(schedule);
+    ro.observe(el);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", schedule);
+      window.visualViewport?.removeEventListener("resize", schedule);
+      ro.disconnect();
+    };
+  }, [visible]);
 
   const handleScroll = () => {
     const el = scrollRef.current;
     if (!el) return;
-    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
-    setAutoScroll(isNearBottom);
-    setShowScrollButton(!isNearBottom);
 
-    if (isNearBottom) setHasNewMessages(false);
+    const anchored = isNearBottom(el, 20);
+    isAtBottomRef.current = anchored;
+
+    setShowScrollButton(!anchored);
+    if (anchored) setHasNewMessages(false);
   };
-
-  const scrollToBottom = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const inputArea = el.parentElement?.querySelector(".chat-input-container");
-    if (!inputArea) return;
-
-    let lastKnownHeight = el.scrollHeight;
-
-    const observer = new ResizeObserver(() => {
-      const newHeight = el.scrollHeight;
-      const delta = newHeight - lastKnownHeight;
-
-      // Check how far the user is from the bottom (in pixels)
-      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-
-      // When resizing, if user is within ~100px of bottom, treat as "anchored"
-      const shouldStayAtBottom = distanceFromBottom < 100;
-
-      // If user is near bottom and chat input grew (delta < 0 => visible area shrank),
-      // move scrollTop downward to keep bottom messages in view.
-      if (shouldStayAtBottom) {
-        requestAnimationFrame(() => {
-          el.scrollTop = el.scrollHeight - el.clientHeight;
-        });
-      } else if (delta !== 0) {
-        // For non-bottom users, maintain their relative view position
-        el.scrollTop += delta;
-      }
-
-      lastKnownHeight = newHeight;
-    });
-
-    observer.observe(el);
-    lastKnownHeight = el.scrollHeight;
-
-    return () => observer.disconnect();
-  }, []);
-
 
   // Send chat (with optional position)
   const handleSendChat = async (plain: string, formatted: string) => {
@@ -316,9 +294,9 @@ export const ChatPanel: React.FC<{
 
   useEffect(() => {
     if (!visible) {
-      setAutoScroll(true);
       setShowScrollButton(false);
       setHasNewMessages(false);
+      setFreshMessageIds(new Set());
     }
   }, [visible]);
 
@@ -411,15 +389,9 @@ export const ChatPanel: React.FC<{
             "dark:bg-gradient-to-b dark:from-[hsl(var(--background)_/_0.9)] dark:via-[hsl(var(--background)_/_0.7)] dark:to-[hsl(var(--background)_/_0.95)]",
             "dark:after:content-[''] dark:after:absolute dark:after:inset-0 dark:after:bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.04)_0%,transparent_70%)] dark:after:pointer-events-none",
             "dark:before:absolute dark:before:inset-0 dark:before:bg-[radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.03)_0%,transparent_70%)] dark:before:pointer-events-none",
-
-            // Accent shimmer line
             "before:absolute before:top-0 before:left-0 before:w-full before:h-[1px] before:bg-gradient-to-r before:from-transparent before:via-accent/50 before:to-transparent"
           )}
         >
-          {/* Soft highlight gradients for atmosphere */}
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-accent/5 to-transparent dark:from-accent/20" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-background/85 to-transparent dark:from-background/95" />
-
           {messages.length ? (
             messages.map((msg) => {
               const isSelf = msg.userId === currentUserId;
@@ -517,7 +489,7 @@ export const ChatPanel: React.FC<{
 
                     <div
                       className={cn(
-                        "text-[10px] mt-1 font-mono tracking-tight flex items-center gap-1 transition-all duration-1000 ease-out",
+                        "mt-1 tracking-tight flex items-center gap-1 transition-all duration-1000 ease-out",
                         isSelf
                           ? "flex-row-reverse text-accent-foreground/50"
                           : isFresh
@@ -525,9 +497,9 @@ export const ChatPanel: React.FC<{
                             : "text-muted-foreground/60"
                       )}
                     >
-                    <span className="text-foreground/75">{msg.username}</span>
-                      <span className="text-foreground/30">•</span>
-                      <span className="text-foreground/50">{time}</span>
+                    <span className="text-foreground/75 text-[12px]">{msg.username}</span>
+                      <span className="text-foreground/30 text-[10px]">•</span>
+                      <span className="text-foreground/50 text-[10px]">{time}</span>
                     </div>
                   </div>
 
@@ -556,8 +528,12 @@ export const ChatPanel: React.FC<{
           {visible && (
             <motion.button
               onClick={() => {
-                scrollToBottom();
                 setHasNewMessages(false);
+
+                const el = scrollRef.current;
+                if (!el) return;
+
+                scrollToBottomSmooth(el);
               }}
               initial={false}
               animate={{

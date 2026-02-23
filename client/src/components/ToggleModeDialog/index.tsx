@@ -30,7 +30,7 @@ interface ToggleModeDialogProps {
 }
 
 /** Accent tokens for preview (H S% L% strings) */
-const ACCENT_MAP: Record<
+export const ACCENT_MAP: Record<
   string,
   { base: string; foreground: string; hover?: string; active?: string }
 > = {
