@@ -465,6 +465,7 @@ export function Room({ room, onShowInChat, roomRef, chatVisible}: RoomProps) {
                 onMakeOwner={handlePromote}
                 playerPositionMap={playerPositionMap}
                 tableRect={tableRect}
+                chatVisible={chatVisible}
               />
             </div>
           );

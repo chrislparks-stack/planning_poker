@@ -30,6 +30,7 @@ interface PlayerProps {
   onMakeOwner?: (userId: string, room: Room) => Promise<void> | void;
   playerPositionMap?: Record<string, { x: number; y: number }>;
   tableRect?: DOMRect | null;
+  chatVisible?: boolean;
 }
 
 type MenuPos = { x: number; y: number } | null;
@@ -42,7 +43,8 @@ export function Player({
   roomId,
   onMakeOwner,
   playerPositionMap,
-  tableRect
+  tableRect,
+  chatVisible
 }: PlayerProps) {
   const { toast } = useToast();
   const { theme } = useTheme();
@@ -494,7 +496,7 @@ export function Player({
     name.length < 30 ? name : `${name.slice(0, 26)}...`
 
   const title = useMemo(() => {
-    if (isTargetSelf) {
+    if (isTargetSelf && !chatVisible) {
       return "Click to chat"
     }
 
@@ -528,12 +530,12 @@ export function Player({
     <div className="flex flex-col items-center" data-testid="player">
       <div
         className={`flex flex-col items-center ${
-          isTargetSelf ? "cursor-pointer" : "cursor-default"
+          isTargetSelf && !chatVisible ? "cursor-pointer" : "cursor-default"
         }`}
         ref={cardRef}
         title={title}
         onClick={() => {
-          if (isTargetSelf) setShowChatInput(!showChatInput);
+          if (isTargetSelf && !chatVisible) setShowChatInput(!showChatInput);
         }}
       >
         <div
@@ -567,7 +569,7 @@ export function Player({
               group
             "
           >
-            {isTargetSelf && (
+            {isTargetSelf && !chatVisible && (
               <div
                 className="
                   flex mt-1.5 ml-1
