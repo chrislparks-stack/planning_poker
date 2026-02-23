@@ -7,22 +7,22 @@ interface ChatBubbleProps {
   message: string;
   playerId: string;
   senderName?: string;
-  absolutePosition?: { x: number; y: number; width?: number; height?: number };
   duration?: number;
   className?: string;
   onExpire?: (playerId: string) => void;
   onShowInChat?: () => void;
+  anchorRect?: DOMRect;
 }
 
 export const ChatBubble: React.FC<ChatBubbleProps> = ({
   message,
   playerId,
   senderName,
-  absolutePosition,
   duration = 5,
   className,
   onExpire,
   onShowInChat,
+  anchorRect
 }) => {
   const [visible, setVisible] = useState(true);
   const [coords, setCoords] = useState<{ x: number; y: number }>({
@@ -32,19 +32,35 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
 
   const bubbleRef = useRef<HTMLDivElement>(null);
 
+  useLayoutEffect(() => {
+    if (!anchorRect) return;
+
+    requestAnimationFrame(() => requestAnimationFrame(computeAndSetCoords));
+
+    const onWin = () => computeAndSetCoords();
+    window.addEventListener("resize", onWin);
+    window.addEventListener("scroll", onWin, true);
+
+    return () => {
+      window.removeEventListener("resize", onWin);
+      window.removeEventListener("scroll", onWin, true);
+    };
+  }, [message, anchorRect?.left, anchorRect?.top, anchorRect?.width, anchorRect?.height]);
+
   const computeAndSetCoords = () => {
-    if (!absolutePosition) return;
     const el = bubbleRef.current;
-    if (!el) return;
+    if (!el || !anchorRect) return;
 
-    const { x, y, width = 0} = absolutePosition;
     const bubbleRect = el.getBoundingClientRect();
-
     const bubbleWidth = Math.max(1, bubbleRect.width || 160);
     const bubbleHeight = Math.max(1, bubbleRect.height || 60);
 
-    const baseX = x + width / 2 - bubbleWidth / 2;
-    const baseY = y - bubbleHeight;
+    // anchor: top-center of player card
+    const x = anchorRect.left + anchorRect.width / 2;
+    const y = anchorRect.top;
+
+    const baseX = x - bubbleWidth / 2;
+    const baseY = y - bubbleHeight - 8;
 
     const margin = 8;
     const clampedX = Math.min(
@@ -60,7 +76,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
   };
 
   useLayoutEffect(() => {
-    if (!absolutePosition) return;
+    if (!anchorRect) return;
 
     requestAnimationFrame(() => {
       requestAnimationFrame(computeAndSetCoords);
@@ -92,7 +108,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
       window.removeEventListener("resize", onWin);
       window.removeEventListener("scroll", onWin, true);
     };
-  }, [message, absolutePosition]);
+  }, [message, anchorRect]);
 
   useLayoutEffect(() => {
     const timer = setTimeout(() => {
@@ -114,7 +130,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
           initial={{ opacity: 0, y: 0, scale: 0.96 }}
           animate={{
             opacity: [0, 1, 1, 0],
-            y: [0, -35],
+            y: [25, -10],
             scale: [0.96, 1],
           }}
           exit={{ opacity: 0 }}

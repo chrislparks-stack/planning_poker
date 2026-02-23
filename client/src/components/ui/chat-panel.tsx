@@ -109,19 +109,20 @@ export const ChatPanel: React.FC<{
   useEffect(() => {
     if (!visible || freshMessageIds.size === 0) return;
 
-    const timeout = setTimeout(() => {
-      setFreshMessageIds(prev => {
-        if (prev.size === 0) return prev;
-        return new Set();
+    if (roomId && currentUserId) {
+      markChatSeen({
+        variables: { roomId, userId: currentUserId }
+      }).catch(err => {
+        console.error("Failed to mark chat seen:", err);
       });
+    }
+  }, [visible, freshMessageIds]);
 
-      if (roomId && currentUserId) {
-        markChatSeen({
-          variables: { roomId, userId: currentUserId }
-        }).catch(err => {
-          console.error("Failed to mark chat seen:", err);
-        });
-      }
+  useEffect(() => {
+    if (!visible || freshMessageIds.size === 0) return;
+
+    const timeout = setTimeout(() => {
+      setFreshMessageIds(new Set());
     }, 5000);
 
     return () => clearTimeout(timeout);
@@ -295,6 +296,7 @@ export const ChatPanel: React.FC<{
     if (!visible) {
       setShowScrollButton(false);
       setHasNewMessages(false);
+      setFreshMessageIds(new Set());
     }
   }, [visible]);
 

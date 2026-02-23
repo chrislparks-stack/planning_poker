@@ -9,6 +9,7 @@ import Picker from "@emoji-mart/react";
 import {OverlayPortal} from "@/utils/overlayPortal.tsx";
 import {motion} from "framer-motion";
 import {compressMessage} from "@/utils/messageUtils.ts";
+import {getShiftedAccent} from "@/lib/theme-accent.ts";
 
 interface ChatInputProps {
   onSend: (
@@ -36,7 +37,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [customColor, setCustomColor] = useState("#7C3AED");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showGifPicker, setShowGifPicker] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const [gifs, setGifs] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [showCategories, setShowCategories] = useState(true);
+  const [autocomplete, setAutocomplete] = useState<string[]>([]);
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [hoveredGif, setHoveredGif] = useState<string | null>(null);
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const hoverTimer = useRef<NodeJS.Timeout | null>(null);
@@ -57,6 +63,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const selectionRef = useRef<Range | null>(null);
+  const gifScrollRef = useRef<HTMLDivElement>(null);
 
   const [pickerPos, setPickerPos] = useState({ top: 0, left: 0, width: 0, height: 0 });
 
@@ -201,6 +208,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
       if (!inPanel) onClose?.();
 
+      setSearchTerm("");
+      setAutocomplete([]);
+      setShowAutocomplete(false);
+
       setShowPalette(false);
       setShowGifPicker(false);
       setShowCustomPicker(false);
@@ -267,6 +278,40 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     e.target.value = "";
   };
 
+  const fetchCategories = async () => {
+    const apiKey =
+      import.meta.env.VITE_TENOR_KEY || process.env.TENOR_KEY;
+
+    const url = `https://tenor.googleapis.com/v2/categories?key=${apiKey}&client_key=SummitPoker`;
+
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+
+      setCategories(data.tags || []);
+    } catch (e) {
+      console.error("Failed to fetch Tenor categories", e);
+    }
+  };
+
+  const fetchAutocomplete = async (term: string) => {
+    const apiKey =
+      import.meta.env.VITE_TENOR_KEY || process.env.TENOR_KEY;
+
+    const url = `https://tenor.googleapis.com/v2/autocomplete?q=${encodeURIComponent(
+      term
+    )}&key=${apiKey}&client_key=SummitPoker&limit=5`;
+
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      setAutocomplete(data.results || []);
+      setShowAutocomplete(true);
+    } catch (e) {
+      console.error("Autocomplete failed", e);
+    }
+  };
+
   const fetchGifs = async (query?: string) => {
     const term = query?.trim() || "trending";
     const apiKey = import.meta.env.VITE_TENOR_KEY || process.env.TENOR_KEY;
@@ -319,14 +364,37 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     e?.stopPropagation();
     if (url) setAttachments((prev) => [...prev, url]);
     setShowGifPicker(false);
+    setSearchTerm("");
+    setAutocomplete([]);
+    setShowAutocomplete(false);
   };
 
   const handleGifSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value.trim();
+
     if (debounceRef.current) clearTimeout(debounceRef.current);
+
     debounceRef.current = setTimeout(() => {
+      if (!term) {
+        setShowCategories(true);
+        setGifs([]);
+        setSearchTerm("");
+        setAutocomplete([]);
+        setShowAutocomplete(false);
+        gifScrollRef.current?.scrollTo({ top: 0 });
+        return;
+      }
+
+      fetchAutocomplete(term);
+      setShowCategories(false);
+
       startTransition(() => fetchGifs(term));
     }, 300);
+  };
+
+  const handleCategoryClick = (term: string) => {
+    setShowCategories(false);
+    fetchGifs(term);
   };
 
   const handleGifHover = (url: string, e: React.MouseEvent) => {
@@ -364,7 +432,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   }, [showEmojiPicker])
 
   useEffect(() => {
-    if (showGifPicker) fetchGifs();
+    if (!showGifPicker) return;
+
+    setShowCategories(true);
+    setGifs([]);
+
+    if (categories.length === 0) {
+      fetchCategories();
+    }
   }, [showGifPicker]);
 
   useEffect(() => {
@@ -447,6 +522,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           <button
             onClick={(e) => {
               e.stopPropagation();
+              if (showGifPicker) {
+                setSearchTerm("");
+                setAutocomplete([]);
+                setShowAutocomplete(false);
+              }
               setShowGifPicker((s) => !s);
             }}
             className={cn(
@@ -687,51 +767,122 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           className="border border-border rounded-xl bg-popover p-2 shadow-xl relative z-[60]"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex justify-between mb-2">
-            <input
-              type="text"
-              placeholder="Search Tenor GIFs..."
-              className="w-full text-xs rounded-md px-2 py-[3px] bg-background/70 border border-border focus:ring-1 focus:ring-accent outline-none"
-              onChange={handleGifSearch}
-              onClick={(e) => e.stopPropagation()}
-            />
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowGifPicker(false);
-              }}
-              className="ml-2 text-muted-foreground hover:text-foreground transition"
-              title="Close"
-            >
-              <X size={12} />
-            </button>
+          <div className="relative mb-2">
+            <div className="flex justify-between gap-2">
+              <input
+                type="search"
+                placeholder="Search Tenor GIFs..."
+                className="flex-1 text-xs rounded-md px-2 py-[3px] bg-background/70 border border-border focus:ring-1 focus:ring-accent outline-none"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  handleGifSearch(e);
+                }}
+                onClick={(e) => e.stopPropagation()}
+              />
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowGifPicker(false);
+                  setSearchTerm("");
+                  setAutocomplete([]);
+                  setShowAutocomplete(false);
+                }}
+                className="text-muted-foreground hover:text-foreground transition"
+                title="Close"
+              >
+                <X size={12} />
+              </button>
+            </div>
+
+            {showAutocomplete && autocomplete.length > 0 && (
+              <div className="flex gap-1 mt-2 overflow-x-auto scrollbar-none">
+                {autocomplete.map((term) => (
+                  <button
+                    key={term}
+                    onClick={() => {
+                      setSearchTerm(term);
+                      setShowAutocomplete(false);
+                      setShowCategories(false);
+                      fetchGifs(term);
+                      gifScrollRef.current?.scrollTo({ top: 0 });
+                    }}
+                    style={{
+                      backgroundColor: getShiftedAccent(term, 0.3),
+                      color: "hsl(var(--accent-foreground))"
+                    }}
+                    className="whitespace-nowrap px-2 py-1 mb-1 text-xs rounded-md border border-border hover:brightness-110 transition"
+                  >
+                    {term}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="relative">
             {/* Scrollable grid area */}
-            <div className="max-h-[160px] overflow-y-auto overflow-x-hidden relative">
-              <div className="grid grid-cols-3 gap-1">
-                {gifs.map((g) => (
-                  <motion.div
-                    key={g.id}
-                    className="relative"
-                    onMouseEnter={(e) => handleGifHover(g.url, e)}
-                    onMouseLeave={handleGifLeave}
+            <div
+              ref={gifScrollRef}
+              className="max-h-[160px] overflow-y-auto overflow-x-hidden relative"
+            >
+              {!showCategories && (
+                <div className="sticky top-0 z-10 pb-1 bg-background">
+                  <button
+                    onClick={() => {
+                      setShowCategories(true);
+                      setGifs([]);
+                    }}
+                    className="flex items-center gap-2 px-2 py-1 text-xs rounded-md text-foreground border border-border bg-accent/50 scale-95 hover:bg-accent/70 hover:scale-100 transition w-full"
                   >
-                    <motion.img
-                      key={g.id}
-                      src={g.url}
-                      alt=""
-                      layout
-                      initial={{ opacity: 0, scale: 0.96 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.25, ease: "easeOut" }}
-                      className="rounded-md cursor-pointer hover:opacity-80 hover:scale-[1.02] transition-transform"
-                      onClick={(e) => handleGifSelect(g.url, e)}
-                    />
-                  </motion.div>
-                ))}
+                    ← Back to Categories
+                  </button>
+                </div>
+              )}
+              <div className="flex flex-col gap-2 p-1">
+                {showCategories ? (
+                  <div className="grid grid-cols-2 gap-2 w-full">
+                    {categories.map((cat) => (
+                      <motion.button
+                        key={cat.searchterm}
+                        onClick={() => handleCategoryClick(cat.searchterm)}
+                        whileHover={{ scale: 1.03 }}
+                        className="relative w-full rounded-md overflow-hidden"
+                      >
+                        <img
+                          src={cat.image}
+                          alt={cat.name}
+                          className="w-full h-[80px] object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-xs font-medium">
+                          {cat.name}
+                        </div>
+                      </motion.button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-1 w-full">
+                    {gifs.map((g) => (
+                      <motion.div
+                        key={g.id}
+                        className="relative w-full"
+                        onMouseEnter={(e) => handleGifHover(g.url, e)}
+                        onMouseLeave={handleGifLeave}
+                      >
+                        <motion.img
+                          src={g.url}
+                          alt=""
+                          initial={{ opacity: 0, scale: 0.96 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.25 }}
+                          className="w-full rounded-md cursor-pointer hover:opacity-80 hover:scale-[1.02] transition-transform"
+                          onClick={(e) => handleGifSelect(g.url, e)}
+                        />
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {isLoading && (
@@ -792,49 +943,122 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 bg-popover/90 backdrop-blur-md p-3 border-b border-border flex justify-between items-center">
-          <input
-            type="text"
-            placeholder="Search Tenor GIFs..."
-            className="w-full text-sm rounded-md px-2 py-[2px] bg-background/70 border border-border focus:ring-1 focus:ring-accent outline-none"
-            onChange={handleGifSearch}
-            onClick={(e) => e.stopPropagation()}
-          />
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowGifPicker(false);
-            }}
-            className="ml-2 text-muted-foreground hover:text-foreground transition"
-            title="Close"
-          >
-            <X size={14} />
-          </button>
+        <div className="sticky top-0 bg-popover/90 backdrop-blur-md p-3 border-b border-border">
+          <div className="relative">
+            <div className="flex justify-between gap-2 items-center">
+              <input
+                type="search"
+                placeholder="Search Tenor GIFs..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  handleGifSearch(e);
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="flex-1 text-sm rounded-md px-2 py-[2px] bg-background/70 border border-border focus:ring-1 focus:ring-accent outline-none"
+              />
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowGifPicker(false);
+                  setSearchTerm("");
+                  setAutocomplete([]);
+                  setShowAutocomplete(false);
+                }}
+                className="text-muted-foreground hover:text-foreground transition"
+                title="Close"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            {showAutocomplete && autocomplete.length > 0 && (
+              <div className="flex gap-1 mt-2 overflow-x-auto scrollbar-none">
+                {autocomplete.map((term) => (
+                  <button
+                    key={term}
+                    onClick={() => {
+                      setSearchTerm(term);
+                      setShowAutocomplete(false);
+                      setShowCategories(false);
+                      fetchGifs(term);
+                      gifScrollRef.current?.scrollTo({ top: 0 });
+                    }}
+                    style={{
+                      backgroundColor: getShiftedAccent(term, 0.3),
+                      color: "hsl(var(--accent-foreground))"
+                    }}
+                    className="whitespace-nowrap px-2 py-1 mb-1 text-xs rounded-md border border-border hover:brightness-110 transition"
+                  >
+                    {term}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="max-h-[210px] overflow-y-auto overflow-x-hidden">
-          <div className="grid grid-cols-3 gap-1 p-3 pt-2">
-            {gifs.map((g) => (
-              <motion.div
-                key={g.id}
-                className="relative"
-                onMouseEnter={(e) => handleGifHover(g.url, e)}
-                onMouseLeave={handleGifLeave}
+        <div
+          ref={gifScrollRef}
+          className="max-h-[210px] overflow-y-auto overflow-x-hidden"
+        >
+          {!showCategories && (
+            <div className="sticky top-0 z-10 pb-1 bg-background">
+              <button
+                onClick={() => {
+                  setShowCategories(true);
+                  setGifs([]);
+                }}
+                className="flex items-center gap-2 px-2 py-1 text-xs rounded-md text-foreground border border-border bg-accent/50 scale-95 hover:bg-accent/70 hover:scale-100 transition w-full"
               >
-                <motion.img
-                  key={g.id}
-                  src={g.url}
-                  alt=""
-                  layout
-                  initial={{ opacity: 0, scale: 0.96 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.25, ease: "easeOut" }}
-                  className="rounded-md cursor-pointer hover:opacity-80 hover:scale-[1.02] transition-transform"
-                  onClick={(e) => handleGifSelect(g.url, e)}
-                />
-              </motion.div>
-            ))}
+                ← Back to Categories
+              </button>
+            </div>
+          )}
+          <div className="flex flex-col gap-2 p-3 pt-2">
+            {showCategories ? (
+              <div className="grid grid-cols-2 gap-2">
+                {categories.map((cat) => (
+                  <motion.div
+                    key={cat.searchterm}
+                    onClick={() => handleCategoryClick(cat.searchterm)}
+                    whileHover={{ scale: 1.03 }}
+                    className="relative cursor-pointer rounded-md overflow-hidden"
+                  >
+                    <img
+                      src={cat.image}
+                      alt={cat.name}
+                      className="w-full h-[70px] object-cover rounded-md"
+                    />
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-xs font-medium">
+                      {cat.name}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-1">
+                {gifs.map((g) => (
+                  <motion.div
+                    key={g.id}
+                    className="relative"
+                    onMouseEnter={(e) => handleGifHover(g.url, e)}
+                    onMouseLeave={handleGifLeave}
+                  >
+                    <motion.img
+                      src={g.url}
+                      alt=""
+                      initial={{ opacity: 0, scale: 0.96 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.25 }}
+                      className="rounded-md cursor-pointer hover:opacity-80 hover:scale-[1.02] transition-transform"
+                      onClick={(e) => handleGifSelect(g.url, e)}
+                    />
+                  </motion.div>
+                ))}
+              </div>
+            )}
 
             {hoveredGif &&
               createPortal(
@@ -1002,6 +1226,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
         if (!gifPickerRef?.current?.contains(e.target as Node) && showGifPicker) {
           setShowGifPicker(false);
+          setSearchTerm("");
+          setAutocomplete([]);
+          setShowAutocomplete(false);
         }
       }}
     >

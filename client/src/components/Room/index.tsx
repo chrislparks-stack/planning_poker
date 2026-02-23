@@ -31,7 +31,11 @@ export function Room({ room, onShowInChat, roomRef, chatVisible}: RoomProps) {
   const [tableRect, setTableRect] = useState<DOMRect | null>(null);
   const [senderName, setSenderName] = useState<string | null>(null);
   const [lastChats, setLastChats] = useState<Record<string, string | null>>({});
-  const [chatPositionMap, setChatPositionMap] = useState<Record<string, Position | null>>({});
+  const getPlayerAnchorRect = (playerId: string) => {
+    const el = playerRefs.current[playerId];
+    if (!el) return null;
+    return el.getBoundingClientRect();
+  };
   const [setRoomOwner] = useSetRoomOwnerMutation({errorPolicy: "none"});
 
   const users = useMemo(
@@ -43,32 +47,35 @@ export function Room({ room, onShowInChat, roomRef, chatVisible}: RoomProps) {
   const CARD_WIDTH = 60;
   const CARD_HEIGHT = 96;
   const CARD_MARGIN = 20;
-
   const TB_ROW_OFFSET = CARD_HEIGHT + 14;
   const SIDE_COLUMN_GAP = 14;
   const SIDE_MAX_PER_COLUMN = 3;
-
   const padding = 80;
+
+  const chatVisibleRef = useRef(!!chatVisible);
+
+  useEffect(() => {
+    chatVisibleRef.current = !!chatVisible;
+
+    if (chatVisible) setLastChats({});
+  }, [chatVisible]);
 
   useRoomChatSubscription({
     variables: { roomId: room?.id ?? "" },
     skip: !room?.id,
     onData: ({ data }) => {
-      if (chatVisible) return;
+      if (chatVisibleRef.current) return;
+
       const msg = data?.data?.roomChat;
       if (!msg) return;
 
-      const { userId, formattedContent, content, position } = msg as any;
+      const { userId, formattedContent, content } = msg as any;
 
-      // --- Decompression step ---
       let message = formattedContent || content;
 
-      if (msg.username) {
-        setSenderName(msg.username);
-      }
+      if (msg.username) setSenderName(msg.username);
 
       try {
-        // Detect base64-ish compressed payloads (long strings with mostly base64 chars)
         if (/^[A-Za-z0-9+/=]+$/.test(message) && message.length > 40) {
           message = decompressMessage(message);
         }
@@ -76,23 +83,7 @@ export function Room({ room, onShowInChat, roomRef, chatVisible}: RoomProps) {
         console.warn("Decompression failed for chat message:", err);
       }
 
-      // --- Update recent chat text for that user ---
       setLastChats((prev) => ({ ...prev, [userId]: message }));
-
-      // --- Handle positional chat bubble ---
-      if (position && typeof position === "object") {
-        const { x, y, width, height } = position;
-        const scaled = {
-          x: x * window.innerWidth,
-          y: y * window.innerHeight,
-          width: width * window.innerWidth,
-          height: height * window.innerHeight,
-        };
-        setChatPositionMap((prev) => ({ ...prev, [userId]: scaled }));
-        return;
-      }
-
-      setChatPositionMap((prev) => ({ ...prev, [userId]: null }));
     },
   });
 
@@ -482,14 +473,16 @@ export function Room({ room, onShowInChat, roomRef, chatVisible}: RoomProps) {
         {/* Chat Bubbles */}
         {Object.entries(lastChats).map(([senderId, message]) => {
           if (!message || chatVisible) return null;
-          const pos = chatPositionMap[senderId];
+          const rect = getPlayerAnchorRect(senderId);
+          if (!rect) return null;
+
           return (
             <ChatBubble
               key={senderId + message}
               message={message}
               playerId={senderId}
               senderName={senderName ?? ""}
-              absolutePosition={pos ?? undefined}
+              anchorRect={rect ?? undefined}
               onExpire={(pid) =>
                 setLastChats((prev) => ({ ...prev, [pid]: null }))
               }
