@@ -6,7 +6,6 @@ export const ToggleGif: React.FC<{ src: string; alt?: string }> = ({ src, alt })
   const [staticFrame, setStaticFrame] = useState<string | null>(null);
 
   useEffect(() => {
-    // Extract the first frame of the GIF for paused mode
     const extractFrame = async () => {
       const img = document.createElement("img");
       img.crossOrigin = "anonymous";

@@ -11,7 +11,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {Room, User} from "@/types";
 import {useTheme} from "@/components";
-import {Ban, Crown, DoorOpen, MessageSquareText} from "lucide-react";
+import {Ban, Crown, DoorOpen, MessageSquareText, MessagesSquare} from "lucide-react";
 import {ChatInputWrapper} from "@/components/ui/chat-input-wrapper.tsx";
 import {useCardPosition} from "@/utils/cardPositionContext.tsx";
 import {useBackgroundConfig} from "@/contexts/BackgroundContext.tsx";
@@ -30,6 +30,7 @@ interface PlayerProps {
   onMakeOwner?: (userId: string, room: Room) => Promise<void> | void;
   playerPositionMap?: Record<string, { x: number; y: number }>;
   tableRect?: DOMRect | null;
+  chatVisible?: boolean;
 }
 
 type MenuPos = { x: number; y: number } | null;
@@ -42,7 +43,8 @@ export function Player({
   roomId,
   onMakeOwner,
   playerPositionMap,
-  tableRect
+  tableRect,
+  chatVisible
 }: PlayerProps) {
   const { toast } = useToast();
   const { theme } = useTheme();
@@ -494,14 +496,14 @@ export function Player({
     name.length < 30 ? name : `${name.slice(0, 26)}...`
 
   const title = useMemo(() => {
-    if (isTargetSelf) {
+    if (isTargetSelf && !chatVisible) {
       return "Click to chat"
     }
 
     const name = truncateUsername(user.username)
 
     if (hasUnreadFromUser) {
-      return `${name} has a new message...\nCheck the chat panel!`
+      return `${name} has a new message...`
     }
 
     if (!isGameOver) {
@@ -528,12 +530,12 @@ export function Player({
     <div className="flex flex-col items-center" data-testid="player">
       <div
         className={`flex flex-col items-center ${
-          isTargetSelf ? "cursor-pointer" : "cursor-default"
+          isTargetSelf && !chatVisible ? "cursor-pointer" : "cursor-default"
         }`}
         ref={cardRef}
         title={title}
         onClick={() => {
-          if (isTargetSelf) setShowChatInput(!showChatInput);
+          if (isTargetSelf && !chatVisible) setShowChatInput(!showChatInput);
         }}
       >
         <div
@@ -567,7 +569,7 @@ export function Player({
               group
             "
           >
-            {isTargetSelf && (
+            {isTargetSelf && !chatVisible && (
               <div
                 className="
                   flex mt-1.5 ml-1
@@ -635,7 +637,7 @@ export function Player({
                   {room?.roomOwnerId === user.id && <Crown className="text-glass w-3 h-3" />}
                   <span>{user.username.length < 30 ? user.username : `${user.username.slice(0, 26)}...`}</span>
                   {hasUnreadFromUser && (
-                    <MessageSquareText className="w-[10px] h-[10px] -ml-1 -mt-1 text-accent" />
+                    <MessagesSquare className="w-[10px] h-[10px] -ml-1 -mt-1 text-accent animate-pulse" />
                   )}
                 </div>
               </div>
@@ -648,7 +650,7 @@ export function Player({
             onSend={(plain, formatted) => handleSendChat(plain, formatted)}
             onClose={() => setShowChatInput(false)}
             isOpen={showChatInput}
-            className={`${isLeftSide ? "right-[20px] top-4" : "-right-[280px] top-4"}`}
+            className={`${isLeftSide ? "right-[20px] top-5" : "-right-[280px] top-5"}`}
             isLeftSide={isLeftSide}
             isTopSide={isTopSide}
           />

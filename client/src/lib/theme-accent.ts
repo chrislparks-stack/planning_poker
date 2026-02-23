@@ -203,3 +203,31 @@ export function applyAccent(accentId: string, opts?: { persist?: boolean }) {
     console.error("applyAccent failed", err);
   }
 }
+
+export const getRootAccent = () => {
+  const raw = getComputedStyle(document.documentElement)
+    .getPropertyValue("--accent")
+    .trim();
+
+  const [h, s, l] = raw.split(" ");
+
+  return {
+    h: parseFloat(h),
+    s,
+    l
+  };
+};
+
+export const getShiftedAccent = (seed: string, alpha = 0.3) => {
+  const { h, s, l } = getRootAccent();
+
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  const shift = (hash % 36) - 18;
+  const newHue = (h + shift + 360) % 360;
+
+  return `hsl(${newHue} ${s} ${l} / ${alpha})`;
+};

@@ -181,7 +181,7 @@ export type MarkChatSeenMutationVariables = Types.Exact<{
 }>;
 
 
-export type MarkChatSeenMutation = { __typename?: 'MutationRoot', markChatSeen: { __typename?: 'Room', id: string, hasUnreadChat: boolean } };
+export type MarkChatSeenMutation = { __typename?: 'MutationRoot', markChatSeen: { __typename?: 'Room', id: string, hasUnreadChat?: boolean | null } };
 
 export type RoomSubscriptionVariables = Types.Exact<{
   roomId: Types.Scalars['UUID']['input'];
@@ -210,7 +210,7 @@ export type RoomUnreadSubscriptionVariables = Types.Exact<{
 }>;
 
 
-export type RoomUnreadSubscription = { __typename?: 'SubscriptionRoot', room: { __typename?: 'Room', id: string, hasUnreadChat: boolean } };
+export type RoomUnreadSubscription = { __typename?: 'SubscriptionRoot', room: { __typename?: 'Room', id: string, hasUnreadChat?: boolean | null } };
 
 export type GetRoomQueryVariables = Types.Exact<{
   roomId: Types.Scalars['UUID']['input'];
@@ -225,7 +225,7 @@ export type GetRoomUnreadQueryVariables = Types.Exact<{
 }>;
 
 
-export type GetRoomUnreadQuery = { __typename?: 'QueryRoot', roomById?: { __typename?: 'Room', id: string, hasUnreadChat: boolean } | null };
+export type GetRoomUnreadQuery = { __typename?: 'QueryRoot', roomById?: { __typename?: 'Room', id: string, hasUnreadChat?: boolean | null } | null };
 
 export const UserFragmentFragmentDoc = gql`
     fragment UserFragment on User {
