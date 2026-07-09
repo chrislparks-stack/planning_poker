@@ -7,7 +7,7 @@ test.describe("Planning Poker Estimation", () => {
     pages = await Promise.all(
       Array(4)
         .fill(null)
-        .map(() => browser.newPage()),
+        .map(() => browser.newPage())
     );
   });
 
@@ -61,8 +61,8 @@ async function makeEstimations(pages: Page[]) {
     pages.map((page, index) =>
       page
         .getByRole("button", { name: estimations[index], exact: true })
-        .click(),
-    ),
+        .click()
+    )
   );
 }
 
@@ -74,7 +74,7 @@ async function verifyResults(pages: Page[]) {
   await Promise.all(
     pages.map(async (page) => {
       await expect(page.getByText("average")).toBeVisible();
-    }),
+    })
   );
   await expect(pages[0].getByTestId("vote-distribution-chart")).toBeVisible();
 }
@@ -82,7 +82,7 @@ async function verifyResults(pages: Page[]) {
 async function startNewRound(hostPage: Page) {
   await hostPage.getByRole("button", { name: "Start New Game" }).click();
   await expect(
-    hostPage.getByText("Are you sure you want to start a new game?"),
+    hostPage.getByText("Are you sure you want to start a new game?")
   ).toBeVisible();
   await hostPage.getByRole("button", { name: "Start New Game" }).click();
 }
@@ -92,9 +92,9 @@ async function verifyNewRound(pages: Page[]) {
     pages.map(async (page) => {
       await expect(page.getByText("average")).not.toBeVisible();
       await expect(
-        page.getByTestId("vote-distribution-chart"),
+        page.getByTestId("vote-distribution-chart")
       ).not.toBeVisible();
       await expect(page.getByText("Just start picking cards!")).toBeVisible();
-    }),
+    })
   );
 }

@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+
 import { cn } from "@/lib/utils";
 
 interface ResultsTagProps {
@@ -23,7 +24,7 @@ export const ResultsTag: React.FC<ResultsTagProps> = ({ active }) => {
       style={{
         writingMode: "vertical-rl",
         textOrientation: "upright",
-        letterSpacing: "0.1em",
+        letterSpacing: "0.1em"
       }}
     >
       VOTE RESULTS

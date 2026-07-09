@@ -15,17 +15,17 @@ const mockDefaultOptions: ModalOptions = {
   dialogProps: {},
   confirmationButtonProps: {},
   cancellationButtonProps: {},
-  allowClose: true,
+  allowClose: true
 };
 
 const mockWithContentOptions: ModalOptions = {
   ...mockDefaultOptions,
-  content: <div>content</div>,
+  content: <div>content</div>
 };
 
 const mockWithDescriptionOptions: ModalOptions = {
   ...mockDefaultOptions,
-  description: <div>description</div>,
+  description: <div>description</div>
 };
 
 describe("<ConfirmationDialog />", () => {
@@ -37,7 +37,7 @@ describe("<ConfirmationDialog />", () => {
         onCancel={() => null}
         onConfirm={() => null}
         onClose={() => null}
-      />,
+      />
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
@@ -52,22 +52,22 @@ describe("<ConfirmationDialog />", () => {
         onCancel={mockCancelHandler}
         onConfirm={mockConfirmHandler}
         onClose={() => null}
-      />,
+      />
     );
     expect(screen.getByRole("dialog")).toBeInTheDocument();
 
     expect(
-      screen.getByText(mockWithContentOptions.title as string),
+      screen.getByText(mockWithContentOptions.title as string)
     ).toBeInTheDocument();
 
     expect(screen.getByRole("dialog")).toContainElement(
-      screen.getByText("content"),
+      screen.getByText("content")
     );
     const confirmationButton = screen.getByRole("button", {
-      name: mockWithContentOptions.confirmationText as string,
+      name: mockWithContentOptions.confirmationText as string
     });
     const cancellationButton = screen.getByRole("button", {
-      name: mockWithContentOptions.cancellationText as string,
+      name: mockWithContentOptions.cancellationText as string
     });
     expect(confirmationButton).toBeInTheDocument();
     expect(cancellationButton).toBeInTheDocument();
@@ -88,23 +88,23 @@ describe("<ConfirmationDialog />", () => {
         onCancel={mockCancelHandler}
         onConfirm={mockConfirmHandler}
         onClose={() => null}
-      />,
+      />
     );
     expect(screen.getByRole("dialog")).toBeInTheDocument();
 
     expect(
-      screen.getByText(mockWithDescriptionOptions.title as string),
+      screen.getByText(mockWithDescriptionOptions.title as string)
     ).toBeInTheDocument();
 
     expect(screen.getByRole("dialog")).toContainElement(
-      screen.getByText("description"),
+      screen.getByText("description")
     );
 
     const confirmationButton = screen.getByRole("button", {
-      name: mockWithContentOptions.confirmationText as string,
+      name: mockWithContentOptions.confirmationText as string
     });
     const cancellationButton = screen.getByRole("button", {
-      name: mockWithContentOptions.cancellationText as string,
+      name: mockWithContentOptions.cancellationText as string
     });
     expect(confirmationButton).toBeInTheDocument();
     expect(cancellationButton).toBeInTheDocument();

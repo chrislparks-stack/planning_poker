@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {useAuth} from "@/contexts";
-import {useMarkChatSeenMutation} from "@/api";
-import {Room} from "@/types";
-import {NotificationDot} from "@/components/ui/notification-dot.tsx";
+import React, { useEffect, useState } from "react";
+
+import { useMarkChatSeenMutation } from "@/api";
+import { NotificationDot } from "@/components/ui/notification-dot.tsx";
+import { useAuth } from "@/contexts";
+import { Room } from "@/types";
 
 const HEADER_HEIGHT = 56;
 const HEADER_PADDING = 30;
@@ -15,7 +16,12 @@ interface ChatRevealPromptProps {
   chatOpen?: boolean;
 }
 
-export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({ onClick, menuOpen = false, room, chatOpen }) => {
+export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({
+  onClick,
+  menuOpen = false,
+  room,
+  chatOpen
+}) => {
   const { user } = useAuth();
   const [markChatSeen] = useMarkChatSeenMutation();
   const [isNearEdge, setIsNearEdge] = useState(false);
@@ -26,10 +32,10 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({ onClick, men
     markChatSeen({
       variables: {
         roomId: room.id,
-        userId: user.id,
-      },
+        userId: user.id
+      }
     });
-  }, [chatOpen]);
+  }, [chatOpen, room?.id, user?.id, markChatSeen]);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -58,7 +64,7 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({ onClick, men
       }
     };
 
-    const EDGE_VW = 0.10;
+    const EDGE_VW = 0.1;
     const EDGE_MAX = 250;
 
     const handleMouseMove = (e: MouseEvent) => {
@@ -86,33 +92,31 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({ onClick, men
       html.style.overflowX = prevHtmlOverflow;
       body.style.overflowX = prevBodyOverflow;
     };
-  }, []);
+  }, [menuOpen]);
 
   const unreadCount = React.useMemo(() => {
     if (!room?.chatHistory || !user?.id) return 0;
 
-    const roomUser = room?.users.find(u => u.id === user?.id);
+    const roomUser = room?.users.find((u) => u.id === user?.id);
     const lastSeenId = roomUser?.lastSeenChatMessageId;
 
     // If user has never seen anything
     if (!lastSeenId) {
-      return room.chatHistory.filter(m => m.userId !== user.id).length;
+      return room.chatHistory.filter((m) => m.userId !== user.id).length;
     }
 
     const lastSeenIndex = room.chatHistory.findIndex(
-      m => m.id === lastSeenId
+      (m) => m.id === lastSeenId
     );
 
     // If last seen not found (pruned, edge case, etc.)
     if (lastSeenIndex === -1) {
-      return room.chatHistory.filter(m => m.userId !== user.id).length;
+      return room.chatHistory.filter((m) => m.userId !== user.id).length;
     }
 
     return room.chatHistory
       .slice(lastSeenIndex + 1)
-      .filter(m => m.userId !== user.id)
-      .length;
-
+      .filter((m) => m.userId !== user.id).length;
   }, [room?.chatHistory, room?.users, user?.id]);
 
   const hasUnread = unreadCount > 0;
@@ -138,12 +142,21 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({ onClick, men
                   transparent
                 )
               `,
-              pointerEvents: "none",
+              pointerEvents: "none"
             }}
           >
             {/* Clickable inner layer — inset a bit from the right to avoid scrollbar overlap */}
             <div
+              role="button"
+              tabIndex={0}
+              aria-label="Open chat"
               onClick={onClick}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onClick?.();
+                }
+              }}
               className="absolute inset-y-0 right-[6px] w-[9.8vw] max-w-[245px] cursor-pointer"
               style={{ pointerEvents: "auto" }}
             >
@@ -162,7 +175,7 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({ onClick, men
                   writingMode: "vertical-rl",
                   textOrientation: "mixed",
                   transformOrigin: "center right",
-                  pointerEvents: "none",
+                  pointerEvents: "none"
                 }}
               >
                 <div
@@ -179,17 +192,19 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({ onClick, men
                       ? "NEW CHAT MESSAGE"
                       : "NEW CHAT MESSAGES"
                     : "SHOW CHAT"}
-                  <NotificationDot count={unreadCount} className= "bg-red-500 text-white shadow-md -mr-[5px] -mt-[2px]" />
+                  <NotificationDot
+                    count={unreadCount}
+                    className="bg-red-500 text-white shadow-md -mr-[5px] -mt-[2px]"
+                  />
                 </div>
                 <div
                   className={`mt-2 text-accent/70 text-xl font-light transition-transform duration-300
                    group-hover:translate-x-[1px]
                    ${
-                    hasUnread
-                      ? "text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]"
-                      : "text-accent/70 drop-shadow-[0_0_1px_rgba(0,0,0,0.4)] group-hover:text-accent"
-                  }`
-                }
+                     hasUnread
+                       ? "text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]"
+                       : "text-accent/70 drop-shadow-[0_0_1px_rgba(0,0,0,0.4)] group-hover:text-accent"
+                   }`}
                 >
                   ◂
                 </div>

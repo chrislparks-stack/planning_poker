@@ -1,6 +1,8 @@
 // src/main.tsx
 import { ApolloProvider } from "@apollo/client";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
+import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
@@ -9,19 +11,17 @@ import { ConfirmationDialogProvider } from "@/components/ConfirmationDialog";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts";
+import { BackgroundConfigProvider } from "@/contexts/BackgroundContext.tsx";
 import { applyAccent } from "@/lib/theme-accent";
 import { NotFoundPage } from "@/pages/NotFoundPage";
+
 import { TooltipProvider } from "./components/ui/tooltip";
 import { routeTree } from "./routeTree.gen";
 
 import "./index.css";
 
-import "slick-carousel/slick/slick.css"
-import "slick-carousel/slick/slick-theme.css"
-
-import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
-import { SpeedInsights } from "@vercel/speed-insights/react";
-import {BackgroundConfigProvider} from "@/contexts/BackgroundContext.tsx";
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
 
 try {
   if (typeof document !== "undefined") {

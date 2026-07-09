@@ -4,9 +4,7 @@ export function useTouchInput() {
   const [isTouch, setIsTouch] = useState(false);
 
   useEffect(() => {
-    setIsTouch(
-      window.matchMedia("(pointer: coarse)").matches
-    );
+    setIsTouch(window.matchMedia("(pointer: coarse)").matches);
   }, []);
 
   return isTouch;

@@ -65,7 +65,6 @@ export const ConfirmLogoutDialog: FC<ConfirmLogoutDialogProps> = ({
       });
       setOpen(false);
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error("Logout failed:", err);
       toast({
         title: "Sign out failed",
@@ -112,22 +111,23 @@ export const ConfirmLogoutDialog: FC<ConfirmLogoutDialogProps> = ({
 
                 <DialogDescription asChild>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    We’ll save your place. Signing out ends this session — you can
-                    sign back in anytime to return to your rooms and settings.
+                    We’ll save your place. Signing out ends this session — you
+                    can sign back in anytime to return to your rooms and
+                    settings.
                   </p>
                 </DialogDescription>
               </div>
 
               <div className="flex items-start gap-2">
-          <span
-            className="inline-block rounded px-2 py-0.5 text-xs font-medium flex-shrink-0"
-            style={{
-              backgroundColor: "hsl(var(--accent) / 0.08)",
-              color: "hsl(var(--accent))"
-            }}
-          >
-            Tip
-          </span>
+                <span
+                  className="inline-block rounded px-2 py-0.5 text-xs font-medium flex-shrink-0"
+                  style={{
+                    backgroundColor: "hsl(var(--accent) / 0.08)",
+                    color: "hsl(var(--accent))"
+                  }}
+                >
+                  Tip
+                </span>
 
                 <p className="text-xs text-muted-foreground m-0">
                   {isOwner && isLastUser ? (
@@ -149,35 +149,35 @@ export const ConfirmLogoutDialog: FC<ConfirmLogoutDialogProps> = ({
 
           {/* ownership handoff card */}
           {isOwner && nextOwner && (
-              <div className="mt-4">
-                <div
-                  className="flex items-center gap-3 rounded-md border px-3 py-2"
-                  style={{
-                    backgroundColor: "hsl(var(--accent) / 0.06)",
-                    borderColor: "hsl(var(--accent) / 0.28)"
-                  }}
-                  role="status"
-                >
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>
-                      {String(nextOwner.username?.[0] ?? "?").toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+            <div className="mt-4">
+              <div
+                className="flex items-center gap-3 rounded-md border px-3 py-2"
+                style={{
+                  backgroundColor: "hsl(var(--accent) / 0.06)",
+                  borderColor: "hsl(var(--accent) / 0.28)"
+                }}
+                role="status"
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback>
+                    {String(nextOwner.username?.[0] ?? "?").toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
 
-                  <div className="min-w-0">
-                    <p className="text-xs text-muted-foreground mb-0">
-                      Heads up — as the room owner, ownership will be passed to:
-                    </p>
-                    <p
-                      className="mt-1 text-sm font-medium truncate"
-                      style={{ color: "hsl(var(--accent))" }}
-                      title={nextOwner.username}
-                    >
-                      {nextOwner.username}
-                    </p>
-                  </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground mb-0">
+                    Heads up — as the room owner, ownership will be passed to:
+                  </p>
+                  <p
+                    className="mt-1 text-sm font-medium truncate"
+                    style={{ color: "hsl(var(--accent))" }}
+                    title={nextOwner.username}
+                  >
+                    {nextOwner.username}
+                  </p>
                 </div>
               </div>
+            </div>
           )}
         </div>
 

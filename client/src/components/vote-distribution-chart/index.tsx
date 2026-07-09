@@ -1,5 +1,5 @@
-import {FC, useEffect, useMemo, useRef, useState} from "react";
-import {Bar, BarChart, Cell, XAxis} from "recharts";
+import { FC, useEffect, useMemo, useRef, useState } from "react";
+import { Bar, BarChart, Cell, XAxis } from "recharts";
 
 import { CardTitle } from "@/components/ui/card";
 import {
@@ -7,9 +7,9 @@ import {
   ChartTooltip,
   ChartTooltipContent
 } from "@/components/ui/chart";
+import { VoteLabel } from "@/components/ui/vote-label.tsx";
+import { useBackgroundConfig } from "@/contexts/BackgroundContext.tsx";
 import { Room } from "@/types";
-import {useBackgroundConfig} from "@/contexts/BackgroundContext.tsx";
-import {VoteLabel} from "@/components/ui/vote-label.tsx";
 
 interface VoteDistributionChartProps {
   room: Room;
@@ -65,7 +65,7 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
       return {
         card,
         cardValue: parseFloat(card),
-        Votes: Number(count),
+        Votes: Number(count)
       };
     });
   }, [voteSignature]);
@@ -112,8 +112,7 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
       if (cancelled) return;
       if (!chartRef.current) return;
 
-      const labels =
-        chartRef.current.querySelectorAll("text");
+      const labels = chartRef.current.querySelectorAll("text");
 
       const expected = chartData.length;
 
@@ -144,7 +143,7 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
     setShowLabels(false);
     const t = setTimeout(() => setShowLabels(true), 750);
     return () => clearTimeout(t);
-  }, [chartData]);
+  }, [chartData, room.isGameOver]);
 
   return (
     <div
@@ -178,7 +177,11 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
             isAnimationActive
             animationBegin={0}
             animationDuration={500}
-            label={showLabels && <VoteLabel max={maxCardCount} barCount={chartData.length} />}
+            label={
+              showLabels && (
+                <VoteLabel max={maxCardCount} barCount={chartData.length} />
+              )
+            }
           >
             {chartData.map((entry) => {
               const isMajority = entry.Votes === maxCardCount;
@@ -190,7 +193,9 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
                     filter: isMajority
                       ? "drop-shadow(0 0 10px hsl(var(--accent))) drop-shadow(0 0 24px rgba(var(--accent-rgb),0.4))"
                       : "drop-shadow(0 0 10px rgba(var(--accent-rgb),0.3))",
-                    animation: isMajority ? "pulseGlow 3s ease-in-out infinite" : undefined,
+                    animation: isMajority
+                      ? "pulseGlow 3s ease-in-out infinite"
+                      : undefined
                   }}
                 />
               );
@@ -215,7 +220,10 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
 
       {/* --- Gauge --- */}
       <div className="relative w-[clamp(1.25rem,10vw,10rem)] h-[clamp(60px,10vw,100px)] flex items-end justify-center">
-        <svg viewBox="0 0 100 50" className="absolute top-0 left-0 w-full h-full">
+        <svg
+          viewBox="0 0 100 50"
+          className="absolute top-0 left-0 w-full h-full"
+        >
           <path
             d="M10,50 A40,40 0 0,1 90,50"
             fill="none"
@@ -234,7 +242,7 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
             strokeDashoffset={126 - (agreement / 100) * 126}
             style={{
               filter: "drop-shadow(0 0 2px rgba(var(--accent-rgb),0.6))",
-              transition: "stroke-dashoffset 0.6s ease",
+              transition: "stroke-dashoffset 0.6s ease"
             }}
           />
         </svg>

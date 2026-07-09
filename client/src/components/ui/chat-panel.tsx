@@ -1,15 +1,20 @@
-import React, {useEffect, useLayoutEffect, useRef, useState} from "react";
 import { motion } from "framer-motion";
-import { Room, ChatMessage, User } from "@/types";
-import { cn } from "@/lib/utils";
-import {useMarkChatSeenMutation, useRoomChatSubscription, useSendChatMessageMutation} from "@/api";
-import { ChatInput } from "@/components/ui/chat-input";
-import { useToast } from "@/hooks/use-toast";
-import { useCardPosition } from "@/utils/cardPositionContext";
+import parse, { Element } from "html-react-parser";
 import { Info } from "lucide-react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+
+import {
+  useMarkChatSeenMutation,
+  useRoomChatSubscription,
+  useSendChatMessageMutation
+} from "@/api";
+import { ChatInput } from "@/components/ui/chat-input";
+import { ToggleGif } from "@/components/ui/toggle-gif.tsx";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import { Room, ChatMessage, User } from "@/types";
+import { useCardPosition } from "@/utils/cardPositionContext";
 import { safeDecompressMessage } from "@/utils/messageUtils.ts";
-import {ToggleGif} from "@/components/ui/toggle-gif.tsx";
-import parse from "html-react-parser";
 
 export const ChatPanel: React.FC<{
   room?: Room;
@@ -31,7 +36,9 @@ export const ChatPanel: React.FC<{
   const wasVisibleRef = useRef(false);
   const [hasNewMessages, setHasNewMessages] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [freshMessageIds, setFreshMessageIds] = useState<Set<string>>(new Set());
+  const [freshMessageIds, setFreshMessageIds] = useState<Set<string>>(
+    new Set()
+  );
   const [markChatSeen] = useMarkChatSeenMutation();
   const { toast } = useToast();
   const { getCardRect } = useCardPosition();
@@ -45,7 +52,7 @@ export const ChatPanel: React.FC<{
     if (!roomId || messages.length) return;
 
     setMessages((room?.chatHistory ?? []).map(safeDecompressMessage));
-  }, [roomId]);
+  }, [roomId, room?.chatHistory, messages.length]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -61,11 +68,14 @@ export const ChatPanel: React.FC<{
   }, [visible]);
 
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      setNow(Date.now());
-      const interval = setInterval(() => setNow(Date.now()), 60_000);
-      return () => clearInterval(interval);
-    }, 60_000 - (Date.now() % 60_000));
+    const timeout = setTimeout(
+      () => {
+        setNow(Date.now());
+        const interval = setInterval(() => setNow(Date.now()), 60_000);
+        return () => clearInterval(interval);
+      },
+      60_000 - (Date.now() % 60_000)
+    );
 
     return () => clearTimeout(timeout);
   }, []);
@@ -103,7 +113,7 @@ export const ChatPanel: React.FC<{
 
         return [...prev, message];
       });
-    },
+    }
   });
 
   useEffect(() => {
@@ -112,11 +122,11 @@ export const ChatPanel: React.FC<{
     if (roomId && currentUserId) {
       markChatSeen({
         variables: { roomId, userId: currentUserId }
-      }).catch(err => {
+      }).catch((err) => {
         console.error("Failed to mark chat seen:", err);
       });
     }
-  }, [visible, freshMessageIds]);
+  }, [visible, freshMessageIds, roomId, currentUserId, markChatSeen]);
 
   useEffect(() => {
     if (!visible || freshMessageIds.size === 0) return;
@@ -130,8 +140,12 @@ export const ChatPanel: React.FC<{
 
   const renderMessage = (html: string) => {
     return parse(html, {
-      replace: (domNode: any) => {
-        if (domNode.name === "img" && domNode.attribs?.src?.endsWith(".gif")) {
+      replace: (domNode) => {
+        if (
+          domNode instanceof Element &&
+          domNode.name === "img" &&
+          domNode.attribs?.src?.endsWith(".gif")
+        ) {
           return (
             <ToggleGif
               key={domNode.attribs.src}
@@ -141,7 +155,7 @@ export const ChatPanel: React.FC<{
           );
         }
         return undefined;
-      },
+      }
     });
   };
 
@@ -155,7 +169,7 @@ export const ChatPanel: React.FC<{
 
     return new Date(messageTime).toLocaleTimeString([], {
       hour: "2-digit",
-      minute: "2-digit",
+      minute: "2-digit"
     });
   };
 
@@ -260,35 +274,27 @@ export const ChatPanel: React.FC<{
   const handleSendChat = async (plain: string, formatted: string) => {
     if (!currentUserId || !roomId || !user) return;
 
-    const tempId = `local-${Date.now()}`;
-    const newMessage: ChatMessage = {
-      id: tempId,
-      roomId,
-      userId: currentUserId,
-      username: user.username,
-      content: plain,
-      formattedContent: formatted,
-      contentType: "html",
-      timestamp: new Date().toISOString(),
-    };
-
     try {
       const position = getCardRect(currentUserId);
-      const variables: any = {
-        ...newMessage,
-        position,
-      };
 
-      await sendChatMessage({ variables });
+      await sendChatMessage({
+        variables: {
+          roomId,
+          userId: currentUserId,
+          username: user.username,
+          content: plain,
+          formattedContent: formatted,
+          contentType: "html",
+          position
+        }
+      });
     } catch (err) {
       console.error("Failed to send chat:", err);
       toast({
         title: "Message failed",
         description: err instanceof Error ? err.message : "Unknown error",
-        variant: "destructive",
+        variant: "destructive"
       });
-      // rollback if needed
-      setMessages((prev) => prev.filter((m) => m.id !== tempId));
     }
   };
 
@@ -308,7 +314,7 @@ export const ChatPanel: React.FC<{
         animate={{
           x: visible ? 0 : "100%",
           opacity: visible ? 1 : 0,
-          pointerEvents: visible ? "auto" : "none",
+          pointerEvents: visible ? "auto" : "none"
         }}
         exit={{ x: "100%", opacity: 0 }}
         transition={{ type: "spring", stiffness: 180, damping: 22 }}
@@ -322,7 +328,7 @@ export const ChatPanel: React.FC<{
           "before:absolute before:inset-y-0 before:left-0 before:w-[2px] before:bg-gradient-to-b before:from-accent/20 before:via-accent/60 before:to-accent/20 before:blur-[2px]"
         )}
       >
-      {/* Header */}
+        {/* Header */}
         <div className="relative flex items-center justify-between px-4 py-2 bg-gradient-to-r from-background/70 via-background/60 to-background/70 backdrop-blur-md overflow-visible z-40">
           {/* Title + Info */}
           <div className="flex items-center gap-2">
@@ -361,7 +367,9 @@ export const ChatPanel: React.FC<{
               >
                 <div>Only the most recent 100 messages are available</div>
                 <div className="my-1 h-px w-3/4 mx-auto bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
-                <div>Any messages older than 48 hours are automatically removed</div>
+                <div>
+                  Any messages older than 48 hours are automatically removed
+                </div>
               </div>
             </div>
           </div>
@@ -405,16 +413,18 @@ export const ChatPanel: React.FC<{
                 .toUpperCase();
 
               const isEmojiOnly = (() => {
-                const html = msg.formattedContent || msg.content || ""
+                const html = msg.formattedContent || msg.content || "";
 
                 // Normalize HTML: remove tags, entities, and invisible chars
                 const text = html
                   .replace(/<[^>]+>/g, "")
                   .replace(/&nbsp;|<br\s*\/?>|\n|\r/g, "")
                   .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(dec))
-                  .replace(/&#x([0-9A-Fa-f]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+                  .replace(/&#x([0-9A-Fa-f]+);/g, (_, hex) =>
+                    String.fromCodePoint(parseInt(hex, 16))
+                  )
                   .replace(/[\u200D\uFE0F]/g, "")
-                  .trim()
+                  .trim();
 
                 // if the text is just one or a few emoji, no letters or numbers
                 const emojiRegex =
@@ -425,7 +435,7 @@ export const ChatPanel: React.FC<{
                   !/[A-Za-z0-9!@#$%^&*(),.?":{}|<>\-_+=]/.test(text) &&
                   emojiRegex.test(text)
                 );
-              })()
+              })();
 
               return (
                 <motion.div
@@ -458,29 +468,31 @@ export const ChatPanel: React.FC<{
                         isSelf
                           ? "bg-accent/45 dark:bg-accent/25 border-accent/40 text-[color:hsl(var(--foreground))] dark:text-[color:hsl(var(--foreground))]"
                           : "bg-background/45 dark:bg-background/25 border-border text-[color:hsl(var(--foreground))] dark:text-[color:hsl(var(--foreground))]",
-                        !isSelf && isFresh &&
-                        "ring-2 ring-accent/70 bg-accent/15 shadow-[0_0_18px_rgba(var(--accent-rgb),0.45)]",
+                        !isSelf &&
+                          isFresh &&
+                          "ring-2 ring-accent/70 bg-accent/15 shadow-[0_0_18px_rgba(var(--accent-rgb),0.45)]",
                         isEmojiOnly &&
-                        "bg-transparent border-none shadow-none p-0 leading-none text-[3rem] sm:text-[3.5rem] md:text-[4rem]"
+                          "bg-transparent border-none shadow-none p-0 leading-none text-[3rem] sm:text-[3.5rem] md:text-[4rem]"
                       )}
                     >
-                    <div
+                      <div
                         className={cn(
                           "chat-bubble-content leading-snug break-words break-all whitespace-pre-wrap overflow-hidden",
                           isEmojiOnly &&
-                          "flex justify-center items-center text-center select-none p-3 leading-none"
+                            "flex justify-center items-center text-center select-none p-3 leading-none"
                         )}
                         style={
                           isEmojiOnly
                             ? {
-                              fontSize: "3rem",
-                              lineHeight: "1",
-                              textAlign: "center",
-                              fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'
-                            }
+                                fontSize: "3rem",
+                                lineHeight: "1",
+                                textAlign: "center",
+                                fontFamily:
+                                  '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'
+                              }
                             : {
-                              wordBreak: "break-word"
-                            }
+                                wordBreak: "break-word"
+                              }
                         }
                       >
                         {renderMessage(msg.formattedContent || msg.content)}
@@ -493,13 +505,17 @@ export const ChatPanel: React.FC<{
                         isSelf
                           ? "flex-row-reverse text-accent-foreground/50"
                           : isFresh
-                            ? "text-accent drop-shadow-[0_0_6px_rgba(var(--accent-rgb),0.7)]"
-                            : "text-muted-foreground/60"
+                          ? "text-accent drop-shadow-[0_0_6px_rgba(var(--accent-rgb),0.7)]"
+                          : "text-muted-foreground/60"
                       )}
                     >
-                    <span className="text-foreground/75 text-[12px]">{msg.username}</span>
+                      <span className="text-foreground/75 text-[12px]">
+                        {msg.username}
+                      </span>
                       <span className="text-foreground/30 text-[10px]">•</span>
-                      <span className="text-foreground/50 text-[10px]">{time}</span>
+                      <span className="text-foreground/50 text-[10px]">
+                        {time}
+                      </span>
                     </div>
                   </div>
 
@@ -537,14 +553,14 @@ export const ChatPanel: React.FC<{
               }}
               initial={false}
               animate={{
-                opacity: showScrollButton ? 0.70 : 0,
-                y: showScrollButton ? 0 : 10,
+                opacity: showScrollButton ? 0.7 : 0,
+                y: showScrollButton ? 0 : 10
               }}
               transition={{
                 type: "spring",
                 stiffness: 160,
                 damping: 22,
-                opacity: { duration: 0.3 },
+                opacity: { duration: 0.3 }
               }}
               className={cn(
                 "ml-auto mr-3 mt-2 flex items-center gap-1 px-3 py-1.5 rounded-full",
@@ -558,7 +574,7 @@ export const ChatPanel: React.FC<{
               )}
               style={{
                 zIndex: 10,
-                alignSelf: "flex-end",
+                alignSelf: "flex-end"
               }}
             >
               <span

@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import {cn} from "@/lib/utils.ts";
+
+import { cn } from "@/lib/utils.ts";
 
 type ChevronCascadeProps = {
   overlap?: number;
@@ -13,8 +14,8 @@ export const ChevronCascade = ({
   overlap = 0,
   travel = 3,
   className,
-  color="text-gray-400 dark:text-gray-500",
-  size = 16,
+  color = "text-gray-400 dark:text-gray-500",
+  size = 16
 }: ChevronCascadeProps) => (
   <div className={cn("flex flex-col items-center leading-none", className)}>
     {[0, 1, 2].map((i) => (
@@ -23,17 +24,17 @@ export const ChevronCascade = ({
         className={cn("leading-none", color)}
         style={{
           fontSize: size,
-          marginTop: i === 0 ? 0 : -overlap,
+          marginTop: i === 0 ? 0 : -overlap
         }}
         animate={{
           opacity: [0.25, 1, 0.25],
-          y: [0, travel, 0],
+          y: [0, travel, 0]
         }}
         transition={{
           duration: 1.4,
           repeat: Infinity,
           delay: i * 0.15,
-          ease: "easeInOut",
+          ease: "easeInOut"
         }}
       >
         ⌄
@@ -66,7 +67,7 @@ export const ScrollHint = ({ label }: ScrollHintProps) => (
         transition={{
           duration: 2,
           repeat: Infinity,
-          ease: "easeInOut",
+          ease: "easeInOut"
         }}
         style={{ height: "100%" }}
       />

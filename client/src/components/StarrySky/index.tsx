@@ -1,4 +1,5 @@
-import {CSSProperties, FC, useEffect, useMemo, useRef, useState} from "react";
+import { CSSProperties, FC, useEffect, useMemo, useRef, useState } from "react";
+
 import Mountain from "@/assets/silhouetted-mountain-range-at-dusk.jpg";
 
 interface StarrySkyProps {
@@ -29,19 +30,15 @@ function getAccentRGB(): [number, number, number] {
 
   if (!raw) return [186, 147, 255]; // lilac fallback
 
-  return raw.split(",").map(n => parseInt(n.trim(), 10)) as [
+  return raw.split(",").map((n) => parseInt(n.trim(), 10)) as [
     number,
     number,
     number
   ];
 }
 
-function tint(
-  [r, g, b]: [number, number, number],
-  amount: number
-): string {
-  const mix = (c: number) =>
-    Math.min(255, Math.round(c + (255 - c) * amount));
+function tint([r, g, b]: [number, number, number], amount: number): string {
+  const mix = (c: number) => Math.min(255, Math.round(c + (255 - c) * amount));
 
   return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
 }
@@ -54,30 +51,32 @@ function generateNightSkyColors(): string[] {
     tint(accent, 0.15),
     tint(accent, 0.3),
     tint(accent, 0.45),
-    tint(accent, 0.6),
+    tint(accent, 0.6)
   ];
 }
 
 const nightsky = generateNightSkyColors();
 
-const rand = (min: number, max: number) =>
-  Math.random() * (max - min) + min;
+const rand = (min: number, max: number) => Math.random() * (max - min) + min;
 
-const pickColor = () =>
-  nightsky[Math.floor(rand(0, nightsky.length))];
+const pickColor = () => nightsky[Math.floor(rand(0, nightsky.length))];
 
 function generateBackgroundShadows(count: number): string {
   const out: string[] = [];
   for (let i = 0; i < count; i++) {
     out.push(
       `${rand(0, 100).toFixed(2)}vw ` +
-      `${rand(0, 100).toFixed(2)}vh rgba(255,255,255,0.6)`
+        `${rand(0, 100).toFixed(2)}vh rgba(255,255,255,0.6)`
     );
   }
   return out.join(", ");
 }
 
-export const StarrySky: FC<StarrySkyProps> = ({gradient = true, fallingStars = true, mountains = true}) => {
+export const StarrySky: FC<StarrySkyProps> = ({
+  gradient = true,
+  fallingStars = true,
+  mountains = true
+}) => {
   const [shootingStars, setShootingStars] = useState<ShootingStar[]>([]);
   const startedRef = useRef(false);
 
@@ -103,13 +102,13 @@ export const StarrySky: FC<StarrySkyProps> = ({gradient = true, fallingStars = t
         angle: rand(35, 65),
         duration: rand(600, 1500),
         length: rand(50, 220),
-        travel: rand(400, 900),
+        travel: rand(400, 900)
       };
 
-      setShootingStars(s => [...s, star]);
+      setShootingStars((s) => [...s, star]);
 
       setTimeout(() => {
-        setShootingStars(s => s.filter(x => x.id !== star.id));
+        setShootingStars((s) => s.filter((x) => x.id !== star.id));
       }, star.duration + 200);
 
       scheduleNext();
@@ -124,122 +123,123 @@ export const StarrySky: FC<StarrySkyProps> = ({gradient = true, fallingStars = t
     };
   }, []);
 
-  const { stars, crossStars, crossAuxStars, backgroundShadows } = useMemo(() => {
-    const stars: Star[] = [];
-    const crossStars: Star[] = [];
-    const crossAuxStars: Star[] = [];
+  const { stars, crossStars, crossAuxStars, backgroundShadows } =
+    useMemo(() => {
+      const stars: Star[] = [];
+      const crossStars: Star[] = [];
+      const crossAuxStars: Star[] = [];
 
-    /* -----------------------------
+      /* -----------------------------
        INDIVIDUAL TWINKLE STARS
     ------------------------------ */
 
-    for (let i = 0; i < 100; i++) {
-      stars.push({
-        className: "star star-1 blink",
-        style: {
-          top: `${rand(0, 70)}vh`,
-          left: `${rand(0, 100)}vw`,
-          animationDuration: `${rand(3, 8)}s`,
-        },
-      });
-    }
-
-    for (let i = 0; i < 90; i++) {
-      stars.push({
-        className: "star star-2 blink",
-        style: {
-          top: `${rand(0, 75)}vh`,
-          left: `${rand(0, 100)}vw`,
-          animationDuration: `${rand(4, 9)}s`,
-        },
-      });
-    }
-
-    for (let i = 0; i < 100; i++) {
-      stars.push({
-        className: "star star-4 blink",
-        style: {
-          top: `${rand(0, 70)}vh`,
-          left: `${rand(0, 100)}vw`,
-          animationDuration: `${rand(6, 12)}s`,
-        },
-      });
-    }
-
-    /* -----------------------------
-             CROSS STARS
-    ------------------------------ */
-
-    for (let i = 0; i < 100; i++) {
-      const color = pickColor();
-
-      crossStars.push(
-        {
-          className: "blur",
-          style: {
-            top: `${rand(0, 100)}%`,
-            left: `${rand(0, 100)}%`,
-            backgroundColor: color,
-          },
-        },
-        {
+      for (let i = 0; i < 100; i++) {
+        stars.push({
           className: "star star-1 blink",
           style: {
-            top: `${rand(0, 100)}%`,
-            left: `${rand(0, 100)}%`,
-            animationDuration: `${rand(6, 12)}s`,
-            backgroundColor: color,
-          },
-        }
-      );
-    }
-
-    for (let i = 0; i < 50; i++) {
-      if (i % 2 === 0) {
-        stars.push({
-          className: "star star-5",
-          style: {
-            top: `${rand(0, 50)}vh`,
+            top: `${rand(0, 70)}vh`,
             left: `${rand(0, 100)}vw`,
-            animationDuration: `${rand(5, 7)}s`,
-            backgroundColor: pickColor(),
-          },
+            animationDuration: `${rand(3, 8)}s`
+          }
         });
       }
 
-      const color = pickColor();
+      for (let i = 0; i < 90; i++) {
+        stars.push({
+          className: "star star-2 blink",
+          style: {
+            top: `${rand(0, 75)}vh`,
+            left: `${rand(0, 100)}vw`,
+            animationDuration: `${rand(4, 9)}s`
+          }
+        });
+      }
 
-      crossAuxStars.push(
-        {
-          className: "blur",
+      for (let i = 0; i < 100; i++) {
+        stars.push({
+          className: "star star-4 blink",
           style: {
-            top: `${rand(0, 100)}%`,
-            left: `${rand(0, 100)}%`,
-            backgroundColor: color,
+            top: `${rand(0, 70)}vh`,
+            left: `${rand(0, 100)}vw`,
+            animationDuration: `${rand(6, 12)}s`
+          }
+        });
+      }
+
+      /* -----------------------------
+             CROSS STARS
+    ------------------------------ */
+
+      for (let i = 0; i < 100; i++) {
+        const color = pickColor();
+
+        crossStars.push(
+          {
+            className: "blur",
+            style: {
+              top: `${rand(0, 100)}%`,
+              left: `${rand(0, 100)}%`,
+              backgroundColor: color
+            }
           },
-        },
-        {
-          className: "star star-2",
-          style: {
-            top: `${rand(0, 100)}%`,
-            left: `${rand(0, 100)}%`,
-            animationDuration: `${rand(4, 10)}s`,
-            backgroundColor: color,
-            boxShadow: `0 0 10px 1px ${pickColor()}`,
-            opacity: 0.7,
-          },
+          {
+            className: "star star-1 blink",
+            style: {
+              top: `${rand(0, 100)}%`,
+              left: `${rand(0, 100)}%`,
+              animationDuration: `${rand(6, 12)}s`,
+              backgroundColor: color
+            }
+          }
+        );
+      }
+
+      for (let i = 0; i < 50; i++) {
+        if (i % 2 === 0) {
+          stars.push({
+            className: "star star-5",
+            style: {
+              top: `${rand(0, 50)}vh`,
+              left: `${rand(0, 100)}vw`,
+              animationDuration: `${rand(5, 7)}s`,
+              backgroundColor: pickColor()
+            }
+          });
         }
-      );
-    }
 
-    /* -----------------------------
+        const color = pickColor();
+
+        crossAuxStars.push(
+          {
+            className: "blur",
+            style: {
+              top: `${rand(0, 100)}%`,
+              left: `${rand(0, 100)}%`,
+              backgroundColor: color
+            }
+          },
+          {
+            className: "star star-2",
+            style: {
+              top: `${rand(0, 100)}%`,
+              left: `${rand(0, 100)}%`,
+              animationDuration: `${rand(4, 10)}s`,
+              backgroundColor: color,
+              boxShadow: `0 0 10px 1px ${pickColor()}`,
+              opacity: 0.7
+            }
+          }
+        );
+      }
+
+      /* -----------------------------
        BACKGROUND STAR DENSITY
     ------------------------------ */
 
-    const backgroundShadows = generateBackgroundShadows(1000);
+      const backgroundShadows = generateBackgroundShadows(1000);
 
-    return { stars, crossStars, crossAuxStars, backgroundShadows };
-  }, []);
+      return { stars, crossStars, crossAuxStars, backgroundShadows };
+    }, []);
 
   return (
     <div className="sky">
@@ -255,25 +255,26 @@ export const StarrySky: FC<StarrySkyProps> = ({gradient = true, fallingStars = t
         ))}
       </div>
 
-      {!fallingStars ?
-        null :
+      {!fallingStars ? null : (
         <div className="shooting-stars">
-          {shootingStars.map(star => (
+          {shootingStars.map((star) => (
             <div
               key={star.id}
               className="shooting-star"
-              style={{
-                top: star.top,
-                left: star.left,
-                "--angle": `${star.angle}deg`,
-                "--duration": `${star.duration}ms`,
-                "--tail-length": `${star.length}px`,
-                "--travel": `${star.travel}px`
-              } as CSSProperties}
+              style={
+                {
+                  top: star.top,
+                  left: star.left,
+                  "--angle": `${star.angle}deg`,
+                  "--duration": `${star.duration}ms`,
+                  "--tail-length": `${star.length}px`,
+                  "--travel": `${star.travel}px`
+                } as CSSProperties
+              }
             />
           ))}
         </div>
-      }
+      )}
 
       <div className="celestial-rotation">
         <div
@@ -288,7 +289,8 @@ export const StarrySky: FC<StarrySkyProps> = ({gradient = true, fallingStars = t
         </div>
       </div>
       <div
-        className={["bg-black",
+        className={[
+          "bg-black",
           gradient &&
             `before:absolute before:inset-0
             before:bg-gradient-to-b
@@ -301,10 +303,10 @@ export const StarrySky: FC<StarrySkyProps> = ({gradient = true, fallingStars = t
             after:via-accent/10
             after:to-accent/40`
         ]
-        .filter(Boolean)
-        .join(" ")}/>
-      {!mountains ?
-        null :
+          .filter(Boolean)
+          .join(" ")}
+      />
+      {!mountains ? null : (
         <div
           className="mountains"
           style={{
@@ -325,7 +327,7 @@ export const StarrySky: FC<StarrySkyProps> = ({gradient = true, fallingStars = t
             className="absolute bottom-0 right-0 w-1/2 min-h-[200px] max-h-[650px] -scale-x-100"
           />
         </div>
-      }
+      )}
     </div>
   );
 };

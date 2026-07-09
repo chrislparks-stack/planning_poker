@@ -1,15 +1,21 @@
-import {ReactNode, RefObject, useEffect, useRef, useState} from "react";
-import { Header } from "@/components/Header";
-import { ChatRevealPrompt } from "@/components/ui/chat-reveal";
-import { Room, User } from "@/types";
-import {ChatPanel} from "@/components/ui/chat-panel.tsx";
-import {CardPositionProvider} from "@/utils/cardPositionContext.tsx";
-import {ThemeHint} from "@/components/ui/theme-hint.tsx";
 import { AnimatePresence } from "framer-motion";
-import {getCookie, setCookie} from "@/utils/cookies.ts";
+import { ReactNode, RefObject, useEffect, useRef, useState } from "react";
 
+import { Header } from "@/components/Header";
+import { ChatPanel } from "@/components/ui/chat-panel.tsx";
+import { ChatRevealPrompt } from "@/components/ui/chat-reveal";
+import { ThemeHint } from "@/components/ui/theme-hint.tsx";
+import { Room, User } from "@/types";
+import { CardPositionProvider } from "@/utils/cardPositionContext.tsx";
+import { getCookie, setCookie } from "@/utils/cookies.ts";
 
-export function PageLayout({ children, room, users, showChat, setShowChat }: {
+export function PageLayout({
+  children,
+  room,
+  users,
+  showChat,
+  setShowChat
+}: {
   children: ReactNode;
   room?: Room;
   users?: User[];
@@ -23,8 +29,10 @@ export function PageLayout({ children, room, users, showChat, setShowChat }: {
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
-      const anyDialogOpen = !!document.querySelector('[data-state="open"][role="dialog"]');
-      document.body.classList.toggle('dialog-open', anyDialogOpen);
+      const anyDialogOpen = !!document.querySelector(
+        '[data-state="open"][role="dialog"]'
+      );
+      document.body.classList.toggle("dialog-open", anyDialogOpen);
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
@@ -36,9 +44,12 @@ export function PageLayout({ children, room, users, showChat, setShowChat }: {
 
     if (hasOpenedMenu) return;
 
-    const timer = setTimeout(() => {
-      setShowThemeHint(true);
-    }, 5 * 60 * 1000);
+    const timer = setTimeout(
+      () => {
+        setShowThemeHint(true);
+      },
+      5 * 60 * 1000
+    );
 
     return () => clearTimeout(timer);
   }, []);
@@ -59,7 +70,7 @@ export function PageLayout({ children, room, users, showChat, setShowChat }: {
       setHighlightAppearance(true);
       setShowThemeHint(false);
     }
-  }, [menuOpen]);
+  }, [menuOpen, showThemeHint]);
 
   return (
     <CardPositionProvider cardRefs={cardRefs}>
@@ -81,29 +92,27 @@ export function PageLayout({ children, room, users, showChat, setShowChat }: {
             />
           )}
         </AnimatePresence>
-        {!menuOpen &&
+        {!menuOpen && (
           <ChatRevealPrompt
             onClick={() => setShowChat?.(true)}
             menuOpen={menuOpen}
             room={room}
             chatOpen={showChat}
           />
-        }
+        )}
         <main className="flex flex-1 min-h-0 flex-col overflow-hidden relative">
           {children}
           <ChatPanel
             room={room}
-            user={
-              (() => {
-                try {
-                  const raw = localStorage.getItem("user");
-                  if (!raw) return undefined;
-                  return JSON.parse(raw);
-                } catch {
-                  return users?.[0];
-                }
-              })()
-            }
+            user={(() => {
+              try {
+                const raw = localStorage.getItem("user");
+                if (!raw) return undefined;
+                return JSON.parse(raw);
+              } catch {
+                return users?.[0];
+              }
+            })()}
             visible={showChat ?? false}
             onClose={() => setShowChat?.(false)}
           />

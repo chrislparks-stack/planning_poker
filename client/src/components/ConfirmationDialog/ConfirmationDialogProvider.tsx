@@ -24,34 +24,34 @@ const DEFAULT_OPTIONS: ModalOptions = {
   cancellationButtonProps: {},
   titleProps: {},
   contentProps: {},
-  allowClose: true,
+  allowClose: true
 };
 
 const buildOptions = (
   defaultOptions: ModalOptions = DEFAULT_OPTIONS,
-  options?: ModalOptions,
+  options?: ModalOptions
 ): ModalOptions => {
   const dialogProps = {
     ...(defaultOptions.dialogProps || DEFAULT_OPTIONS.dialogProps),
-    ...(options?.dialogProps || {}),
+    ...(options?.dialogProps || {})
   };
   const confirmationButtonProps = {
     ...(defaultOptions.confirmationButtonProps ||
       DEFAULT_OPTIONS.confirmationButtonProps),
-    ...(options?.confirmationButtonProps || {}),
+    ...(options?.confirmationButtonProps || {})
   };
   const cancellationButtonProps = {
     ...(defaultOptions.cancellationButtonProps ||
       DEFAULT_OPTIONS.cancellationButtonProps),
-    ...(options?.cancellationButtonProps || {}),
+    ...(options?.cancellationButtonProps || {})
   };
   const titleProps = {
     ...(defaultOptions.titleProps || DEFAULT_OPTIONS.titleProps),
-    ...(options?.titleProps || {}),
+    ...(options?.titleProps || {})
   };
   const contentProps = {
     ...(defaultOptions.contentProps || DEFAULT_OPTIONS.contentProps),
-    ...(options?.contentProps || {}),
+    ...(options?.contentProps || {})
   };
 
   return {
@@ -62,7 +62,7 @@ const buildOptions = (
     confirmationButtonProps,
     cancellationButtonProps,
     titleProps,
-    contentProps,
+    contentProps
   };
 };
 
@@ -73,7 +73,7 @@ interface ModalProviderProps {
 
 export const ConfirmationDialogProvider = ({
   children,
-  defaultOptions,
+  defaultOptions
 }: ModalProviderProps) => {
   const [state, setState] = useState<Record<string, ModalOptions>>({});
 
@@ -88,13 +88,13 @@ export const ConfirmationDialogProvider = ({
               ...buildOptions(defaultOptions, options),
               open: true,
               resolve,
-              reject,
-            },
+              reject
+            }
           };
         });
       });
     },
-    [defaultOptions],
+    [defaultOptions]
   );
 
   const handleUpdate = useCallback(
@@ -106,12 +106,12 @@ export const ConfirmationDialogProvider = ({
             ...buildOptions(defaultOptions, options),
             open: state[id]?.open ?? false,
             resolve: state[id]?.resolve,
-            reject: state[id]?.reject,
-          },
+            reject: state[id]?.reject
+          }
         };
       });
     },
-    [defaultOptions],
+    [defaultOptions]
   );
 
   const handleClear = useCallback((id: string) => {
@@ -132,9 +132,9 @@ export const ConfirmationDialogProvider = ({
       open: handleOpen,
       update: handleUpdate,
       clear: handleClear,
-      close: handleClose,
+      close: handleClose
     }),
-    [handleOpen, handleUpdate, handleClear, handleClose],
+    [handleOpen, handleUpdate, handleClear, handleClose]
   );
 
   return (

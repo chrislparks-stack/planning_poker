@@ -1,6 +1,11 @@
-import {FC, FormEvent, useEffect, useState} from "react";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { useNavigate } from "@tanstack/react-router";
+import { House } from "lucide-react";
+import { FC, FormEvent, useEffect, useState } from "react";
+
 import { useCreateUserMutation } from "@/api";
 import { Button } from "@/components/ui/button";
+import { CardFan } from "@/components/ui/card-fan";
 import {
   Dialog,
   DialogContent,
@@ -10,14 +15,10 @@ import {
   DialogTitle
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { CardFan } from "@/components/ui/card-fan";
 import { useAuth } from "@/contexts";
 import { useToast } from "@/hooks/use-toast";
 import { Room, User } from "@/types";
-import {VisuallyHidden} from "@radix-ui/react-visually-hidden";
-import {MAX_LEN} from "@/utils/enums.ts";
-import {useNavigate} from "@tanstack/react-router";
-import {House} from "lucide-react";
+import { MAX_LEN } from "@/utils/enums.ts";
 
 interface CreateUserDialogProps {
   roomData: Room;
@@ -47,7 +48,8 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
   const [username, setUsername] = useState("");
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [users, setUsers] = useState<User[]>([]);
-  const [selectedCards, setSelectedCards] = useState<(string | number)[]>(DEFAULT_CARDS);
+  const [selectedCards, setSelectedCards] =
+    useState<(string | number)[]>(DEFAULT_CARDS);
 
   useEffect(() => {
     if (!open) return;
@@ -158,10 +160,12 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        <form onSubmit={(e) => {
-          e.preventDefault();
-          handleSubmit();
-        }}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmit();
+          }}
+        >
           {/* Accent bar */}
           <div className="h-1.5 w-full bg-gradient-to-r from-accent to-accent/60" />
 
@@ -196,7 +200,9 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
                     const clamped = raw.slice(0, MAX_LEN.roomName);
 
                     if (raw.length > MAX_LEN.roomName) {
-                      setRoomNameError(`Room name must be ${MAX_LEN.roomName} characters or less.`);
+                      setRoomNameError(
+                        `Room name must be ${MAX_LEN.roomName} characters or less.`
+                      );
                     } else {
                       setRoomNameError(null);
                     }
@@ -206,12 +212,16 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
                   aria-invalid={!!roomNameError}
                   placeholder="Enter room name"
                   className={`mt-2 ${
-                    roomNameError ? "border-destructive focus:ring-destructive" : ""
+                    roomNameError
+                      ? "border-destructive focus:ring-destructive"
+                      : ""
                   }`}
                 />
 
                 {roomNameError && (
-                  <p className="mt-1 text-sm text-destructive">{roomNameError}</p>
+                  <p className="mt-1 text-sm text-destructive">
+                    {roomNameError}
+                  </p>
                 )}
               </section>
             )}
@@ -235,9 +245,13 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
                   const triedTooLong = allowedOnly.length > MAX_LEN.username;
 
                   if (triedInvalidChar) {
-                    setUsernameError("Only letters, numbers, and spaces are allowed.");
+                    setUsernameError(
+                      "Only letters, numbers, and spaces are allowed."
+                    );
                   } else if (triedTooLong) {
-                    setUsernameError(`Username must be ${MAX_LEN.username} characters or less.`);
+                    setUsernameError(
+                      `Username must be ${MAX_LEN.username} characters or less.`
+                    );
                   } else if (clamped.trim().length === 0) {
                     setUsernameError("Username is required.");
                   } else {
@@ -249,7 +263,9 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
                 aria-invalid={!!usernameError}
                 placeholder="Enter username"
                 className={`mt-2 ${
-                  usernameError ? "border-destructive focus:ring-destructive" : ""
+                  usernameError
+                    ? "border-destructive focus:ring-destructive"
+                    : ""
                 }`}
               />
 
@@ -290,20 +306,17 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
                   className="border-accent-hover border-[1px]"
                   onClick={() => navigate({ to: "/" })}
                 >
-                  <House className="h-5 w-5"/>
+                  <House className="h-5 w-5" />
                 </Button>
               )}
             </div>
 
-            <Button
-              type="submit"
-              disabled={loading || !canSubmit}
-            >
+            <Button type="submit" disabled={loading || !canSubmit}>
               {loading
                 ? "Creating..."
                 : users.length > 0
-                  ? "Join Room"
-                  : "Create Room"}
+                ? "Join Room"
+                : "Create Room"}
             </Button>
           </DialogFooter>
         </form>

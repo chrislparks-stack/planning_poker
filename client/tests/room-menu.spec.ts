@@ -62,10 +62,10 @@ async function openMenu(page: Page) {
 async function verifyMenuItems(page: Page, username: string) {
   const firstLetter = username.charAt(0);
   await expect(
-    page.getByLabel(firstLetter, { exact: true }).getByText(username),
+    page.getByLabel(firstLetter, { exact: true }).getByText(username)
   ).toBeVisible();
   await expect(
-    page.getByRole("menuitem", { name: "Change username" }),
+    page.getByRole("menuitem", { name: "Change username" })
   ).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Logout" })).toBeVisible();
 }
@@ -84,9 +84,9 @@ async function logout(page: Page) {
 
 async function verifyLoggedOut(page: Page) {
   await expect(
-    page.getByRole("button", { name: "Start New Game" }),
+    page.getByRole("button", { name: "Start New Game" })
   ).not.toBeVisible();
   await expect(
-    page.getByText("Enter your username to join the room"),
+    page.getByText("Enter your username to join the room")
   ).toBeVisible();
 }

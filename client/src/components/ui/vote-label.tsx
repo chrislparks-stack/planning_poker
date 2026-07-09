@@ -1,5 +1,6 @@
-import {FC} from "react";
-import {clamp} from "@/utils/messageUtils.ts";
+import { FC } from "react";
+
+import { clamp } from "@/utils/messageUtils.ts";
 
 interface VoteLabelProps {
   x?: number;
@@ -18,7 +19,7 @@ export const VoteLabel: FC<VoteLabelProps> = ({
   height,
   value,
   max,
-  barCount,
+  barCount
 }) => {
   const isMajority = value === max;
 

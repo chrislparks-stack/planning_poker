@@ -1,10 +1,11 @@
-import React from "react"
-import { cn } from "@/lib/utils"
+import React from "react";
+
+import { cn } from "@/lib/utils";
 
 interface NotificationDotProps {
-  count?: number
-  className?: string
-  max?: number
+  count?: number;
+  className?: string;
+  max?: number;
 }
 
 export const NotificationDot: React.FC<NotificationDotProps> = ({
@@ -12,9 +13,9 @@ export const NotificationDot: React.FC<NotificationDotProps> = ({
   className,
   max = 9
 }) => {
-  if (!count || count <= 0) return null
+  if (!count || count <= 0) return null;
 
-  const display = count > max ? `${max}+` : count
+  const display = count > max ? `${max}+` : count;
 
   return (
     <div
@@ -29,5 +30,5 @@ export const NotificationDot: React.FC<NotificationDotProps> = ({
     >
       {display}
     </div>
-  )
-}
+  );
+};

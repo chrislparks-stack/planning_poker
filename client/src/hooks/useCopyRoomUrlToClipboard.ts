@@ -18,14 +18,14 @@ export function useCopyRoomUrlToClipboard(): UseCopyRoomUrlReturn {
     if (isCopySuccess) {
       toast({
         title: "Invite link copied to clipboard",
-        variant: "default",
+        variant: "default"
       });
     } else {
       toast({
         title: "Error",
         description:
           "When copying a invite link something went wrong. But don't be discouraged, just copy it yourself from the browser.",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   }, []);

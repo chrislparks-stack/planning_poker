@@ -5,5 +5,5 @@ export const Route = createRootRoute({
     <>
       <Outlet />
     </>
-  ),
+  )
 });

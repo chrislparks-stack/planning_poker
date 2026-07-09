@@ -1,9 +1,5 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  ReactNode
-} from "react";
+import { createContext, useContext, useState, ReactNode } from "react";
+
 import {
   loadBackgroundConfig,
   saveBackgroundConfig,
@@ -18,7 +14,11 @@ type BackgroundConfigContextValue = {
 const BackgroundConfigContext =
   createContext<BackgroundConfigContextValue | null>(null);
 
-export function BackgroundConfigProvider({ children }: { children: ReactNode }) {
+export function BackgroundConfigProvider({
+  children
+}: {
+  children: ReactNode;
+}) {
   const [background, setBackgroundState] = useState<BackgroundConfig>(() =>
     loadBackgroundConfig()
   );
@@ -38,7 +38,9 @@ export function BackgroundConfigProvider({ children }: { children: ReactNode }) 
 export function useBackgroundConfig() {
   const ctx = useContext(BackgroundConfigContext);
   if (!ctx) {
-    throw new Error("useBackgroundConfig must be used inside BackgroundConfigProvider");
+    throw new Error(
+      "useBackgroundConfig must be used inside BackgroundConfigProvider"
+    );
   }
   return ctx;
 }
