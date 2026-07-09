@@ -29,9 +29,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Room, User } from "@/types";
 import { useCardPosition } from "@/utils/cardPositionContext.tsx";
 
-// Fetch every card-icon gif as soon as this chunk loads. The gifs are otherwise
-// requested lazily on state transitions, and their content-hashed URLs 404 for
-// tabs opened before a redeploy replaced the static assets.
 if (typeof window !== "undefined") {
   [darkModeDiscussion, lightModeDiscussion, noVoteGif, pickedGif].forEach(
     (src) => {
