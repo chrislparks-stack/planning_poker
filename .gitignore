@@ -1,0 +1,10 @@
+# Claude Code
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+
+# IDE
+.idea/
+
+# dependencies
+node_modules/
