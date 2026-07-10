@@ -580,6 +580,9 @@ export function Player({
               tabIndex: 0,
               onClick: () => setShowChatInput(!showChatInput),
               onKeyDown: (e: React.KeyboardEvent) => {
+                // only when the card itself is focused — keystrokes inside the
+                // chat composer (message editor, gif search) bubble up here
+                if (e.target !== e.currentTarget) return;
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
                   setShowChatInput((v) => !v);

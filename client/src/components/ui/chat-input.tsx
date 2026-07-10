@@ -23,32 +23,35 @@ import React, {
 import { HexColorPicker } from "react-colorful";
 import { createPortal } from "react-dom";
 
-import tenorLogo from "@/assets/PB_tenor_logo_grey_vertical.svg";
 import { getShiftedAccent } from "@/lib/theme-accent.ts";
 import { cn } from "@/lib/utils";
 import { compressMessage } from "@/utils/messageUtils.ts";
 import { OverlayPortal } from "@/utils/overlayPortal.tsx";
 
-interface TenorGif {
+interface PickerGif {
   id: string;
   url: string;
 }
 
-interface TenorCategory {
+interface PickerCategory {
   searchterm: string;
   image: string;
   name: string;
 }
 
-interface TenorApiResult {
+interface GiphyGif {
   id: string;
-  url?: string;
-  media_formats?: {
-    gif?: { url?: string };
-    mediumgif?: { url?: string };
-    tinygif?: { url?: string };
+  images?: {
+    fixed_width?: { url?: string };
+    downsized_medium?: { url?: string };
+    downsized?: { url?: string };
+    original?: { url?: string };
   };
-  media?: Array<{ gif?: { url?: string } }>;
+}
+
+interface GiphyCategory {
+  name: string;
+  gif?: GiphyGif;
 }
 
 interface ChatInputProps {
@@ -78,8 +81,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showGifPicker, setShowGifPicker] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [gifs, setGifs] = useState<TenorGif[]>([]);
-  const [categories, setCategories] = useState<TenorCategory[]>([]);
+  const [gifs, setGifs] = useState<PickerGif[]>([]);
+  const [categories, setCategories] = useState<PickerCategory[]>([]);
+  const [gifError, setGifError] = useState(false);
   const [showCategories, setShowCategories] = useState(true);
   const [autocomplete, setAutocomplete] = useState<string[]>([]);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
@@ -331,32 +335,49 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     e.target.value = "";
   };
 
-  const fetchCategories = useCallback(async () => {
-    const apiKey = import.meta.env.VITE_TENOR_KEY || process.env.TENOR_KEY;
+  const giphyGifUrl = (g: GiphyGif) =>
+    g.images?.fixed_width?.url ||
+    g.images?.downsized_medium?.url ||
+    g.images?.downsized?.url ||
+    g.images?.original?.url ||
+    "";
 
-    const url = `https://tenor.googleapis.com/v2/categories?key=${apiKey}&client_key=SummitPoker`;
+  const fetchCategories = useCallback(async () => {
+    const apiKey = import.meta.env.VITE_GIPHY_KEY;
+
+    const url = `https://api.giphy.com/v1/gifs/categories?api_key=${apiKey}`;
 
     try {
       const res = await fetch(url);
       const data = await res.json();
 
-      setCategories(data.tags || []);
+      setCategories(
+        ((data.data || []) as GiphyCategory[]).map((c) => ({
+          searchterm: c.name,
+          name: c.name,
+          image: c.gif ? giphyGifUrl(c.gif) : ""
+        }))
+      );
+      setGifError(false);
     } catch (e) {
-      console.error("Failed to fetch Tenor categories", e);
+      console.error("Failed to fetch GIPHY categories", e);
+      setGifError(true);
     }
   }, []);
 
   const fetchAutocomplete = async (term: string) => {
-    const apiKey = import.meta.env.VITE_TENOR_KEY || process.env.TENOR_KEY;
+    const apiKey = import.meta.env.VITE_GIPHY_KEY;
 
-    const url = `https://tenor.googleapis.com/v2/autocomplete?q=${encodeURIComponent(
+    const url = `https://api.giphy.com/v1/gifs/search/tags?api_key=${apiKey}&q=${encodeURIComponent(
       term
-    )}&key=${apiKey}&client_key=SummitPoker&limit=5`;
+    )}&limit=5`;
 
     try {
       const res = await fetch(url);
       const data = await res.json();
-      setAutocomplete(data.results || []);
+      setAutocomplete(
+        ((data.data || []) as Array<{ name: string }>).map((t) => t.name)
+      );
       setShowAutocomplete(true);
     } catch (e) {
       console.error("Autocomplete failed", e);
@@ -364,35 +385,30 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   const fetchGifs = async (query?: string) => {
-    const term = query?.trim() || "trending";
-    const apiKey = import.meta.env.VITE_TENOR_KEY || process.env.TENOR_KEY;
-    const url = `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(
-      term
-    )}&key=${apiKey}&client_key=SummitPoker&limit=12`;
+    const term = query?.trim();
+    const apiKey = import.meta.env.VITE_GIPHY_KEY;
+    const url = term
+      ? `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(
+          term
+        )}&limit=12`
+      : `https://api.giphy.com/v1/gifs/trending?api_key=${apiKey}&limit=12`;
 
     try {
       setIsLoading(true);
       const res = await fetch(url);
       const data = await res.json();
 
-      const normalized = ((data.results || []) as TenorApiResult[]).map((g) => {
-        const fm = g.media_formats || {};
-        const url =
-          fm.gif?.url ||
-          fm.mediumgif?.url ||
-          fm.tinygif?.url ||
-          g.media?.[0]?.gif?.url ||
-          g.url ||
-          "";
-        return { id: g.id, url };
-      });
+      const normalized = ((data.data || []) as GiphyGif[]).map((g) => ({
+        id: g.id,
+        url: giphyGifUrl(g)
+      }));
 
       const filtered = normalized.filter((g) => !!g.url);
 
       // Preload all images before updating DOM
       const preloadAll = filtered.map(
         (g) =>
-          new Promise<TenorGif>((resolve) => {
+          new Promise<PickerGif>((resolve) => {
             const img = new Image();
             img.src = g.url;
             img.onload = img.onerror = () => resolve(g);
@@ -403,10 +419,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
       requestAnimationFrame(() => {
         setGifs(loaded);
+        setGifError(false);
         setIsLoading(false);
       });
     } catch (e) {
       console.error(e);
+      setGifError(true);
       setIsLoading(false);
     }
   };
@@ -850,7 +868,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <div className="flex justify-between gap-2">
               <input
                 type="search"
-                placeholder="Search Tenor GIFs..."
+                placeholder="Search GIPHY..."
                 className="flex-1 text-xs rounded-md px-2 py-[3px] bg-background/70 border border-border focus:ring-1 focus:ring-accent outline-none"
                 value={searchTerm}
                 onChange={(e) => {
@@ -920,6 +938,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 </div>
               )}
               <div className="flex flex-col gap-2 p-1">
+                {gifError && (
+                  <div className="p-3 text-xs text-center text-muted-foreground">
+                    GIF search is unavailable right now
+                  </div>
+                )}
                 {showCategories ? (
                   <div className="grid grid-cols-2 gap-2 w-full">
                     {categories.map((cat) => (
@@ -998,7 +1021,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           </div>
 
           <div className="flex justify-center py-1">
-            <img src={tenorLogo} alt="Tenor" className="w-[60px] opacity-60" />
+            <span className="text-[10px] tracking-wide text-muted-foreground/60 select-none">
+              Powered by GIPHY
+            </span>
           </div>
         </div>
       );
@@ -1027,7 +1052,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <div className="flex justify-between gap-2 items-center">
               <input
                 type="search"
-                placeholder="Search Tenor GIFs..."
+                placeholder="Search GIPHY..."
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
@@ -1096,6 +1121,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             </div>
           )}
           <div className="flex flex-col gap-2 p-3 pt-2">
+            {gifError && (
+              <div className="p-3 text-xs text-center text-muted-foreground">
+                GIF search is unavailable right now
+              </div>
+            )}
             {showCategories ? (
               <div className="grid grid-cols-2 gap-2">
                 {categories.map((cat) => (
@@ -1165,11 +1195,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               )}
           </div>
           <div className="sticky bottom-0 flex justify-center items-center bg-popover py-1">
-            <img
-              src={tenorLogo}
-              alt="Tenor"
-              className="w-[80px] opacity-70 mt-1"
-            />
+            <span className="text-[10px] tracking-wide text-muted-foreground/60 select-none">
+              Powered by GIPHY
+            </span>
           </div>
         </div>
       </div>,
