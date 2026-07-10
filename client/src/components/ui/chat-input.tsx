@@ -957,7 +957,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                           alt={cat.name}
                           className="w-full h-[80px] object-cover"
                         />
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-xs font-medium">
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-center px-1 text-white text-xs font-medium">
                           {cat.name}
                         </div>
                       </motion.button>
@@ -1140,7 +1140,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                       alt={cat.name}
                       className="w-full h-[70px] object-cover rounded-md"
                     />
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-xs font-medium">
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-center px-1 text-white text-xs font-medium">
                       {cat.name}
                     </div>
                   </motion.div>
