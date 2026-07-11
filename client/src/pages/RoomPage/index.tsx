@@ -491,6 +491,7 @@ export function RoomPage() {
                     isGameOver={room.isGameOver}
                     cards={room.deck.cards}
                     table={room.game.table}
+                    users={room.users}
                   />
                   {room.isGameOver && (
                     <div className="flex justify-center ml-5">

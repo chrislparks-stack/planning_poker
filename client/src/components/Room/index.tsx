@@ -447,6 +447,7 @@ export function Room({ room, onShowInChat, roomRef, chatVisible }: RoomProps) {
             >
               <Player
                 user={user}
+                room={room}
                 isCardPicked={!!pickedCard}
                 isGameOver={room.isGameOver}
                 card={pickedCard?.card}

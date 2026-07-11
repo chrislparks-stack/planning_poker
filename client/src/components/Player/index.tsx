@@ -12,8 +12,6 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import {
-  useGetRoomQuery,
-  useRoomSubscription,
   useKickUserMutation,
   useBanUserMutation,
   useSendChatMessageMutation
@@ -51,6 +49,9 @@ function CardIconImage({ fallback, alt, ...imgProps }: CardIconImageProps) {
 
 interface PlayerProps {
   user: User;
+  /** The room from the page-level subscription — do NOT subscribe per player,
+   * with N players on screen that multiplies every server event by N. */
+  room: Room;
   isCardPicked: boolean;
   isGameOver: boolean;
   card?: string | null | undefined;
@@ -65,6 +66,7 @@ type MenuPos = { x: number; y: number } | null;
 
 export function Player({
   user,
+  room,
   isCardPicked,
   isGameOver,
   card,
@@ -88,14 +90,8 @@ export function Player({
       ? window.matchMedia("(prefers-color-scheme: dark)").matches
       : false;
 
-  // --- Queries & Subscriptions ---
-  const { data: roomData } = useGetRoomQuery({ variables: { roomId } });
-  const { data: subscriptionData } = useRoomSubscription({
-    variables: { roomId }
-  });
   const [sendChatMessage] = useSendChatMessageMutation();
 
-  const room = subscriptionData?.room ?? roomData?.roomById;
   const roomName = room?.name ?? "this room";
   const [kickUser] = useKickUserMutation();
   const [banUser] = useBanUserMutation();
@@ -375,7 +371,7 @@ export function Player({
     closeMenu();
     if (!onMakeOwner || !room) return;
     try {
-      await onMakeOwner(user.id, room as Room);
+      await onMakeOwner(user.id, room);
       toast({
         title: "Ownership transferred",
         description: `${user.username} is now the room owner`

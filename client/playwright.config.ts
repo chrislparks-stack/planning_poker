@@ -1,9 +1,12 @@
 import path from "path";
+import { fileURLToPath } from "url";
 
 import { defineConfig, devices } from "@playwright/test";
 import { config } from "dotenv";
 
-config({ path: path.resolve(__dirname, ".env") });
+config({
+  path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".env")
+});
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -33,7 +36,20 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] }
+      use: { ...devices["Desktop Chrome"] },
+      grepInvert: /@stress/
+    },
+
+    /* Stress tests (client rendering under load) — run via `npm run test:stress:browser`, excluded from `npm run test:e2e` */
+    {
+      name: "stress",
+      use: {
+        ...devices["Desktop Chrome"],
+        /* Always record traces + video so render lag can be replayed frame by frame (npx playwright show-report) */
+        trace: "on",
+        video: "on"
+      },
+      grep: /@stress/
     }
 
     // {

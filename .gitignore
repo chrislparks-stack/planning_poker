@@ -8,3 +8,7 @@ CLAUDE.local.md
 
 # dependencies
 node_modules/
+
+# stress test run reports and machine-specific baselines
+stress/results/
+stress/baselines/*.local.json

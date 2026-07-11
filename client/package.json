@@ -17,8 +17,9 @@
     "test": "vitest",
     "coverage": "vitest run --coverage",
     "codegen": "graphql-codegen --config codegen.yml",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e": "playwright test --project=chromium",
+    "test:e2e:ui": "playwright test --ui --project=chromium",
+    "test:stress:browser": "playwright test --project=stress"
   },
   "dependencies": {
     "@ant-design/react-slick": "2.0.0",

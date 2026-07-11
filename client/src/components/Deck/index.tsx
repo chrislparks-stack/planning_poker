@@ -1,37 +1,35 @@
 import { useEffect, useState } from "react";
 
-import {
-  useGetRoomQuery,
-  useRoomSubscription,
-  usePickCardMutation
-} from "@/api";
+import { usePickCardMutation } from "@/api";
 import { Card } from "@/components/Card";
 import { useAuth } from "@/contexts";
 import { useKeyboardControls } from "@/hooks";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { UserCard } from "@/types";
+import { User, UserCard } from "@/types";
 
 interface DeckProps {
   roomId: string;
   isGameOver?: boolean;
   cards: string[];
   table: UserCard[] | undefined;
+  /** Room users from the page-level subscription — the deck must not open its
+   * own room subscription/query (it multiplies every server event). */
+  users: User[];
 }
 
-export function Deck({ roomId, isGameOver: isGameOverProp, cards }: DeckProps) {
+export function Deck({
+  roomId,
+  isGameOver: isGameOverProp,
+  cards,
+  users
+}: DeckProps) {
   const { user: authUser } = useAuth();
   const { toast } = useToast();
   const { cardsContainerRef } = useKeyboardControls();
 
-  const { data: queryData, refetch } = useGetRoomQuery({
-    variables: { roomId }
-  });
-  const { data: subData } = useRoomSubscription({ variables: { roomId } });
-
-  const room = subData?.room ?? queryData?.roomById ?? null;
-  const currentUser = room?.users?.find((u) => u.id === authUser?.id) ?? null;
-  const isGameOver = room?.isGameOver ?? isGameOverProp ?? false;
+  const currentUser = users.find((u) => u.id === authUser?.id) ?? null;
+  const isGameOver = isGameOverProp ?? false;
 
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [windowWidth, setWindowWidth] = useState(() => window.innerWidth);
@@ -61,7 +59,7 @@ export function Deck({ roomId, isGameOver: isGameOverProp, cards }: DeckProps) {
   useEffect(() => {
     const serverPick = currentUser?.lastCardPicked ?? null;
     setSelectedCard(serverPick);
-  }, [room, authUser?.id, isGameOver, currentUser?.lastCardPicked]);
+  }, [authUser?.id, isGameOver, currentUser?.lastCardPicked]);
 
   const handleCardClick = (card: string) => async () => {
     if (!authUser?.id) return;
@@ -70,12 +68,10 @@ export function Deck({ roomId, isGameOver: isGameOverProp, cards }: DeckProps) {
     setSelectedCard(isSelected ? null : card);
 
     try {
-      await pickCardMutation({
+      const result = await pickCardMutation({
         variables: { userId: authUser.id, roomId, card: cardToSend }
       });
-      const result = await refetch({ roomId });
-      const refreshedRoom = result?.data?.roomById ?? null;
-      const refreshedUser = refreshedRoom?.users?.find(
+      const refreshedUser = result.data?.pickCard.users.find(
         (u) => u.id === authUser.id
       );
       setSelectedCard(refreshedUser?.lastCardPicked ?? null);
