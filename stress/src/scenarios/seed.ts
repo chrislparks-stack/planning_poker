@@ -1,8 +1,6 @@
 import { setTimeout as sleep } from "node:timers/promises";
 
-import { createRoomWithVus, type ScenarioContext } from "./support.js";
-
-const VOTE_CARDS = ["1", "2", "3", "5", "8", "13", "21"];
+import { createRoomWithVus, VOTE_CARDS, type ScenarioContext } from "./support.js";
 
 /**
  * Joins N VUs into an EXISTING room and holds them there, voting and chatting

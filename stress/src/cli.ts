@@ -20,6 +20,7 @@ interface SharedOpts {
   saveBaseline?: boolean;
   compare?: boolean;
   compareTolerance: string;
+  compareFloorMs: string;
   fullPayload?: boolean;
   verbose?: boolean;
   yes?: boolean;
@@ -36,6 +37,11 @@ function addSharedOptions(cmd: Command): Command {
     .option("--save-baseline", "promote this run's report to the committed baseline")
     .option("--no-compare", "skip baseline comparison even when a baseline exists")
     .option("--compare-tolerance <pct>", "p95 regression tolerance in percent", "20")
+    .option(
+      "--compare-floor-ms <ms>",
+      "absolute p95 delta a regression must also exceed (absorbs scheduler jitter)",
+      "15"
+    )
     .option("--full-payload", "use client-fidelity fat fragments instead of lean selections")
     .option("--timeout-ms <ms>", "per-operation timeout", "5000")
     .option("--server-profile <name>", "informational: cargo profile the server was built with", "release")
@@ -124,7 +130,12 @@ async function execute(
   if (opts.compare !== false) {
     const baseline = loadBaseline(scenario, target.label);
     if (baseline) {
-      comparePass = compareToBaseline(report, baseline, Number(opts.compareTolerance)).pass;
+      comparePass = compareToBaseline(
+        report,
+        baseline,
+        Number(opts.compareTolerance),
+        Number(opts.compareFloorMs)
+      ).pass;
     } else {
       console.log(`no baseline for ${scenario}.${target.label} — run with --save-baseline to create one.`);
     }
@@ -300,6 +311,117 @@ addSharedOptions(
     });
   }
 );
+
+addSharedOptions(
+  program
+    .command("rooms-capacity")
+    .description("ramp the number of concurrent active rooms until latency degrades; reports max rooms")
+    .option("--max-rooms <n>", "stop ramping here even without degradation", "300")
+    .option("--step <n>", "rooms added per step", "25")
+    .option("--players-per-room <n>", "players in each room", "4")
+    .option("--mut-p95-ms <ms>", "mutation latency threshold", "150")
+    .option("--prop-p95-ms <ms>", "probe propagation threshold", "300")
+).action(
+  async (
+    opts: SharedOpts & {
+      maxRooms: string;
+      step: string;
+      playersPerRoom: string;
+      mutP95Ms: string;
+      propP95Ms: string;
+    }
+  ) => {
+    const { runRoomsCapacity } = await import("./scenarios/rooms-capacity.js");
+    const playersPerRoom = Number(opts.playersPerRoom);
+    const thresholds = {
+      step: Number(opts.step),
+      playersPerRoom,
+      mutP95Ms: Number(opts.mutP95Ms),
+      propP95Ms: Number(opts.propP95Ms),
+      probeRooms: 5
+    };
+    await execute(
+      "rooms-capacity",
+      opts,
+      { vus: Number(opts.maxRooms) * playersPerRoom, durationSec: 600 },
+      (c) => ({ maxRooms: Math.max(1, Math.floor(c.vus / playersPerRoom)), ...thresholds }),
+      (ctx, c) =>
+        runRoomsCapacity(ctx, { maxRooms: Math.max(1, Math.floor(c.vus / playersPerRoom)), ...thresholds })
+    );
+  }
+);
+
+addSharedOptions(
+  program
+    .command("throughput")
+    .description("ramp raw mutation rate until the latency knee; reports max sustained calls/sec")
+    .option("--rooms <n>", "rooms in the sender pool", "10")
+    .option("--players-per-room <n>", "players (senders/subscribers) per room", "5")
+    .option("--rates <list>", "comma-separated mutation rates to sweep", "50,100,200,400,800,1600")
+    .option("--stage-sec <s>", "seconds per rate stage", "8")
+    .option("--knee-p95-ms <ms>", "latency threshold that marks the knee", "150")
+).action(
+  async (
+    opts: SharedOpts & {
+      rooms: string;
+      playersPerRoom: string;
+      rates: string;
+      stageSec: string;
+      kneeP95Ms: string;
+    }
+  ) => {
+    const { runThroughput } = await import("./scenarios/throughput.js");
+    const params = {
+      rooms: Number(opts.rooms),
+      playersPerRoom: Number(opts.playersPerRoom),
+      rates: opts.rates.split(",").map(Number),
+      stageSec: Number(opts.stageSec),
+      kneeP95Ms: Number(opts.kneeP95Ms)
+    };
+    await execute(
+      "throughput",
+      opts,
+      { vus: params.rooms * params.playersPerRoom, durationSec: params.rates.length * (params.stageSec + 1) },
+      () => params,
+      (ctx) => runThroughput(ctx, params)
+    );
+  }
+);
+
+addSharedOptions(
+  program
+    .command("find-limits")
+    .description("run all capacity ramps and print a CAPACITY REPORT with your actual maximums (~5-10 min)")
+    .option("--max-players <n>", "cap for the players-in-one-room ramp", "500")
+    .option("--max-rooms <n>", "cap for the concurrent-rooms ramp", "300")
+    .option("--rates <list>", "mutation rates for the throughput ramp", "50,100,200,400,800,1600")
+).action(async (opts: SharedOpts & { maxPlayers: string; maxRooms: string; rates: string }) => {
+  const { runFindLimits } = await import("./scenarios/find-limits.js");
+  // exploratory — maximums ARE the result, so no baseline gating
+  opts.compare = false;
+  opts.saveBaseline = false;
+  const params = {
+    maxPlayers: Number(opts.maxPlayers),
+    maxRooms: Number(opts.maxRooms),
+    rates: opts.rates.split(",").map(Number)
+  };
+  await execute(
+    "find-limits",
+    opts,
+    { vus: Math.max(params.maxPlayers, params.maxRooms * 4), durationSec: 900 },
+    (c) => ({
+      maxPlayers: Math.min(params.maxPlayers, c.vus),
+      maxRooms: Math.min(params.maxRooms, Math.max(1, Math.floor(c.vus / 4))),
+      rates: params.rates
+    }),
+    (ctx, c) =>
+      runFindLimits(ctx, {
+        maxPlayers: Math.min(params.maxPlayers, c.vus),
+        maxRooms: Math.min(params.maxRooms, Math.max(1, Math.floor(c.vus / 4))),
+        rates: params.rates
+      })
+  );
+});
 
 program.parseAsync().catch((err) => {
   console.error(err instanceof Error ? err.message : err);

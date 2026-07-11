@@ -38,8 +38,11 @@ All commands run from `stress/`. Extra flags go after `--`.
 
 | Command | What it measures |
 |---|---|
+| `npm run find-limits` | **All capacity ramps in one run → CAPACITY REPORT with your actual maximums** |
 | `npm run smoke` | Harness self-test: 5 VUs vote/reveal/chat; fails if any event is missed |
-| `npm run room-capacity` | Ramps players into one room until latency degrades → **max players** |
+| `npm run room-capacity` | Ramps players into one room until latency degrades → **max players/room** |
+| `npm run rooms-capacity` | Ramps concurrent active rooms until latency degrades → **max rooms** |
+| `npm run throughput` | Ramps raw mutation rate until the latency knee → **max server calls/sec** |
 | `npm run vote-cycle` | Vote → reveal → reset cycles: pickCard latency + propagation to all subscribers |
 | `npm run chat-storm` | Chat throughput: send latency + propagation at a target msg/s rate |
 | `npm run multi-room` | Many rooms voting concurrently: broker fan-out + global mutex contention |
@@ -66,14 +69,40 @@ Every run reports client-side p50/p95/p99 latencies, **propagation latency**
 and server memory/CPU sampled from `/metrics`. Reports are written to
 `stress/results/` (git-ignored).
 
+## Finding your maximums
+
+```sh
+npm run find-limits        # ~5-10 min; restart the server first for a clean run
+```
+
+Runs three ramps back to back and prints a CAPACITY REPORT:
+
+1. **Max players in one room** — adds players until join latency or vote
+   propagation degrades (each join broadcasts a full snapshot to all N
+   subscribers, so this cost is inherently O(N²) per batch).
+2. **Max concurrent active rooms** — adds rooms of 4 until mutation latency or
+   propagation degrades (all rooms share one storage mutex, and the broker
+   clones every publish to all subscribers across all rooms).
+3. **Max server calls/sec** — ramps the raw mutation rate until the latency
+   knee (p95 > 150ms), the achieved rate falls behind the target, or calls fail.
+
+Each ramp also prints its full latency-vs-load curve so you can see where
+degradation starts, not just where it fails; the curves are saved in the run's
+JSON report. A `+` after a number means the test cap was reached with no
+degradation — raise `--max-players` / `--max-rooms` / `--rates` to push higher.
+The numbers are ceilings for *your machine + server build* (the harness shares
+the same CPU); treat them as relative baselines, not production guarantees.
+
 ## Baselines & regression checks
 
 Baselines live in `stress/baselines/<scenario>.<local|remote>.json`. Local
 baselines are machine-specific (the numbers depend on your hardware), so
 `*.local.json` is git-ignored — create yours once with `npm run baseline:all`.
 When a baseline exists and the run used the same params, every run auto-compares
-and **exits 1** if a metric's p95 regressed more than 20% (and >5ms absolute), or
-if errors/timeouts increased.
+and **exits 1** if a metric's p95 regressed more than 20% AND more than 15ms
+absolute (`--compare-tolerance` / `--compare-floor-ms` to adjust — the floor
+absorbs scheduler jitter on low-ms metrics when server and harness share one
+machine), or if errors/timeouts increased.
 
 ```sh
 npm run vote-cycle                      # auto-compares against the committed baseline

@@ -124,6 +124,7 @@ export async function runRoomCapacity(
   }
 
   console.log(`\nmax sustainable players: ${maxSustainable} (${stopReason})`);
+  console.table(series);
   return {
     // Finding the ceiling is the point — hitting it isn't a failure.
     ok: true,

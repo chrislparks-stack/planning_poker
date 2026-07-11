@@ -61,6 +61,11 @@ export interface RoomSetup {
   joinHist: Histogram;
 }
 
+export interface VuRoomPair {
+  vu: VirtualUser;
+  roomId: string;
+}
+
 /**
  * First VU creates the room; all VUs join (batched) and open the room + chat
  * subscriptions, feeding payloads into the given trackers.
@@ -182,7 +187,7 @@ export function makeCycleInstruments(shared?: {
   };
 }
 
-const VOTE_CARDS = ["1", "2", "3", "5", "8", "13", "21"];
+export const VOTE_CARDS = ["1", "2", "3", "5", "8", "13", "21"];
 
 /**
  * players vote (staggered) → host reveals → host resets, `cycles` times,

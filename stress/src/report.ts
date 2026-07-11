@@ -143,11 +143,18 @@ export interface CompareOutcome {
 }
 
 /**
- * Regression rule: p95 > baseline * (1 + tolerance) AND absolute delta > 5ms
- * (floor avoids flagging noise on single-digit-ms metrics), or any increase
- * in error/timeout counters.
+ * Regression rule: p95 > baseline * (1 + tolerance) AND absolute delta >
+ * floorMs, or any increase in error/timeout counters. The absolute floor
+ * absorbs scheduler jitter on low-double-digit-ms metrics when server and
+ * harness share one machine — real regressions in this architecture (global
+ * mutex, per-subscriber fan-out) show up as multiples, not +10ms.
  */
-export function compareToBaseline(report: Report, baseline: Report, tolerancePct: number): CompareOutcome {
+export function compareToBaseline(
+  report: Report,
+  baseline: Report,
+  tolerancePct: number,
+  floorMs = 15
+): CompareOutcome {
   const sameParams = JSON.stringify(report.params) === JSON.stringify(baseline.params);
   if (!sameParams) {
     console.log(
@@ -165,7 +172,7 @@ export function compareToBaseline(report: Report, baseline: Report, tolerancePct
     const base = baseline.metrics[name];
     if (base === undefined) continue;
     if (isHist(cur) && isHist(base)) {
-      const regressed = cur.p95 > base.p95 * (1 + tol) && cur.p95 - base.p95 > 5;
+      const regressed = cur.p95 > base.p95 * (1 + tol) && cur.p95 - base.p95 > floorMs;
       if (regressed) pass = false;
       const deltaPct = base.p95 === 0 ? 0 : Math.round(((cur.p95 - base.p95) / base.p95) * 1000) / 10;
       rows.push({
@@ -183,7 +190,9 @@ export function compareToBaseline(report: Report, baseline: Report, tolerancePct
     }
   }
 
-  console.log(`\nBaseline comparison (${baseline.createdAt}, commit ${baseline.git.commit}, tolerance ${tolerancePct}%):`);
+  console.log(
+    `\nBaseline comparison (${baseline.createdAt}, commit ${baseline.git.commit}, tolerance ${tolerancePct}% + ${floorMs}ms floor):`
+  );
   console.table(rows);
   console.log(pass ? "RESULT: PASS" : "RESULT: FAIL (performance regression detected)");
   return { ran: true, pass };
