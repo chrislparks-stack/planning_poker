@@ -46,17 +46,12 @@ const DistributionBars = memo(function DistributionBars({
   chartData,
   maxCardCount
 }: DistributionBarsProps) {
-  // Only call out a MAJORITY when a single card wins outright; a tie for the
-  // top spot isn't a majority (and labeling every tied bar just adds clutter).
   const uniqueMajority =
     chartData.filter((d) => d.Votes === maxCardCount).length === 1;
   const visualData = useMemo(
     () =>
       chartData.map((datum) => ({
         ...datum,
-        // Preserve a substantial card frame for low tallies, then step each
-        // card upward toward the leader. Raw vote counts made 1-vote cards
-        // nearly disappear whenever one estimate had a large lead.
         VisualHeight:
           0.56 + (maxCardCount ? (datum.Votes / maxCardCount) * 0.44 : 0)
       })),
@@ -80,9 +75,6 @@ const DistributionBars = memo(function DistributionBars({
         <Bar
           dataKey="VisualHeight"
           maxBarSize={82}
-          // Recharts' own bar animation is disabled — see voteCardReveal in index.css
-          // for why. The grow is driven by CSS on each Cell instead so labels
-          // (which Recharts only paints after its animation ends) always render.
           isAnimationActive={false}
           shape={
             <VoteLabel
@@ -118,8 +110,6 @@ const DistributionBars = memo(function DistributionBars({
 export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
   room
 }) => {
-  // Single source of truth for the vote tallies. Everything below derives from
-  // this, so the debug override works and the whole card stays consistent.
   const voteCount = useMemo(() => {
     const counts: { [key: string]: number } = {};
     room.game.table.forEach((userCard) => {
@@ -135,8 +125,6 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
     return counts;
   }, [room.game.table]);
 
-  // Stable string key of the distribution so chartData — and the memoized bars —
-  // only change when the spread actually changes, not on every room snapshot.
   const voteSignature = useMemo(
     () =>
       Object.entries(voteCount)
