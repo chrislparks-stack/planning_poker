@@ -13,6 +13,7 @@ use crate::{
 };
 use async_graphql::*;
 use futures_util::{Stream, StreamExt};
+use log::info;
 use tokio::sync::MutexGuard;
 use uuid::Uuid;
 
@@ -103,6 +104,14 @@ impl MutationRoot {
         storage.insert(room.id, room.clone());
         SimpleBroker::publish(room.get_room());
 
+        info!(
+            "[room] created room_id={} name={} cards={} users=0 rooms_total={}",
+            room.id,
+            room.name.as_deref().unwrap_or("<unnamed>"),
+            room.deck.cards.len(),
+            storage.len()
+        );
+
         Ok(room.get_room())
     }
 
@@ -141,6 +150,23 @@ impl MutationRoot {
                     room.touch();
 
                     SimpleBroker::publish(room.get_room());
+
+                    info!(
+                        "[room] user_joined room_id={} user_id={} users_in_room={} owner_id={}",
+                        room_id,
+                        user.id,
+                        room.users.len(),
+                        room.room_owner_id
+                            .map(|id| id.to_string())
+                            .unwrap_or_else(|| "none".to_string())
+                    );
+                } else {
+                    info!(
+                        "[room] join_noop room_id={} user_id={} reason=already_joined users_in_room={}",
+                        room_id,
+                        user.id,
+                        room.users.len()
+                    );
                 }
 
                 Ok(room.get_room())

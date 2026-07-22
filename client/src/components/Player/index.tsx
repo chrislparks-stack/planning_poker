@@ -1,6 +1,5 @@
 import {
   Ban,
-  CheckCircle2,
   CircleOff,
   Crown,
   DoorOpen,
@@ -19,8 +18,8 @@ import {
 import darkModeDiscussion from "@/assets/dark-mode-discussion.gif";
 import lightModeDiscussion from "@/assets/light-mode-discussion.gif";
 import noVoteGif from "@/assets/no-vote.gif";
-import pickedGif from "@/assets/picked.gif";
 import { useTheme } from "@/components";
+import { CardPickedIcon } from "@/components/ui/card-picked-icon.tsx";
 import { ChatInputWrapper } from "@/components/ui/chat-input-wrapper.tsx";
 import { useBackgroundConfig } from "@/contexts/BackgroundContext.tsx";
 import { useToast } from "@/hooks/use-toast";
@@ -28,12 +27,12 @@ import { Room, User } from "@/types";
 import { useCardPosition } from "@/utils/cardPositionContext.tsx";
 
 if (typeof window !== "undefined") {
-  [darkModeDiscussion, lightModeDiscussion, noVoteGif, pickedGif].forEach(
-    (src) => {
-      const img = new Image();
-      img.src = src;
-    }
-  );
+  // picked.gif is a one-shot animation. Preloading it can advance its shared
+  // Chromium animation timeline before the submitted-card state is mounted.
+  [darkModeDiscussion, lightModeDiscussion, noVoteGif].forEach((src) => {
+    const img = new Image();
+    img.src = src;
+  });
 }
 
 interface CardIconImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
@@ -221,16 +220,7 @@ export function Player({
           </div>
         );
       } else {
-        return (
-          <CardIconImage
-            key="picked"
-            src={pickedGif}
-            alt="Card picked"
-            className="max-w-none max-h-none"
-            style={{ width: 90, height: 70 }}
-            fallback={<CheckCircle2 className="text-glass w-8 h-8" />}
-          />
-        );
+        return <CardPickedIcon />;
       }
     }
 

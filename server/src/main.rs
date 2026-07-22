@@ -16,6 +16,7 @@ use log::{info, warn, debug};
 
 mod configuration;
 mod domain;
+mod giphy;
 mod handlers;
 mod schema;
 mod simple_broker;
@@ -28,6 +29,29 @@ use uuid::Uuid;
 
 use prometheus::{Encoder, TextEncoder, Registry, IntCounter, IntGauge};
 use sysinfo::{Pid, System};
+
+fn http_request_kind(method: &str, path: &str, websocket: bool) -> &'static str {
+    match (method, path, websocket) {
+        ("OPTIONS", _, _) => "cors_preflight",
+        ("GET", "/", true) => "graphql_websocket",
+        ("POST", "/", _) => "graphql_http",
+        ("GET", "/", _) => "graphql_playground",
+        ("GET", "/health_check", _) => "health_check",
+        ("GET", "/metrics", _) => "metrics",
+        ("GET", path, _) if path.starts_with("/giphy/") => "giphy_proxy",
+        _ => "http",
+    }
+}
+
+fn http_outcome(status: u16) -> &'static str {
+    match status {
+        101 => "upgraded",
+        200..=299 => "success",
+        400..=499 => "client_error",
+        500..=599 => "server_error",
+        _ => "other",
+    }
+}
 
 fn spawn_room_cleanup_task(
     storage: Storage,
@@ -432,13 +456,38 @@ async fn main() -> std::io::Result<()> {
         .data(storage.clone())
         .finish();
 
+    let http_client = reqwest::Client::builder()
+        .user_agent("SummitPlanningPoker/1.0")
+        .build()
+        .expect("Failed to build HTTP client");
+
     HttpServer::new(move || {
         let registry = registry.clone();
 
         App::new()
             .app_data(Data::new(schema.clone()))
+            .app_data(Data::new(storage.clone()))
+            .app_data(Data::new(http_client.clone()))
             .wrap(Cors::permissive())
-            .wrap(middleware::Logger::default())
+            .wrap(
+                middleware::Logger::new(
+                    "[http] kind=%{KIND}xi method=%m path=%U status=%s outcome=%{OUTCOME}xo duration_ms=%D bytes=%b peer=%a origin=\"%{Origin}i\"",
+                )
+                .custom_request_replace("KIND", |request| {
+                    let path = request.path();
+                    let method = request.method().as_str();
+                    let websocket = request
+                        .headers()
+                        .get("upgrade")
+                        .and_then(|value| value.to_str().ok())
+                        .is_some_and(|value| value.eq_ignore_ascii_case("websocket"));
+
+                    http_request_kind(method, path, websocket).to_string()
+                })
+                .custom_response_replace("OUTCOME", |response| {
+                    http_outcome(response.status().as_u16()).to_string()
+                }),
+            )
             .service(
                 web::resource("/metrics").route(web::get().to(move || {
                     let registry = registry.clone();
@@ -466,8 +515,25 @@ async fn main() -> std::io::Result<()> {
                     .guard(guard::Get())
                     .to(health_check),
             )
+            .service(web::resource("/giphy/image").route(web::get().to(giphy::image)))
+            .service(web::resource("/giphy/{path:.*}").route(web::get().to(giphy::api)))
     })
     .bind(server_bind_addr)?
     .run()
     .await
+}
+
+#[cfg(test)]
+mod http_log_tests {
+    use super::{http_outcome, http_request_kind};
+
+    #[test]
+    fn classifies_the_previously_opaque_http_requests() {
+        assert_eq!(http_request_kind("GET", "/", true), "graphql_websocket");
+        assert_eq!(http_request_kind("OPTIONS", "/", false), "cors_preflight");
+        assert_eq!(http_request_kind("POST", "/", false), "graphql_http");
+        assert_eq!(http_outcome(101), "upgraded");
+        assert_eq!(http_outcome(200), "success");
+        assert_eq!(http_outcome(503), "server_error");
+    }
 }

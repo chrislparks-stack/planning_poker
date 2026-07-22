@@ -74,6 +74,7 @@ export const CardFan: FC<CardFanProps> = ({
 
           return (
             <button
+              type="button"
               key={String(card)}
               onClick={() => toggleCardSelection(card)}
               aria-pressed={selected}
