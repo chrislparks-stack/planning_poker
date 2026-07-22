@@ -131,7 +131,7 @@ test("reveal shows each player's value and computes the average correctly", asyn
     await expect(chart.getByText("NEXT STEP")).toBeVisible();
     await expect(
       chart.getByText(
-        "Wide spread (1-5) - compare the highest and lowest assumptions."
+        "Wide spread (1-5) - compare and discuss the lowest [1] and highest [5] assumptions."
       )
     ).toBeVisible();
     for (const [name, value] of Object.entries(votes)) {

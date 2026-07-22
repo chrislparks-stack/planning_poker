@@ -206,9 +206,11 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
     );
     const leadingValue = numericCardValue(leading[0]);
     const runnerUp = numericByCount[1];
+    const thirdPlace = numericByCount[2];
     const closeTieThreshold = Math.max(1, Math.floor(totalVotes * 0.1));
     const closeTie =
       runnerUp &&
+      (!thirdPlace || runnerUp.count > thirdPlace.count) &&
       Math.abs(numericByCount[0].count - runnerUp.count) <= closeTieThreshold;
     const high = numericEntries[numericEntries.length - 1];
     const previousHigh = numericEntries[numericEntries.length - 2];
