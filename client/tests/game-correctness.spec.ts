@@ -7,15 +7,6 @@ import {
   startNewRound
 } from "./helpers";
 
-/**
- * Functional correctness of the voting flow: votes register and propagate to
- * every tab, the math (average / agreement / distribution) is right, each
- * voting stage shows the right visuals, and the core buttons do what they say.
- *
- * Every test gets a fresh room. All cross-tab assertions verify reactivity:
- * an action in one tab must appear in the others via the room subscription.
- */
-
 let pages: Page[] = [];
 
 test.afterEach(async () => {
@@ -73,11 +64,8 @@ test("a vote registers in every tab: counter, indicator, and waiting state", asy
 
   await vote(guest, "3");
 
-  // voter sees their waiting state
   await expect(guest.getByText("Waiting to reveal cards...")).toBeVisible();
-  // host's reveal button appears with the correct count
   await expect(host.getByText("1/2 voted (50%)")).toBeVisible();
-  // host sees the voter's card-picked indicator
   await expect(tile(host, "Bruno").getByAltText("Card picked")).toBeVisible();
 
   await vote(host, "5");
@@ -259,7 +247,6 @@ test("countdown reveal counts down, then reveals in every tab", async ({
   test.setTimeout(60_000);
   const [host, guest] = await setupRoom(browser, ["Alice", "Bruno"]);
 
-  // enable the countdown option via the room options dialog
   await host.getByRole("button", { name: "Account menu" }).click();
   await host.getByRole("menuitem", { name: "Change Room Options" }).click();
   await host.locator("#countdown-enabled").click();
@@ -280,7 +267,6 @@ test("countdown reveal counts down, then reveals in every tab", async ({
   await revealEstimations(host);
   await overlaySeen;
 
-  // after the countdown, the reveal lands in both tabs
   for (const page of [host, guest]) {
     await expect(page.getByTestId("vote-distribution-chart")).toBeVisible({
       timeout: 15_000
@@ -298,7 +284,6 @@ test("the room owner can kick a player from the context menu", async ({
   await host.getByRole("button", { name: "Kick user" }).click();
 
   await expect(host.getByTestId("player")).toHaveCount(1);
-  // the kicked tab is logged out and lands back on the join dialog
   await expect(guest.getByPlaceholder("Enter username")).toBeVisible();
 });
 
@@ -307,13 +292,11 @@ test("a chat message sent from one tab appears in the others", async ({
 }) => {
   const [host, guest] = await setupRoom(browser, ["Alice", "Bruno"]);
 
-  // clicking your own tile opens the chat composer
   await tile(guest, "Bruno").click();
   const editor = guest.getByLabel("Type message");
   await expect(editor).toBeVisible();
   await editor.fill("hello from Bruno");
   await guest.getByTitle("Send").click();
 
-  // the message renders as both a floating bubble and a chat preview
   await expect(host.getByText("hello from Bruno").first()).toBeVisible();
 });

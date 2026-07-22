@@ -483,20 +483,18 @@ export function RoomPage() {
                 </div>
               </div>
 
-              {/* Deck area */}
-              <div className="vote-results-shell sticky bottom-0 w-full">
+              <div className="sticky bottom-0 w-full">
                 <div className="vote-results-scroller relative w-full pt-4 pb-6 backdrop-blur-sm [scrollbar-width:thin]">
                   <div className="mx-auto flex w-full min-w-[660px] items-end justify-center px-2">
                     <Deck
                       roomId={roomId}
                       isGameOver={room.isGameOver}
                       cards={room.deck.cards}
-                      table={room.game.table}
                       users={room.users}
                     />
                     {room.isGameOver && (
                       <div className="ml-2 flex min-w-[246px] max-w-[548px] flex-[0_1_auto] justify-center">
-                        <ResultsTag active />
+                        <ResultsTag />
                         <VoteDistributionChart room={room} />
                       </div>
                     )}

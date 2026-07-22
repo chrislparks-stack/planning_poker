@@ -12,55 +12,40 @@ const containsEmoji = (value: string) =>
     );
   });
 
-interface ChartDatum {
+export interface VoteDatum {
   card: string;
-  cardValue: number;
-  Votes: number;
+  votes: number;
 }
 
 interface VoteLabelProps {
-  // Geometry injected by Recharts when this component is used as a Bar shape.
   x?: number;
   y?: number;
   width?: number;
   height?: number;
-  value?: number;
   index?: number;
-  data: ChartDatum[];
+  payload?: VoteDatum;
   max: number;
   uniqueMajority: boolean;
 }
 
-/**
- * Draws a complete vote card instead of a conventional solid bar. The card's
- * total height still communicates the tally, while the split face mirrors the
- * wireframe: estimate above, vote details in the filled lower panel.
- */
 export const VoteLabel: FC<VoteLabelProps> = ({
   x,
   y,
   width,
   height,
-  value,
   index,
-  data,
+  payload,
   max,
   uniqueMajority
 }) => {
   if (x == null || y == null || width == null || height == null) return null;
 
-  const datum = index == null ? undefined : data[index];
-  const card = datum?.card ?? "";
-  // `value` is the normalized visual height used by Recharts. Always source
-  // the actual tally from the datum so labels and accessibility stay truthful.
-  const count = datum?.Votes ?? value ?? 0;
+  const card = payload?.card ?? "";
+  const count = payload?.votes ?? 0;
   const isMajority = uniqueMajority && count === max;
   const inset = 1.25;
   const cx = x + width / 2;
   const relativeStrength = max > 0 ? count / max : 0;
-  // The wireframe's lower panel rises with the bar's share of the leading
-  // tally. A unanimous/leading bar fills roughly three quarters of its frame;
-  // a low tally still retains a substantial, readable vote panel.
   const fillRatio = 0.48 + relativeStrength * 0.26;
   const minimumHeaderHeight = isMajority ? 64 : 40;
   const fillHeight = Math.min(
@@ -74,11 +59,9 @@ export const VoteLabel: FC<VoteLabelProps> = ({
     : 0;
   const estimateAreaTop = y + majorityBandHeight;
   const estimateAreaHeight = Math.max(28, headerHeight - majorityBandHeight);
-  // Size the estimate from the shared card width, not each bar's variable
-  // header height. Every story-point value now carries equal visual weight.
   const cardFont = clamp(14, width * 0.38, 28);
   const isEmoji = containsEmoji(card);
-  const isNumericEstimate = Number.isFinite(datum?.cardValue);
+  const isNumericEstimate = Number.isFinite(Number(card));
   const estimateFont = isEmoji ? cardFont * 0.78 : cardFont;
   const estimateYOffset = isEmoji ? -2 : 0;
   const estimateLabel = isNumericEstimate
@@ -88,8 +71,6 @@ export const VoteLabel: FC<VoteLabelProps> = ({
     : "VOTE OPTION";
   const estimateLabelFont = clamp(4.5, width * 0.085, 7);
   const compactFill = fillHeight < 52;
-  // Vote totals are consistent across bars as well, but intentionally sit one
-  // tier below the estimate so the card's point value reads first.
   const countFont = clamp(11, width * 0.28, 22);
   const labelFont = clamp(3.6, width * 0.095, 8.5);
   const avatarCount = Math.min(Math.max(Math.floor(count), 0), 20);
@@ -98,8 +79,6 @@ export const VoteLabel: FC<VoteLabelProps> = ({
   const widestAvatarRow = Math.min(avatarCount, maxAvatarsPerRow);
   const estimateLabelY = estimateAreaTop + estimateAreaHeight * 0.2;
   const estimateY = estimateAreaTop + estimateAreaHeight * 0.55;
-  // Anchor the divider to the rendered estimate, not the variable header
-  // height. This preserves the same optical gap below majority values.
   const estimateRuleY = Math.min(
     estimateAreaTop + estimateAreaHeight - 2,
     estimateY + estimateFont * 0.6 + 3
@@ -112,9 +91,6 @@ export const VoteLabel: FC<VoteLabelProps> = ({
       fillHeight * (compactFill ? 0.24 : 0.35)
     ) -
     compactTextLift;
-  // Keep the optical gap between the count and VOTE(S) consistent. Their
-  // shared block can move within the fill, but its internal spacing no longer
-  // expands and contracts with the bar height.
   const voteY =
     countY + (countFont + labelFont) * 0.62 + (compactFill ? 1.5 : 2.25);
   const avatarZoneTop = voteY + labelFont * 0.5 + 4;
@@ -141,7 +117,6 @@ export const VoteLabel: FC<VoteLabelProps> = ({
     0,
     (avatarZoneHeight - avatarBlockHeight) / 2
   );
-  // `avatarY` is the body's center line; 1.82 radii reach its visual top.
   const firstAvatarY = avatarZoneTop + avatarBlockOffset + avatarSize * 1.82;
   const crownSize = clamp(6, width * 0.13, 13);
   const majorityFont = clamp(4.2, width * 0.082, 8.5);
@@ -154,15 +129,13 @@ export const VoteLabel: FC<VoteLabelProps> = ({
 
   return (
     <g
+      className="vote-bar-motion"
+      data-vote-card={card}
       pointerEvents="none"
       role="img"
       aria-label={`${card} story points: ${count} ${
         count === 1 ? "vote" : "votes"
       }${isMajority ? ", majority" : ""}`}
-      style={{
-        transformBox: "fill-box",
-        transformOrigin: "50% 100%"
-      }}
     >
       <defs>
         <linearGradient
@@ -211,7 +184,6 @@ export const VoteLabel: FC<VoteLabelProps> = ({
           height={fillHeight}
           rx={clamp(7, width * 0.11, 12)}
           fill={`url(#vote-card-${index ?? 0})`}
-          fillOpacity={1}
           style={{
             filter: "var(--vote-fill-shadow)"
           }}

@@ -1,5 +1,13 @@
 import { UsersRound } from "lucide-react";
-import { CSSProperties, FC, memo, useMemo } from "react";
+import {
+  CSSProperties,
+  FC,
+  memo,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef
+} from "react";
 import { Bar, BarChart } from "recharts";
 
 import { CardTitle } from "@/components/ui/card";
@@ -8,23 +16,21 @@ import {
   ChartTooltip,
   ChartTooltipContent
 } from "@/components/ui/chart";
-import { VoteLabel } from "@/components/ui/vote-label.tsx";
+import { VoteLabel, type VoteDatum } from "@/components/ui/vote-label.tsx";
 import { Room } from "@/types";
 
 interface VoteDistributionChartProps {
   room: Room;
 }
 
-interface ChartDatum {
-  card: string;
-  cardValue: number;
-  Votes: number;
-  VisualHeight?: number;
+interface DistributionBarsProps {
+  chartData: VoteDatum[];
+  maxCardCount: number;
 }
 
-interface DistributionBarsProps {
-  chartData: ChartDatum[];
-  maxCardCount: number;
+interface BarBounds {
+  bottom: number;
+  height: number;
 }
 
 const normalizeCardLabel = (card: string) =>
@@ -35,31 +41,144 @@ const numericCardValue = (card: string) => {
   return Number.isFinite(value) ? value : null;
 };
 
-/**
- * The chart, isolated behind `memo`. RoomPage hands the component a fresh `room`
- * object on every subscription snapshot; without this boundary those re-renders
- * would restart the CSS grow/label-reveal animations (a visible flicker) on each
- * snapshot. Memoizing on the (stable) chartData/maxCardCount keeps the subtree
- * from re-rendering unless the vote distribution actually changes.
- */
 const DistributionBars = memo(function DistributionBars({
   chartData,
   maxCardCount
 }: DistributionBarsProps) {
+  const chartRef = useRef<HTMLDivElement>(null);
+  const previousVotesRef = useRef<Map<string, number>>(new Map());
+  const previousBoundsRef = useRef<Map<string, BarBounds>>(new Map());
   const uniqueMajority =
-    chartData.filter((d) => d.Votes === maxCardCount).length === 1;
+    chartData.filter((datum) => datum.votes === maxCardCount).length === 1;
   const visualData = useMemo(
     () =>
       chartData.map((datum) => ({
         ...datum,
-        VisualHeight:
-          0.56 + (maxCardCount ? (datum.Votes / maxCardCount) * 0.44 : 0)
+        visualHeight:
+          0.56 + (maxCardCount ? (datum.votes / maxCardCount) * 0.44 : 0)
       })),
     [chartData, maxCardCount]
   );
+
+  useLayoutEffect(() => {
+    const nextVotes = new Map(
+      chartData.map((datum) => [datum.card, datum.votes] as const)
+    );
+    let attempts = 0;
+    let animationFrame = 0;
+
+    const animateChangedBars = () => {
+      const bars = Array.from(
+        chartRef.current?.querySelectorAll<SVGGElement>("[data-vote-card]") ??
+          []
+      );
+
+      if (!bars.length && attempts < 4) {
+        attempts += 1;
+        animationFrame = requestAnimationFrame(animateChangedBars);
+        return;
+      }
+
+      const nextBounds = new Map<string, BarBounds>();
+      const reduceMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      ).matches;
+
+      bars.forEach((bar) => {
+        const card = bar.getAttribute("data-vote-card");
+        if (!card) return;
+
+        const rect = bar.getBBox();
+        const bounds = {
+          bottom: rect.y + rect.height,
+          height: rect.height
+        };
+        nextBounds.set(card, bounds);
+
+        const previousCount = previousVotesRef.current.get(card);
+        const previousBounds = previousBoundsRef.current.get(card);
+
+        if (reduceMotion) return;
+
+        if (previousCount == null) {
+          bar.getAnimations().forEach((animation) => animation.cancel());
+          bar.animate(
+            [
+              {
+                opacity: 0.25,
+                transform: "translateY(10px) scaleY(0.05)"
+              },
+              { opacity: 1, transform: "translateY(0) scaleY(1)" }
+            ],
+            { duration: 450, easing: "ease-out" }
+          );
+          return;
+        }
+
+        if (!previousBounds || bounds.height === 0) return;
+
+        const scaleY = previousBounds.height / bounds.height;
+        const translateY = previousBounds.bottom - bounds.bottom;
+        if (Math.abs(scaleY - 1) < 0.001 && Math.abs(translateY) < 0.5) {
+          return;
+        }
+
+        bar.getAnimations().forEach((animation) => animation.cancel());
+        bar.animate(
+          [
+            {
+              opacity: 1,
+              transform: `translateY(${translateY}px) scaleY(${scaleY})`
+            },
+            { opacity: 1, transform: "translateY(0) scaleY(1)" }
+          ],
+          { duration: 450, easing: "ease-out" }
+        );
+      });
+
+      previousVotesRef.current = nextVotes;
+      previousBoundsRef.current = nextBounds;
+    };
+
+    animateChangedBars();
+    return () => cancelAnimationFrame(animationFrame);
+  }, [chartData]);
+
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart || typeof ResizeObserver === "undefined") return;
+
+    let animationFrame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = requestAnimationFrame(() => {
+        const bounds = new Map<string, BarBounds>();
+        chart
+          .querySelectorAll<SVGGElement>("[data-vote-card]")
+          .forEach((bar) => {
+            const card = bar.getAttribute("data-vote-card");
+            if (!card) return;
+            const rect = bar.getBBox();
+            bounds.set(card, {
+              bottom: rect.y + rect.height,
+              height: rect.height
+            });
+          });
+        previousBoundsRef.current = bounds;
+      });
+    });
+
+    observer.observe(chart);
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(animationFrame);
+    };
+  }, []);
+
   return (
     <ChartContainer
-      className="vote-bars-enter h-[clamp(10rem,20vh,13.5rem)] w-full"
+      ref={chartRef}
+      className="vote-bars h-[clamp(10rem,20vh,13.5rem)] w-full"
       config={{
         card: {
           label: "Votes",
@@ -73,15 +192,11 @@ const DistributionBars = memo(function DistributionBars({
         barCategoryGap="10%"
       >
         <Bar
-          dataKey="VisualHeight"
+          dataKey="visualHeight"
           maxBarSize={82}
           isAnimationActive={false}
           shape={
-            <VoteLabel
-              data={chartData}
-              max={maxCardCount}
-              uniqueMajority={uniqueMajority}
-            />
+            <VoteLabel max={maxCardCount} uniqueMajority={uniqueMajority} />
           }
         />
         <ChartTooltip
@@ -95,7 +210,7 @@ const DistributionBars = memo(function DistributionBars({
                 <div className="flex min-w-[7rem] items-center justify-between gap-4">
                   <span className="text-muted-foreground">Votes</span>
                   <span className="font-mono font-medium tabular-nums text-foreground">
-                    {item.payload.Votes}
+                    {item.payload.votes}
                   </span>
                 </div>
               )}
@@ -120,7 +235,11 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
     });
 
     // Local styling fixture. Uncomment while tuning the distribution chart.
-    // Object.assign(counts, { "0": 1, "0.5": 1, "2": 10, "3": 3 });
+    // Object.entries({ "0": 1, "0.5": 1, "2": 10, "3": 4 }).forEach(
+    //   ([card, count]) => {
+    //     counts[card] = (counts[card] || 0) + count;
+    //   }
+    // );
 
     return counts;
   }, [room.game.table]);
@@ -141,21 +260,20 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
     [voteCount]
   );
 
-  const chartData = useMemo<ChartDatum[]>(() => {
+  const chartData = useMemo<VoteDatum[]>(() => {
     if (!voteSignature) return [];
 
     return voteSignature.split("|").map((entry) => {
       const [card, count] = entry.split(":");
       return {
         card,
-        cardValue: numericCardValue(card) ?? Number.POSITIVE_INFINITY,
-        Votes: Number(count)
+        votes: Number(count)
       };
     });
   }, [voteSignature]);
 
   const maxCardCount = useMemo(
-    () => (chartData.length ? Math.max(...chartData.map((c) => c.Votes)) : 0),
+    () => (chartData.length ? Math.max(...chartData.map((c) => c.votes)) : 0),
     [chartData]
   );
 
@@ -235,7 +353,7 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
     }
 
     if (leadingValue != null && leadingValue >= 13) {
-      return `The team centers on ${leading[0]} - this story maybe oversized, consider splitting before committing.`;
+      return `The team centers on ${leading[0]} - this story may be oversized, so consider splitting before committing.`;
     }
 
     if (closeTie) {
@@ -295,7 +413,7 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
             />
           </span>
         </div>
-        <Metric label="AVERAGE" value={averageVote.toFixed(1)} dividerAfter />
+        <AverageMetric value={averageVote.toFixed(1)} />
 
         <div className="vote-consensus flex min-w-0 items-center justify-center gap-2 px-1">
           <div className="relative h-[66px] w-[clamp(108px,46cqw,160px)] max-w-full shrink-0">
@@ -362,19 +480,12 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
   );
 };
 
-const Metric: FC<{
-  label: string;
+const AverageMetric: FC<{
   value: string;
-  dividerAfter?: boolean;
-}> = ({ label, value, dividerAfter = false }) => (
-  <div
-    className={[
-      "flex min-w-0 flex-col items-center justify-center px-1 text-center",
-      dividerAfter ? "vote-distribution-divider border-r" : ""
-    ].join(" ")}
-  >
+}> = ({ value }) => (
+  <div className="vote-distribution-divider flex min-w-0 flex-col items-center justify-center border-r px-1 text-center">
     <span className="vote-distribution-label text-[0.48rem] font-semibold tracking-[0.12em]">
-      {label}
+      AVERAGE
     </span>
     <CardTitle className="vote-distribution-value mt-1 text-[1.5rem] tabular-nums leading-none">
       {value}

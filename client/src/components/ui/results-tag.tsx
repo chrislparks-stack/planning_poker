@@ -3,17 +3,12 @@ import { Vote } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-interface ResultsTagProps {
-  active?: boolean;
-}
-
-export const ResultsTag: React.FC<ResultsTagProps> = ({ active }) => {
+export const ResultsTag = () => {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 0 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
-      data-active={active}
       className={cn(
         "vote-distribution-rail mr-3 flex w-5 self-stretch items-center justify-start gap-1.5 rounded-lg border py-2 select-none",
         "text-[6px] font-semibold uppercase tracking-[0.12em]",

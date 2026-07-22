@@ -6,31 +6,21 @@ import { useAuth } from "@/contexts";
 import { useKeyboardControls } from "@/hooks";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { User, UserCard } from "@/types";
+import { User } from "@/types";
 
 interface DeckProps {
   roomId: string;
-  isGameOver?: boolean;
+  isGameOver: boolean;
   cards: string[];
-  table: UserCard[] | undefined;
-  /** Room users from the page-level subscription — the deck must not open its
-   * own room subscription/query (it multiplies every server event). */
   users: User[];
 }
 
-export function Deck({
-  roomId,
-  isGameOver: isGameOverProp,
-  cards,
-  users
-}: DeckProps) {
+export function Deck({ roomId, isGameOver, cards, users }: DeckProps) {
   const { user: authUser } = useAuth();
   const { toast } = useToast();
   const { cardsContainerRef } = useKeyboardControls();
 
   const currentUser = users.find((u) => u.id === authUser?.id) ?? null;
-  const isGameOver = isGameOverProp ?? false;
-
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [windowWidth, setWindowWidth] = useState(() => window.innerWidth);
 
@@ -50,9 +40,6 @@ export function Deck({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Once results are visible, reserve enough horizontal space for their
-  // compact panel. This lets the deck fold to two rows before the combined
-  // footer needs horizontal scrolling.
   const resultsWidth = isGameOver ? 360 : 0;
   const shouldTwoRowLayout =
     cards.length > 5 && windowWidth < 250 + 75 * cards.length + resultsWidth;

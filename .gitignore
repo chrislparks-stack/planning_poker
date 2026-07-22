@@ -11,6 +11,7 @@ AGENTS.md
 
 # dependencies
 node_modules/
+client/debug.log
 
 # stress test run reports and machine-specific baselines
 stress/results/

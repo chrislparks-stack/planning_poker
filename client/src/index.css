@@ -549,9 +549,6 @@ body.dialog-open .chat-panel {
   color: var(--vote-neon);
   border-color: hsl(var(--accent-hue) 66% 58% / 0.72);
   background: var(--vote-rail-bg);
-}
-
-.vote-distribution-rail[data-active="true"] {
   box-shadow:
     0 0 8px rgba(var(--accent-rgb), 0.42),
     0 0 20px rgba(var(--accent-rgb), 0.22),
@@ -563,8 +560,8 @@ body.dialog-open .chat-panel {
   scrollbar-color: rgb(var(--accent-rgb)) transparent;
 }
 
-.vote-bars-enter .recharts-wrapper,
-.vote-bars-enter .recharts-surface {
+.vote-bars .recharts-wrapper,
+.vote-bars .recharts-surface {
   overflow: visible !important;
 }
 
@@ -578,29 +575,9 @@ body.dialog-open .chat-panel {
   }
 }
 
-/* Animate the stable chart wrapper once. Recharts may rebuild its SVG while a
- * responsive container is resizing, so animating individual bar shapes would
- * repeatedly restart the reveal during a window drag. */
-@keyframes voteChartReveal {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scaleY(0.88);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scaleY(1);
-  }
-}
-
-.vote-bars-enter {
-  animation: voteChartReveal 0.45s ease-out both;
-  transform-origin: 50% 100%;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .vote-bars-enter {
-    animation: none !important;
-  }
+.vote-bar-motion {
+  transform-box: fill-box;
+  transform-origin: center bottom;
 }
 
 @layer starry-sky {
