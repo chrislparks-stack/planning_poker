@@ -1,15 +1,13 @@
-import {useRef, useEffect, useState, useMemo, RefObject} from "react";
-import {
-  useSetRoomOwnerMutation,
-  useRoomChatSubscription,
-} from "@/api";
+import { useRef, useEffect, useState, useMemo, RefObject } from "react";
+
+import { useSetRoomOwnerMutation, useRoomChatSubscription } from "@/api";
 import { Player } from "@/components/Player";
 import { Table } from "@/components/Table";
 import { ChatBubble } from "@/components/ui/chat-bubble";
 import type { Room } from "@/types";
 import { getPickedUserCard } from "@/utils";
-import {decompressMessage} from "@/utils/messageUtils.ts";
-import {withTestUsers} from "@/utils/testUtils.tsx";
+import { decompressMessage } from "@/utils/messageUtils.ts";
+import { withTestUsers } from "@/utils/testUtils.tsx";
 
 interface RoomProps {
   room?: Room;
@@ -25,7 +23,7 @@ export interface Position {
   height?: number;
 }
 
-export function Room({ room, onShowInChat, roomRef, chatVisible}: RoomProps) {
+export function Room({ room, onShowInChat, roomRef, chatVisible }: RoomProps) {
   const tableRef = useRef<HTMLDivElement | null>(null);
   const playerRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [tableRect, setTableRect] = useState<DOMRect | null>(null);
@@ -36,12 +34,9 @@ export function Room({ room, onShowInChat, roomRef, chatVisible}: RoomProps) {
     if (!el) return null;
     return el.getBoundingClientRect();
   };
-  const [setRoomOwner] = useSetRoomOwnerMutation({errorPolicy: "none"});
+  const [setRoomOwner] = useSetRoomOwnerMutation({ errorPolicy: "none" });
 
-  const users = useMemo(
-    () => withTestUsers(0, room?.users),
-    [room?.users]
-  );
+  const users = useMemo(() => withTestUsers(0, room?.users), [room?.users]);
 
   // Layout constants
   const CARD_WIDTH = 60;
@@ -69,7 +64,7 @@ export function Room({ room, onShowInChat, roomRef, chatVisible}: RoomProps) {
       const msg = data?.data?.roomChat;
       if (!msg) return;
 
-      const { userId, formattedContent, content } = msg as any;
+      const { userId, formattedContent, content } = msg;
 
       let message = formattedContent || content;
 
@@ -84,7 +79,7 @@ export function Room({ room, onShowInChat, roomRef, chatVisible}: RoomProps) {
       }
 
       setLastChats((prev) => ({ ...prev, [userId]: message }));
-    },
+    }
   });
 
   useEffect(() => {
@@ -114,7 +109,7 @@ export function Room({ room, onShowInChat, roomRef, chatVisible}: RoomProps) {
       top: 0,
       bottom: 0,
       left: 0,
-      right: 0,
+      right: 0
     };
 
     let remaining = totalPlayers;
@@ -162,8 +157,8 @@ export function Room({ room, onShowInChat, roomRef, chatVisible}: RoomProps) {
         bottomRows,
         leftColumns,
         rightColumns,
-        TB_PER_ROW,
-      }
+        TB_PER_ROW
+      };
     }
 
     const topRows = Math.ceil(sideCounts.top / TB_PER_ROW);
@@ -177,7 +172,7 @@ export function Room({ room, onShowInChat, roomRef, chatVisible}: RoomProps) {
       bottomRows,
       leftColumns,
       rightColumns,
-      TB_PER_ROW,
+      TB_PER_ROW
     };
   }, [tableRect, room, users]);
 
@@ -226,23 +221,15 @@ export function Room({ room, onShowInChat, roomRef, chatVisible}: RoomProps) {
         const rows = Math.ceil(count / perRow);
 
         for (let row = 0; row < rows; row++) {
-          const rowCount =
-            row === rows - 1 ? count - row * perRow : perRow;
+          const rowCount = row === rows - 1 ? count - row * perRow : perRow;
 
-          const xs = clampCenteredCoords(
-            available,
-            rowCount,
-            TB_MIN_GAP
-          );
+          const xs = clampCenteredCoords(available, rowCount, TB_MIN_GAP);
 
           for (let i = 0; i < rowCount; i++) {
             const rowOffset = padding + row * TB_ROW_OFFSET;
             positions.push({
               x: xs[i],
-              y:
-                side === "top"
-                  ? -rowOffset
-                  : height + rowOffset,
+              y: side === "top" ? -rowOffset : height + rowOffset
             });
           }
         }
@@ -266,16 +253,12 @@ export function Room({ room, onShowInChat, roomRef, chatVisible}: RoomProps) {
           CARD_HEIGHT + CARD_MARGIN
         );
 
-        const colOffset =
-          padding + col * (CARD_WIDTH + SIDE_COLUMN_GAP);
+        const colOffset = padding + col * (CARD_WIDTH + SIDE_COLUMN_GAP);
 
         for (let i = 0; i < colCount; i++) {
           positions.push({
-            x:
-              side === "left"
-                ? -colOffset
-                : width + colOffset,
-            y: ys[i],
+            x: side === "left" ? -colOffset : width + colOffset,
+            y: ys[i]
           });
         }
       }
@@ -289,7 +272,7 @@ export function Room({ room, onShowInChat, roomRef, chatVisible}: RoomProps) {
         "top",
         "right",
         "bottom",
-        "left",
+        "left"
       ];
 
       return users.map((_, i) => {
@@ -314,9 +297,9 @@ export function Room({ room, onShowInChat, roomRef, chatVisible}: RoomProps) {
       ...computeSidePositions("top", sideCounts.top),
       ...computeSidePositions("right", sideCounts.right),
       ...computeSidePositions("bottom", sideCounts.bottom),
-      ...computeSidePositions("left", sideCounts.left),
+      ...computeSidePositions("left", sideCounts.left)
     ];
-  }, [tableRect, room, users]);
+  }, [tableRect, room, users, seatLayout, TB_ROW_OFFSET]);
 
   const playerPositionMap = useMemo(() => {
     if (!room || playerPositions.length === 0) return {};
@@ -326,31 +309,18 @@ export function Room({ room, onShowInChat, roomRef, chatVisible}: RoomProps) {
       if (pos) map[user.id] = pos;
     });
     return map;
-  }, [room, playerPositions]);
-
-  if (!room) {
-    return (
-      <div className="flex items-center justify-center w-full h-[calc(100vh-120px)]">
-        Loading...
-      </div>
-    );
-  }
+  }, [room, playerPositions, users]);
 
   const containerSize = useMemo(() => {
     if (!tableRect || !seatLayout) return null;
 
-    const {
-      sideCounts,
-      topRows,
-      bottomRows,
-      leftColumns,
-      rightColumns,
-    } = seatLayout;
+    const { sideCounts, topRows, bottomRows, leftColumns, rightColumns } =
+      seatLayout;
 
     // Vertical expansion
     const topHeight =
       sideCounts.top > 0
-        ? padding + (Math.max(topRows - 1, 0) * TB_ROW_OFFSET)
+        ? padding + Math.max(topRows - 1, 0) * TB_ROW_OFFSET
         : 0;
 
     const bottomHeight =
@@ -362,15 +332,15 @@ export function Room({ room, onShowInChat, roomRef, chatVisible}: RoomProps) {
     const leftWidth =
       leftColumns > 0
         ? padding +
-        (leftColumns - 1) * (CARD_WIDTH + SIDE_COLUMN_GAP) +
-        CARD_WIDTH
+          (leftColumns - 1) * (CARD_WIDTH + SIDE_COLUMN_GAP) +
+          CARD_WIDTH
         : 0;
 
     const rightWidth =
       rightColumns > 0
         ? padding +
-        (rightColumns - 1) * (CARD_WIDTH + SIDE_COLUMN_GAP) +
-        CARD_WIDTH
+          (rightColumns - 1) * (CARD_WIDTH + SIDE_COLUMN_GAP) +
+          CARD_WIDTH
         : 0;
 
     return {
@@ -379,9 +349,9 @@ export function Room({ room, onShowInChat, roomRef, chatVisible}: RoomProps) {
       offsetX: leftWidth,
       offsetY: topHeight,
       topHeight,
-      bottomHeight,
+      bottomHeight
     };
-  }, [tableRect, seatLayout]);
+  }, [tableRect, seatLayout, TB_ROW_OFFSET]);
 
   const totalHeight = useMemo(() => {
     if (!containerSize || !tableRect || !seatLayout) {
@@ -393,22 +363,41 @@ export function Room({ room, onShowInChat, roomRef, chatVisible}: RoomProps) {
 
     const { topRows, bottomRows } = seatLayout;
 
-    const heightRows = tableRect.height + ((topRows + bottomRows) * CARD_HEIGHT);
-    const singleRowHeight = Math.max(((window.innerHeight / 1.8) - heightRows), ((heightRows - TB_ROW_OFFSET) / (topRows + bottomRows)));
-    const doubleRowHeight = Math.max(((window.innerHeight / 1.35) - heightRows), ((heightRows - TB_ROW_OFFSET) / (topRows + bottomRows)));
+    const heightRows = tableRect.height + (topRows + bottomRows) * CARD_HEIGHT;
+    const singleRowHeight = Math.max(
+      window.innerHeight / 1.8 - heightRows,
+      (heightRows - TB_ROW_OFFSET) / (topRows + bottomRows)
+    );
+    const doubleRowHeight = Math.max(
+      window.innerHeight / 1.35 - heightRows,
+      (heightRows - TB_ROW_OFFSET) / (topRows + bottomRows)
+    );
 
     return {
       minHeight: heightRows,
-      offsetHeight: topRows > 1 ? doubleRowHeight : topRows < 1 && bottomRows < 1 ? (window.innerHeight / 3) : singleRowHeight
+      offsetHeight:
+        topRows > 1
+          ? doubleRowHeight
+          : topRows < 1 && bottomRows < 1
+          ? window.innerHeight / 3
+          : singleRowHeight
     };
-  }, [containerSize, tableRect, seatLayout]);
+  }, [containerSize, tableRect, seatLayout, TB_ROW_OFFSET]);
+
+  if (!room) {
+    return (
+      <div className="flex items-center justify-center w-full h-[calc(100vh-120px)]">
+        Loading...
+      </div>
+    );
+  }
 
   const handlePromote = async (userId: string, room: Room) => {
     const res = await setRoomOwner({
       variables: {
         roomId: room.id,
-        userId,
-      },
+        userId
+      }
     });
 
     if (res.errors?.length) {
@@ -426,9 +415,9 @@ export function Room({ room, onShowInChat, roomRef, chatVisible}: RoomProps) {
     >
       <div
         className="relative"
-        style={{marginTop: totalHeight["offsetHeight"]}}
+        style={{ marginTop: totalHeight["offsetHeight"] }}
       >
-      {/* Table */}
+        {/* Table */}
         <Table
           room={room}
           innerRef={tableRef}
@@ -458,6 +447,7 @@ export function Room({ room, onShowInChat, roomRef, chatVisible}: RoomProps) {
             >
               <Player
                 user={user}
+                room={room}
                 isCardPicked={!!pickedCard}
                 isGameOver={room.isGameOver}
                 card={pickedCard?.card}

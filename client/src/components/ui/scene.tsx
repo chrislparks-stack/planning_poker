@@ -6,21 +6,21 @@ export type Direction = "up" | "down";
 const sceneVariants = {
   enter: (dir: Direction) => ({
     y: dir === "down" ? 40 : -40,
-    opacity: 0,
+    opacity: 0
   }),
   center: {
     y: 0,
-    opacity: 1,
+    opacity: 1
   },
   exit: (dir: Direction) => ({
     y: dir === "down" ? -40 : 40,
-    opacity: 0,
-  }),
+    opacity: 0
+  })
 };
 
 export const Scene = ({
   children,
-  direction,
+  direction
 }: {
   children: ReactNode;
   direction: Direction;
@@ -34,7 +34,7 @@ export const Scene = ({
     exit="exit"
     transition={{
       duration: 1.2,
-      ease: [0.22, 1, 0.36, 1],
+      ease: [0.22, 1, 0.36, 1]
     }}
   >
     {children}

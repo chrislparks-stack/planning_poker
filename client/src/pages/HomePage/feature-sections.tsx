@@ -7,20 +7,20 @@ const features = [
     name: "Real-time Collaboration",
     description:
       "Collaborate with your team in real-time, no matter where they are. Our tool ensures seamless communication during planning sessions.",
-    icon: UsersIcon,
+    icon: UsersIcon
   },
   {
     name: "Time-saving Efficiency",
     description:
       "Streamline your planning process and save valuable time. Our intuitive interface allows for quick setup and easy estimation rounds.",
-    icon: ClockIcon,
+    icon: ClockIcon
   },
   {
     name: "Improved Accuracy",
     description:
       "Enhance the accuracy of your estimates with our structured approach. Visualize and analyze estimation data to refine your planning process.",
-    icon: ChartBarIcon,
-  },
+    icon: ChartBarIcon
+  }
 ];
 
 export function FeatureSections() {

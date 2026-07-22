@@ -1,35 +1,44 @@
-import Slider from "@ant-design/react-slick"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import {useRef, useState} from "react";
+import Slider from "@ant-design/react-slick";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useRef, useState } from "react";
+
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent
+} from "@/components/ui/tooltip";
 
 type User = {
-  id: string
-  username: string
-}
+  id: string;
+  username: string;
+};
 
 interface AvatarCarouselProps {
-  users: User[]
-  chatOpen: boolean
-  className?: string
+  users: User[];
+  chatOpen: boolean;
+  className?: string;
 }
 
-export default function AvatarCarousel({ users, chatOpen, className }: AvatarCarouselProps) {
-  const sliderRef = useRef<Slider | null>(null)
-  const [currentSlide, setCurrentSlide] = useState(0)
+export default function AvatarCarousel({
+  users,
+  chatOpen,
+  className
+}: AvatarCarouselProps) {
+  const sliderRef = useRef<Slider | null>(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
-  if (!users?.length) return null
+  if (!users?.length) return null;
 
-  const show = Math.min(5, users.length)
-  const isCarousel = users.length > 5
+  const show = Math.min(5, users.length);
+  const isCarousel = users.length > 5;
 
   const jump = (delta: number) => {
-    if (!sliderRef.current) return
+    if (!sliderRef.current) return;
 
-    const target = currentSlide + delta
-    sliderRef.current.slickGoTo(target)
-  }
+    const target = currentSlide + delta;
+    sliderRef.current.slickGoTo(target);
+  };
 
   const settings = {
     infinite: true,
@@ -67,27 +76,25 @@ export default function AvatarCarousel({ users, chatOpen, className }: AvatarCar
         }
       }
     ]
-  }
+  };
 
   const truncate = (name: string, max = 12) =>
-    name.length > max ? name.slice(0, max) + "…" : name
+    name.length > max ? name.slice(0, max) + "…" : name;
 
   const SlideContent = ({
     u,
     chatOpen,
     truncate
   }: {
-    u: User
-    chatOpen: boolean
-    truncate: (name: string) => string
+    u: User;
+    chatOpen: boolean;
+    truncate: (name: string) => string;
   }) => (
     <Tooltip disabled={chatOpen} delayDuration={1000}>
       <TooltipTrigger asChild>
         <div className="relative flex justify-center">
           <Avatar className="border-2 border-background cursor-default">
-            <AvatarFallback>
-              {u.username[0].toUpperCase()}
-            </AvatarFallback>
+            <AvatarFallback>{u.username[0].toUpperCase()}</AvatarFallback>
           </Avatar>
           <div
             className="
@@ -110,11 +117,9 @@ export default function AvatarCarousel({ users, chatOpen, className }: AvatarCar
           </div>
         </div>
       </TooltipTrigger>
-      <TooltipContent sideOffset={15}>
-        {u.username}
-      </TooltipContent>
+      <TooltipContent sideOffset={15}>{u.username}</TooltipContent>
     </Tooltip>
-  )
+  );
 
   return (
     <div
@@ -146,7 +151,8 @@ export default function AvatarCarousel({ users, chatOpen, className }: AvatarCar
           </div>
         </TooltipTrigger>
         <TooltipContent sideOffset={15}>
-          {users.length} {users.length === 1 ? "Player" : "Players"} Currently In Room
+          {users.length} {users.length === 1 ? "Player" : "Players"} Currently
+          In Room
         </TooltipContent>
       </Tooltip>
 
@@ -164,9 +170,7 @@ export default function AvatarCarousel({ users, chatOpen, className }: AvatarCar
                   <ChevronLeft className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent sideOffset={15}>
-                Skip Previous
-              </TooltipContent>
+              <TooltipContent sideOffset={15}>Skip Previous</TooltipContent>
             </Tooltip>
             <Tooltip disabled={chatOpen} delayDuration={2000}>
               <TooltipTrigger asChild>
@@ -177,9 +181,7 @@ export default function AvatarCarousel({ users, chatOpen, className }: AvatarCar
                   <ChevronLeft className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent sideOffset={15}>
-                Previous Player
-              </TooltipContent>
+              <TooltipContent sideOffset={15}>Previous Player</TooltipContent>
             </Tooltip>
           </div>
         )}
@@ -191,7 +193,11 @@ export default function AvatarCarousel({ users, chatOpen, className }: AvatarCar
               <Slider ref={sliderRef} {...settings} className="avatar-slick">
                 {users.map((u) => (
                   <div key={u.id} className="px-1">
-                    <SlideContent u={u} chatOpen={chatOpen} truncate={truncate} />
+                    <SlideContent
+                      u={u}
+                      chatOpen={chatOpen}
+                      truncate={truncate}
+                    />
                   </div>
                 ))}
               </Slider>
@@ -199,7 +205,11 @@ export default function AvatarCarousel({ users, chatOpen, className }: AvatarCar
               <div className="flex justify-center gap-2">
                 {users.map((u) => (
                   <div key={u.id} className="px-1">
-                    <SlideContent u={u} chatOpen={chatOpen} truncate={truncate} />
+                    <SlideContent
+                      u={u}
+                      chatOpen={chatOpen}
+                      truncate={truncate}
+                    />
                   </div>
                 ))}
               </div>
@@ -219,9 +229,7 @@ export default function AvatarCarousel({ users, chatOpen, className }: AvatarCar
                   <ChevronRight className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent sideOffset={15}>
-                Next Player
-              </TooltipContent>
+              <TooltipContent sideOffset={15}>Next Player</TooltipContent>
             </Tooltip>
             <Tooltip disabled={chatOpen} delayDuration={2000}>
               <TooltipTrigger asChild>
@@ -233,13 +241,11 @@ export default function AvatarCarousel({ users, chatOpen, className }: AvatarCar
                   <ChevronRight className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent sideOffset={15}>
-                Skip Next
-              </TooltipContent>
+              <TooltipContent sideOffset={15}>Skip Next</TooltipContent>
             </Tooltip>
           </div>
         )}
       </div>
     </div>
-  )
+  );
 }

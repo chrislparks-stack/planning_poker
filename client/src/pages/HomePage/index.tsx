@@ -1,9 +1,15 @@
 import { useNavigate } from "@tanstack/react-router";
-import {FC, useEffect, useMemo, useRef, useState} from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import type { Variants } from "framer-motion";
+import { ArrowDownToLine } from "lucide-react";
+import { FC, useEffect, useMemo, useRef, useState } from "react";
 
-import {useCreateRoomMutation, useGetRoomQuery} from "@/api";
+import { useCreateRoomMutation, useGetRoomQuery } from "@/api";
+import SummitLogo from "@/assets/SummitLogo.png";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
+import { Scene } from "@/components/ui/scene.tsx";
+import { ChevronCascade, ScrollHint } from "@/components/ui/spinners.tsx";
 import {
   Tooltip,
   TooltipTrigger,
@@ -11,19 +17,12 @@ import {
   TooltipProvider
 } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import SummitLogo from "@/assets/SummitLogo.png";
-import {AnimatePresence, motion} from "framer-motion";
-import {Scene} from "@/components/ui/scene.tsx";
-import {ChevronCascade, ScrollHint} from "@/components/ui/spinners.tsx";
-
-import type { Variants } from "framer-motion";
-import {useTouchInput} from "@/utils/mobileUtils.tsx";
-import {ArrowDownToLine} from "lucide-react";
+import { useTouchInput } from "@/utils/mobileUtils.tsx";
 
 const beginClimbVariants: Variants = {
   hidden: {
     opacity: 0,
-    y: 6,
+    y: 6
   },
   visible: {
     opacity: 1,
@@ -32,7 +31,7 @@ const beginClimbVariants: Variants = {
       duration: 2,
       delay: 2,
       ease: [0.25, 0.1, 0.25, 1]
-    },
+    }
   },
   exit: {
     opacity: 0,
@@ -40,14 +39,14 @@ const beginClimbVariants: Variants = {
     transition: {
       duration: 0.25,
       ease: [0.4, 0, 1, 1]
-    },
-  },
+    }
+  }
 };
 
 const scrollVariants: Variants = {
   hidden: {
     opacity: 0,
-    y: 6,
+    y: 6
   },
   visible: {
     opacity: 1,
@@ -56,7 +55,7 @@ const scrollVariants: Variants = {
       duration: 2,
       delay: 4,
       ease: [0.25, 0.1, 0.25, 1]
-    },
+    }
   },
   exit: {
     opacity: 0,
@@ -64,8 +63,8 @@ const scrollVariants: Variants = {
     transition: {
       duration: 0.25,
       ease: [0.4, 0, 1, 1]
-    },
-  },
+    }
+  }
 };
 
 export const HomePage: FC = () => {
@@ -80,7 +79,9 @@ export const HomePage: FC = () => {
   const touchStartY = useRef<number | null>(null);
   const touchStartX = useRef<number | null>(null);
 
-  const [viewportHeight, setViewportHeight] = useState<number>(window.innerHeight);
+  const [viewportHeight, setViewportHeight] = useState<number>(
+    window.innerHeight
+  );
   const FADE_START = 720;
   const FADE_END = 620;
 
@@ -90,7 +91,6 @@ export const HomePage: FC = () => {
 
     return (viewportHeight - FADE_END) / (FADE_START - FADE_END);
   }, [viewportHeight]);
-
 
   useEffect(() => {
     function handleResize() {
@@ -107,7 +107,6 @@ export const HomePage: FC = () => {
     }
   }, [scene]);
 
-
   useEffect(() => {
     let locked = false;
     const SWIPE_THRESHOLD = 40;
@@ -120,9 +119,7 @@ export const HomePage: FC = () => {
       setDirection(scrollDirection);
 
       setScene((s) =>
-        scrollDirection === "down"
-          ? Math.min(s + 1, 2)
-          : Math.max(s - 1, 0)
+        scrollDirection === "down" ? Math.min(s + 1, 2) : Math.max(s - 1, 0)
       );
 
       setTimeout(() => (locked = false), 700);
@@ -215,7 +212,11 @@ export const HomePage: FC = () => {
   }, []);
 
   // ===== Verify room exists on server =====
-  const { data, loading: roomCheckLoading, error: roomError } = useGetRoomQuery({
+  const {
+    data,
+    loading: roomCheckLoading,
+    error: roomError
+  } = useGetRoomQuery({
     variables: { roomId: storedRoom?.RoomID ?? "" },
     skip: !storedRoom?.RoomID,
     fetchPolicy: "network-only"
@@ -257,7 +258,7 @@ export const HomePage: FC = () => {
 
   return (
     <div className="min-h-[100svh] bg-white dark:bg-gray-900 overflow-hidden">
-    <header className="relative z-50">
+      <header className="relative z-50">
         <nav
           aria-label="Global"
           className="flex items-center justify-between p-6"
@@ -268,9 +269,7 @@ export const HomePage: FC = () => {
         </nav>
       </header>
 
-      <div
-        className="relative isolate pt-[20svh]"
-      >
+      <div className="relative isolate pt-[20svh]">
         <div
           aria-hidden="true"
           className="absolute w-full h-[65svh] -z-10 flex items-center justify-center overflow-hidden transform-gpu blur-3xl"
@@ -315,7 +314,6 @@ export const HomePage: FC = () => {
             {scene === 0 && (
               <Scene key="hero" direction={direction}>
                 <div className="text-center max-w-xl mx-auto px-2">
-
                   {/* Scene label */}
                   <p className="text-[clamp(8px,1.5svmin,16px)] uppercase tracking-widest text-accent/80 mb-2 max-[360px]:mb-1">
                     The Journey
@@ -357,7 +355,9 @@ export const HomePage: FC = () => {
                       text-gray-600 dark:text-gray-400
                     "
                   >
-                    Collaborative planning poker that helps teams surface assumptions, align faster, and start every sprint with confidence
+                    Collaborative planning poker that helps teams surface
+                    assumptions, align faster, and start every sprint with
+                    confidence
                   </p>
                 </div>
               </Scene>
@@ -374,7 +374,8 @@ export const HomePage: FC = () => {
                       How Teams Reach the Summit
                     </h2>
                     <p className="mt-1 text-[clamp(8px,2svmin,15px)] text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
-                      Summit Planning Poker turns estimation into a shared climb — structured, transparent, and collaborative
+                      Summit Planning Poker turns estimation into a shared climb
+                      — structured, transparent, and collaborative
                     </p>
                   </div>
 
@@ -383,20 +384,47 @@ export const HomePage: FC = () => {
                     <div className="absolute left-1/2 top-0 h-[32svh] w-[2px] bg-gradient-to-b from-transparent via-accent/30 to-transparent" />
                     <div className="space-y-[0.5svh]">
                       {[
-                        ["Basecamp", "Start Together", "Create a room in seconds and bring your whole team into the same space", "left"],
-                        ["The Climb", "Surface Challenges", "Vote simultaneously to reveal gaps, spark discussion, and build shared understanding", "right"],
-                        ["The Summit", "Reach Alignment", "Lock in estimates with confidence and move forward as one team", "left"]
+                        [
+                          "Basecamp",
+                          "Start Together",
+                          "Create a room in seconds and bring your whole team into the same space",
+                          "left"
+                        ],
+                        [
+                          "The Climb",
+                          "Surface Challenges",
+                          "Vote simultaneously to reveal gaps, spark discussion, and build shared understanding",
+                          "right"
+                        ],
+                        [
+                          "The Summit",
+                          "Reach Alignment",
+                          "Lock in estimates with confidence and move forward as one team",
+                          "left"
+                        ]
                       ].map(([label, title, desc, side], i) => (
                         <div key={i} className="relative flex items-start">
                           <div className="absolute left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-accent shadow" />
-                          <div className={`${side === "left" ? "ml-auto text-left" : "mr-auto text-right"} w-[46%]`}>
+                          <div
+                            className={`${
+                              side === "left"
+                                ? "ml-auto text-left"
+                                : "mr-auto text-right"
+                            } w-[46%]`}
+                          >
                             <p className="text-[clamp(7px,1.5svmin,13px)] uppercase tracking-widest text-accent/80 mb-0.5">
                               {label}
                             </p>
                             <h3 className="text-[clamp(8px,2.3svh,16px)] font-semibold text-gray-700 dark:text-white">
                               {title}
                             </h3>
-                            <p className={`${side === "left" ? "text-left" : " text-right float-right"} mt-0.5 text-[clamp(7px,2svmin,15px)] w-[clamp(100px,30svmin,300px)]  text-gray-600 dark:text-gray-400`}>
+                            <p
+                              className={`${
+                                side === "left"
+                                  ? "text-left"
+                                  : " text-right float-right"
+                              } mt-0.5 text-[clamp(7px,2svmin,15px)] w-[clamp(100px,30svmin,300px)]  text-gray-600 dark:text-gray-400`}
+                            >
                               {desc}
                             </p>
                           </div>
@@ -420,7 +448,8 @@ export const HomePage: FC = () => {
                   </h2>
 
                   <p className="mt-2 text-[clamp(10px,1.8svmin,28px)] text-gray-600 dark:text-gray-400 max-w-[50svw]">
-                    Bring your team together, estimate with confidence, and start every sprint on the same page
+                    Bring your team together, estimate with confidence, and
+                    start every sprint on the same page
                   </p>
 
                   <div className="mt-6 sm:mt-8 flex justify-center">
@@ -441,7 +470,13 @@ export const HomePage: FC = () => {
           className="fixed left-1/2 bottom-0 -translate-x-1/2 z-50 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]"
           animate={{ opacity: isTouch ? 1 : footerOpacity }}
           transition={{ duration: 0.25 }}
-          style={{ pointerEvents: isTouch ? "auto" : footerOpacity < 0.1 ? "none" : "auto" }}
+          style={{
+            pointerEvents: isTouch
+              ? "auto"
+              : footerOpacity < 0.1
+              ? "none"
+              : "auto"
+          }}
         >
           <div className="mx-auto w-full max-w-3xl">
             <div className="relative h-[6svh] min-h-[48px]">
@@ -455,7 +490,11 @@ export const HomePage: FC = () => {
                     exit="exit"
                     className="absolute inset-x-0 flex justify-center"
                   >
-                    <ScrollHint label={isTouch ? "Swipe to learn more" : "Scroll to learn more"} />
+                    <ScrollHint
+                      label={
+                        isTouch ? "Swipe to learn more" : "Scroll to learn more"
+                      }
+                    />
                   </motion.div>
                 )}
 
@@ -531,12 +570,12 @@ export const HomePage: FC = () => {
                         <div className="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400">
                           <span>Last joined as</span>
                           <span className="text-accent font-medium">
-                          {storedUser?.username || "Unknown User"}
-                        </span>
+                            {storedUser?.username || "Unknown User"}
+                          </span>
                           {storedRoom?.RoomOwner === storedUser?.id && (
                             <span className="text-[0.65rem] px-2 py-0.5 rounded-md bg-accent text-white font-medium">
-                            Room Owner
-                          </span>
+                              Room Owner
+                            </span>
                           )}
                         </div>
                       </div>

@@ -65,7 +65,7 @@ export function useKeyboardControls(): UseKeyboardControlsReturn {
         }
       }
     },
-    [focusIndex],
+    [focusIndex]
   );
 
   useEffect(() => {

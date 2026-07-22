@@ -1,10 +1,12 @@
-// @ts-ignore
 import path from "path";
+import { fileURLToPath } from "url";
 
 import { defineConfig, devices } from "@playwright/test";
 import { config } from "dotenv";
 
-config({ path: path.resolve(__dirname, ".env") });
+config({
+  path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".env")
+});
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -27,7 +29,7 @@ export default defineConfig({
     // baseURL: 'http://127.0.0.1:3000',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: "on-first-retry",
+    trace: "on-first-retry"
   },
 
   /* Configure projects for major browsers */
@@ -35,7 +37,20 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
+      grepInvert: /@stress/
     },
+
+    /* Stress tests (client rendering under load) — run via `npm run test:stress:browser`, excluded from `npm run test:e2e` */
+    {
+      name: "stress",
+      use: {
+        ...devices["Desktop Chrome"],
+        /* Always record traces + video so render lag can be replayed frame by frame (npx playwright show-report) */
+        trace: "on",
+        video: "on"
+      },
+      grep: /@stress/
+    }
 
     // {
     //   name: "firefox",
@@ -66,7 +81,7 @@ export default defineConfig({
     //   name: 'Google Chrome',
     //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     // },
-  ],
+  ]
 
   /* Run your local dev server before starting the tests */
   // webServer: {

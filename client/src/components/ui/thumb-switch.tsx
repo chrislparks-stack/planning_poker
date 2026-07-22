@@ -1,4 +1,4 @@
-import {FC} from "react";
+import { FC } from "react";
 
 interface ThumbSwitchProps {
   checked: boolean;
@@ -7,13 +7,12 @@ interface ThumbSwitchProps {
   label: string;
 }
 
-
 export const ThumbSwitch: FC<ThumbSwitchProps> = ({
-   checked,
-   onCheckedChange,
-   disabled,
-   label
- })=> {
+  checked,
+  onCheckedChange,
+  disabled,
+  label
+}) => {
   return (
     <button
       type="button"
@@ -38,4 +37,4 @@ export const ThumbSwitch: FC<ThumbSwitchProps> = ({
       />
     </button>
   );
-}
+};

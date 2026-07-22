@@ -1,6 +1,7 @@
-import React, { useLayoutEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import React, { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+
 import { cn } from "@/lib/utils";
 
 interface ChatBubbleProps {
@@ -27,37 +28,32 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
   const [visible, setVisible] = useState(true);
   const [coords, setCoords] = useState<{ x: number; y: number }>({
     x: -9999,
-    y: -9999,
+    y: -9999
   });
 
   const bubbleRef = useRef<HTMLDivElement>(null);
 
-  useLayoutEffect(() => {
-    if (!anchorRect) return;
+  const anchorLeft = anchorRect?.left;
+  const anchorTop = anchorRect?.top;
+  const anchorWidth = anchorRect?.width;
 
-    requestAnimationFrame(() => requestAnimationFrame(computeAndSetCoords));
-
-    const onWin = () => computeAndSetCoords();
-    window.addEventListener("resize", onWin);
-    window.addEventListener("scroll", onWin, true);
-
-    return () => {
-      window.removeEventListener("resize", onWin);
-      window.removeEventListener("scroll", onWin, true);
-    };
-  }, [message, anchorRect?.left, anchorRect?.top, anchorRect?.width, anchorRect?.height]);
-
-  const computeAndSetCoords = () => {
+  const computeAndSetCoords = useCallback(() => {
     const el = bubbleRef.current;
-    if (!el || !anchorRect) return;
+    if (
+      !el ||
+      anchorLeft === undefined ||
+      anchorTop === undefined ||
+      anchorWidth === undefined
+    )
+      return;
 
     const bubbleRect = el.getBoundingClientRect();
     const bubbleWidth = Math.max(1, bubbleRect.width || 160);
     const bubbleHeight = Math.max(1, bubbleRect.height || 60);
 
     // anchor: top-center of player card
-    const x = anchorRect.left + anchorRect.width / 2;
-    const y = anchorRect.top;
+    const x = anchorLeft + anchorWidth / 2;
+    const y = anchorTop;
 
     const baseX = x - bubbleWidth / 2;
     const baseY = y - bubbleHeight - 8;
@@ -73,7 +69,22 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
     );
 
     setCoords({ x: clampedX, y: clampedY });
-  };
+  }, [anchorLeft, anchorTop, anchorWidth]);
+
+  useLayoutEffect(() => {
+    if (anchorLeft === undefined) return;
+
+    requestAnimationFrame(() => requestAnimationFrame(computeAndSetCoords));
+
+    const onWin = () => computeAndSetCoords();
+    window.addEventListener("resize", onWin);
+    window.addEventListener("scroll", onWin, true);
+
+    return () => {
+      window.removeEventListener("resize", onWin);
+      window.removeEventListener("scroll", onWin, true);
+    };
+  }, [message, anchorLeft, computeAndSetCoords]);
 
   useLayoutEffect(() => {
     if (!anchorRect) return;
@@ -108,7 +119,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
       window.removeEventListener("resize", onWin);
       window.removeEventListener("scroll", onWin, true);
     };
-  }, [message, anchorRect]);
+  }, [message, anchorRect, computeAndSetCoords]);
 
   useLayoutEffect(() => {
     const timer = setTimeout(() => {
@@ -131,14 +142,14 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
           animate={{
             opacity: [0, 1, 1, 0],
             y: [25, -10],
-            scale: [0.96, 1],
+            scale: [0.96, 1]
           }}
           exit={{ opacity: 0 }}
           transition={{
             duration,
             ease: "easeInOut",
             opacity: { times: [0, 0.1, 0.9, 1], duration },
-            y: { duration, ease: "easeInOut" },
+            y: { duration, ease: "easeInOut" }
           }}
           className={cn(
             "fixed z-[9999] select-none pointer-events-auto group",
@@ -157,7 +168,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
             transform: "translate(0, -100%)",
             maxWidth: "180px",
             maxHeight: "150px",
-            overflow: "hidden",
+            overflow: "hidden"
           }}
         >
           {senderName && (
@@ -172,9 +183,10 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
               "text-foreground-soft dark:text-accent-foreground"
             )}
             dangerouslySetInnerHTML={{
-              __html: /\n/.test(message) && !/<br\s*\/?>|<\/p>/i.test(message)
-                ? message.replace(/\n/g, "<br>")
-                : message,
+              __html:
+                /\n/.test(message) && !/<br\s*\/?>|<\/p>/i.test(message)
+                  ? message.replace(/\n/g, "<br>")
+                  : message
             }}
           />
 
@@ -190,7 +202,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
               "backdrop-blur-[6px] cursor-pointer"
             )}
             style={{
-              pointerEvents: "auto",
+              pointerEvents: "auto"
             }}
           >
             Show in Chat

@@ -9,5 +9,5 @@ export const defaultOptions: ModalOptions = {
   dialogProps: {},
   confirmationButtonProps: {},
   cancellationButtonProps: {},
-  allowClose: true,
+  allowClose: true
 };

@@ -1,0 +1,33 @@
+{
+  "name": "summit-stress",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Protocol-level stress/load testing harness for Summit Planning Poker",
+  "scripts": {
+    "smoke": "tsx src/cli.ts smoke",
+    "vote-cycle": "tsx src/cli.ts vote-cycle",
+    "chat-storm": "tsx src/cli.ts chat-storm",
+    "room-capacity": "tsx src/cli.ts room-capacity",
+    "rooms-capacity": "tsx src/cli.ts rooms-capacity",
+    "throughput": "tsx src/cli.ts throughput",
+    "find-limits": "tsx src/cli.ts find-limits",
+    "multi-room": "tsx src/cli.ts multi-room",
+    "soak": "tsx src/cli.ts soak",
+    "seed": "tsx src/cli.ts seed",
+    "baseline:all": "tsx src/cli.ts vote-cycle --save-baseline --yes && tsx src/cli.ts chat-storm --save-baseline --yes && tsx src/cli.ts multi-room --save-baseline --yes",
+    "checkTs": "tsc --noEmit"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "graphql": "^16.9.0",
+    "graphql-ws": "^5.14.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/ws": "^8.5.10",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

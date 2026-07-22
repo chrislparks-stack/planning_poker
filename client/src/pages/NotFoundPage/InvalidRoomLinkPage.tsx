@@ -1,4 +1,4 @@
-import {useNavigate, useParams} from "@tanstack/react-router";
+import { useNavigate, useParams } from "@tanstack/react-router";
 
 export function InvalidRoomLinkPage() {
   const navigate = useNavigate();
@@ -11,9 +11,9 @@ export function InvalidRoomLinkPage() {
       </h2>
       <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md">
         The room ID provided (
-        <span className="font-mono break-all">{roomId}</span>
-        ) isn’t a valid room link. It may have been mistyped, corrupted, or
-        modified. For your security, we can’t recreate rooms from invalid IDs.
+        <span className="font-mono break-all">{roomId}</span>) isn’t a valid
+        room link. It may have been mistyped, corrupted, or modified. For your
+        security, we can’t recreate rooms from invalid IDs.
       </p>
 
       <button

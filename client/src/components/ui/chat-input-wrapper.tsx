@@ -1,5 +1,6 @@
 // @ts-expect-error TS6133: React is declared but its value is never read.
 import React, { useEffect, useRef, useState } from "react";
+
 import { ChatInput } from "@/components/ui/chat-input";
 import { cn } from "@/lib/utils";
 
@@ -11,9 +12,13 @@ export const ChatInputWrapper = ({
   className,
   isOpen,
   isLeftSide = false,
-  isTopSide = false,
+  isTopSide = false
 }: {
-  onSend: (plain: string, formatted: string, position?: { x: number; y: number; width: number; height: number } | null) => void;
+  onSend: (
+    plain: string,
+    formatted: string,
+    position?: { x: number; y: number; width: number; height: number } | null
+  ) => void;
   onClose: () => void;
   className?: string;
   isOpen: boolean;
@@ -70,12 +75,16 @@ export const ChatInputWrapper = ({
 
   const animClasses = cn(
     phase === "enter-pre" && "opacity-0 -translate-y-2",
-    phase === "enter"     && "animate-fade-slide-down [animation-fill-mode:forwards]",
-    phase === "exit"      && "animate-fade-slide-up   [animation-fill-mode:forwards]"
+    phase === "enter" &&
+      "animate-fade-slide-down [animation-fill-mode:forwards]",
+    phase === "exit" && "animate-fade-slide-up   [animation-fill-mode:forwards]"
   );
 
   return (
-    <div className={cn("absolute z-50", className)} onAnimationEnd={handleAnimEnd}>
+    <div
+      className={cn("absolute z-50", className)}
+      onAnimationEnd={handleAnimEnd}
+    >
       <ChatInput
         onSend={handleSend}
         onClose={handleChildClose}

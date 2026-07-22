@@ -7,7 +7,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
+  DialogTitle
 } from "@/components/ui/dialog";
 
 import { ModalOptions } from "./types";
@@ -27,7 +27,7 @@ const ModalDialog = ({
   options,
   onCancel,
   onConfirm,
-  onClose,
+  onClose
 }: ConfirmationDialogProps) => {
   const [waitingConfirmation, setWaitingConfirmation] = useState(false);
   const [waitingCancellation, setWaitingCancellation] = useState(false);
@@ -38,7 +38,7 @@ const ModalDialog = ({
     content,
     confirmationText,
     cancellationText,
-    allowClose,
+    allowClose
   } = options;
 
   return (

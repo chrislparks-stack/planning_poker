@@ -44,3 +44,9 @@ opt-level = "z"
 lto = true
 codegen-units = 1
 panic = "abort"
+
+# Speed-optimized build for stress testing (`cargo run --profile bench-release`);
+# the release profile above optimizes for size, not speed.
+[profile.bench-release]
+inherits = "release"
+opt-level = 3

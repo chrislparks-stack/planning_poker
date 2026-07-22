@@ -1,30 +1,31 @@
 import { FC, useEffect, useState } from "react";
-import {
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogTitle,
-    DialogDescription
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Room } from "@/types";
+
 import { useToggleConfirmNewGameMutation } from "@/api";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription
+} from "@/components/ui/dialog";
+import { Room } from "@/types";
 
 interface NewGameDialogProps {
-    open: boolean;
-    setOpen: (open: boolean) => void;
-    room: Room;
-    onConfirm: () => void;
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  room: Room;
+  onConfirm: () => void;
 }
 
 /**
  * A reimagined confirmation dialog — sleek, minimal, and command-palette inspired.
  */
 export const NewGameDialog: FC<NewGameDialogProps> = ({
-    open,
-    setOpen,
-    room,
-    onConfirm
+  open,
+  setOpen,
+  room,
+  onConfirm
 }) => {
   const [toggleConfirmNewGame] = useToggleConfirmNewGameMutation();
   const [disableFutureConfirm, setDisableFutureConfirm] = useState(false);
@@ -67,10 +68,11 @@ export const NewGameDialog: FC<NewGameDialogProps> = ({
         <div className="px-6 py-5 space-y-4 relative">
           <div>
             <DialogTitle className="text-lg font-semibold tracking-tight">
-                Start a new game?
+              Start a new game?
             </DialogTitle>
             <DialogDescription className="mt-1.5 text-sm text-muted-foreground">
-            This will reset the current round and clear everyone's selected cards
+              This will reset the current round and clear everyone&apos;s
+              selected cards
             </DialogDescription>
           </div>
           <div className="relative">
@@ -89,7 +91,7 @@ export const NewGameDialog: FC<NewGameDialogProps> = ({
                   group-hover:scale-[1.05] transition-transform
                 "
               />
-              Don't show this confirmation again
+              Don&apos;t show this confirmation again
             </label>
 
             {/* Helper text appears over reserved space to avoid shifting buttons */}

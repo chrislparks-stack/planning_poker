@@ -1,18 +1,20 @@
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { FC, useEffect, useLayoutEffect, useRef, useState } from "react";
-import {
-  Dialog,
-  DialogContent, DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+
 import {
   Accordion,
   AccordionItem,
   AccordionTrigger
 } from "@/components/ui/accordion";
-import {VisuallyHidden} from "@radix-ui/react-visually-hidden";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
 
 interface SupportDialogProps {
   open: boolean;
@@ -36,9 +38,11 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
       "preloaded using link preload"
     ];
 
-    const shouldIgnore = (args: any[]): boolean => {
-      const joined = args.map(a => (typeof a === "string" ? a : JSON.stringify(a))).join(" ");
-      return ignorePatterns.some(p => joined.includes(p));
+    const shouldIgnore = (args: unknown[]): boolean => {
+      const joined = args
+        .map((a) => (typeof a === "string" ? a : JSON.stringify(a)))
+        .join(" ");
+      return ignorePatterns.some((p) => joined.includes(p));
     };
 
     console.error = (...args) => {
@@ -113,7 +117,6 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
         </DialogHeader>
 
         <div className="flex-1 px-6 py-5 overflow-y-auto">
-
           {/* Collapsible description wrapper */}
           <div
             style={{
@@ -125,24 +128,25 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
               marginBottom: delayedFade && !isOpen ? "1rem" : "0rem",
               transition: isOpen
                 ? "max-height 0.45s cubic-bezier(0.55,0,0.85,0.35), margin-bottom 0.3s ease-out"
-                : "max-height 0.9s cubic-bezier(0.25,0.1,0.25,1), margin-bottom 0.9s ease-in-out",
+                : "max-height 0.9s cubic-bezier(0.25,0.1,0.25,1), margin-bottom 0.9s ease-in-out"
             }}
           >
-          <div
+            <div
               ref={descRef}
               style={{
                 opacity: delayedFade && !isOpen ? 1 : 0,
-                transform: delayedFade && !isOpen ? "translateY(0)" : "translateY(4px)",
+                transform:
+                  delayedFade && !isOpen ? "translateY(0)" : "translateY(4px)",
                 transition: isOpen
                   ? "opacity 0.25s cubic-bezier(0.5,0,0.75,0.35), transform 0.25s ease-out"
-                  : "opacity 0.8s cubic-bezier(0.25,0.1,0.25,1), transform 0.8s ease-in-out",
+                  : "opacity 0.8s cubic-bezier(0.25,0.1,0.25,1), transform 0.8s ease-in-out"
               }}
               className="rounded-lg border bg-card/60 backdrop-blur-sm p-4 shadow-sm"
             >
               <p className="text-sm leading-relaxed text-muted-foreground">
                 This project runs on caffeine, curiosity, and late-night coding.
-                If you’d like to support continued development, you can tip the developer
-                below or visit{" "}
+                If you’d like to support continued development, you can tip the
+                developer below or visit{" "}
                 <a
                   href="https://ko-fi.com/crispyasian"
                   target="_blank"
@@ -154,7 +158,8 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
                 .
               </p>
               <p className="text-sm mt-3 text-muted-foreground italic">
-                Tips are entirely optional — your time and feedback mean just as much.
+                Tips are entirely optional — your time and feedback mean just as
+                much.
               </p>
             </div>
           </div>
@@ -171,9 +176,7 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
               value="tip"
               className="rounded-lg border bg-card/60 backdrop-blur-sm shadow-sm overflow-hidden"
             >
-              <AccordionTrigger
-                className="px-4 py-3 text-sm font-semibold justify-center hover:no-underline focus:outline-none focus:ring-0 transition-all duration-700"
-              >
+              <AccordionTrigger className="px-4 py-3 text-sm font-semibold justify-center hover:no-underline focus:outline-none focus:ring-0 transition-all duration-700">
                 {isOpen ? "Close Tip Panel" : "Tip Here!"}
               </AccordionTrigger>
 
@@ -210,7 +213,11 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
         </div>
 
         <DialogFooter className="px-6 py-3 border-t bg-card/60 backdrop-blur-sm shrink-0">
-          <Button onClick={() => setOpen(false)} variant="default" className="ml-auto">
+          <Button
+            onClick={() => setOpen(false)}
+            variant="default"
+            className="ml-auto"
+          >
             Close
           </Button>
         </DialogFooter>
