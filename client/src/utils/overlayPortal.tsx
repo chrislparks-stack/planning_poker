@@ -1,9 +1,16 @@
 import React, { useLayoutEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 
-export const OverlayPortal: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const OverlayPortal: React.FC<{ children: React.ReactNode }> = ({
+  children
+}) => {
   const ghostRef = useRef<HTMLDivElement>(null);
-  const [coords, setCoords] = useState<{ top: number; left: number; width: number; height: number }>();
+  const [coords, setCoords] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  }>();
 
   useLayoutEffect(() => {
     const update = () => {
@@ -15,7 +22,7 @@ export const OverlayPortal: React.FC<{ children: React.ReactNode }> = ({ childre
         top: rect.top,
         left: rect.left,
         width: rect.width,
-        height: rect.height,
+        height: rect.height
       });
     };
 
@@ -31,7 +38,10 @@ export const OverlayPortal: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <>
       {/* The invisible ghost stays in normal layout */}
-      <div ref={ghostRef} style={{ display: "inline-block", width: "fit-content" }} />
+      <div
+        ref={ghostRef}
+        style={{ display: "inline-block", width: "fit-content" }}
+      />
 
       {/* The portaled element visually follows the ghost */}
       {coords &&
@@ -45,7 +55,7 @@ export const OverlayPortal: React.FC<{ children: React.ReactNode }> = ({ childre
               height: coords.height,
               pointerEvents: "auto",
               isolation: "isolate",
-              zIndex: 99999,
+              zIndex: 99999
             }}
           >
             {children}

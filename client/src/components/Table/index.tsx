@@ -1,17 +1,18 @@
 import { ReloadIcon } from "@radix-ui/react-icons";
-import {FC, RefObject, useEffect, useRef, useState} from "react";
+import { FC, RefObject, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+
 import {
   useCancelRevealCountdownMutation,
   useResetGameMutation,
   useShowCardsMutation,
-  useStartRevealCountdownMutation,
+  useStartRevealCountdownMutation
 } from "@/api";
+import { NewGameDialog } from "@/components/NewGameDialog";
 import { Button } from "@/components/ui/button";
 import { CountdownOverlay } from "@/components/ui/countdown-overlay.tsx";
 import { useToast } from "@/hooks/use-toast";
 import type { Room } from "@/types";
-import { NewGameDialog } from "@/components/NewGameDialog";
-import {createPortal} from "react-dom";
 
 interface TableProps {
   room: Room;
@@ -41,9 +42,9 @@ export const Table: FC<TableProps> = ({
         toast({
           title: "Error",
           description: `Show cards: ${error.message}`,
-          variant: "destructive",
+          variant: "destructive"
         });
-      },
+      }
     });
 
   const [resetGameMutation, { loading: resetGameLoading }] =
@@ -52,9 +53,9 @@ export const Table: FC<TableProps> = ({
         toast({
           title: "Error",
           description: `Reset game: ${error.message}`,
-          variant: "destructive",
+          variant: "destructive"
         });
-      },
+      }
     });
 
   const [startRevealCountdown, { loading: countdownLoading }] =
@@ -63,35 +64,34 @@ export const Table: FC<TableProps> = ({
         toast({
           title: "Error",
           description: `Countdown: ${error.message}`,
-          variant: "destructive",
+          variant: "destructive"
         });
-      },
+      }
     });
 
-  const [cancelRevealCountdownMutation] =
-    useCancelRevealCountdownMutation({
-      onError: (error) => {
-        toast({
-          title: "Error",
-          description: `Cancel countdown: ${error.message}`,
-          variant: "destructive",
-        });
-      },
-    });
+  const [cancelRevealCountdownMutation] = useCancelRevealCountdownMutation({
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Cancel countdown: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  });
 
   // ===== Current user tracking =====
   const currentUserId =
     typeof window !== "undefined"
       ? (() => {
-        try {
-          const raw = localStorage.getItem("user");
-          if (!raw) return undefined;
-          const parsed = JSON.parse(raw) as { id?: string } | null;
-          return parsed?.id;
-        } catch {
-          return undefined;
-        }
-      })()
+          try {
+            const raw = localStorage.getItem("user");
+            if (!raw) return undefined;
+            const parsed = JSON.parse(raw) as { id?: string } | null;
+            return parsed?.id;
+          } catch {
+            return undefined;
+          }
+        })()
       : undefined;
 
   const currentIsRoomOwner =
@@ -103,10 +103,7 @@ export const Table: FC<TableProps> = ({
 
   // entry for THIS user
   const currentEntry = currentUserId
-    ? table.find(
-      (t) =>
-        (t.userId ?? t.user?.id ?? null) === currentUserId
-    )
+    ? table.find((t) => (t.userId ?? t.user?.id ?? null) === currentUserId)
     : undefined;
 
   const totalPlayers = room.users?.length ?? 0;
@@ -114,16 +111,11 @@ export const Table: FC<TableProps> = ({
   const userHasSubmitted = currentEntry !== undefined;
   const selectedCardLabel = currentEntry?.card ?? "";
   const votePercentage =
-    totalPlayers > 0
-      ? Math.round((voteCount / totalPlayers) * 100)
-      : 0;
+    totalPlayers > 0 ? Math.round((voteCount / totalPlayers) * 100) : 0;
 
   // ===== Countdown Overlay state =====
-  const [showCountdownOverlay, setShowCountdownOverlay] =
-    useState(false);
-  const [localCountdown, setLocalCountdown] = useState<
-    number | null
-  >(null);
+  const [showCountdownOverlay, setShowCountdownOverlay] = useState(false);
+  const [localCountdown, setLocalCountdown] = useState<number | null>(null);
 
   const revealStageRef = useRef(room.revealStage);
   useEffect(() => {
@@ -144,9 +136,7 @@ export const Table: FC<TableProps> = ({
       let cancelled = false;
 
       const tick = () => {
-        if (
-          revealStageRef.current?.toUpperCase() === "CANCELLED"
-        ) {
+        if (revealStageRef.current?.toUpperCase() === "CANCELLED") {
           cancelled = true;
           setShowCountdownOverlay(false);
           setLocalCountdown(null);
@@ -174,7 +164,7 @@ export const Table: FC<TableProps> = ({
     room.countdownEnabled,
     room.countdownValue,
     room.revealStage,
-    showCountdownOverlay,
+    showCountdownOverlay
   ]);
 
   // ===== Handlers =====
@@ -183,7 +173,7 @@ export const Table: FC<TableProps> = ({
       toast({
         title: "Not allowed",
         description: "Only the room owner can reveal cards.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
@@ -191,19 +181,19 @@ export const Table: FC<TableProps> = ({
     try {
       if (room.countdownEnabled) {
         await startRevealCountdown({
-          variables: { roomId: room.id, userId: currentUserId },
+          variables: { roomId: room.id, userId: currentUserId }
         });
       } else {
         await showCardsMutation({
-          variables: { roomId: room.id },
+          variables: { roomId: room.id }
         });
       }
-    } catch (err: any) {
+    } catch (err) {
       toast({
         title: "Error",
         description:
-          err.message || "Failed to reveal cards.",
-        variant: "destructive",
+          err instanceof Error ? err.message : "Failed to reveal cards.",
+        variant: "destructive"
       });
     }
   }
@@ -212,9 +202,8 @@ export const Table: FC<TableProps> = ({
     if (!currentIsRoomOwner) {
       toast({
         title: "Not allowed",
-        description:
-          "Only the room owner can start a new game.",
-        variant: "destructive",
+        description: "Only the room owner can start a new game.",
+        variant: "destructive"
       });
       return;
     }
@@ -224,9 +213,8 @@ export const Table: FC<TableProps> = ({
         console.error("Failed to reset game:", err);
         toast({
           title: "Error",
-          description:
-            "Failed to reset game. Please try again.",
-          variant: "destructive",
+          description: "Failed to reset game. Please try again.",
+          variant: "destructive"
         });
       })
       .finally(() => {
@@ -240,7 +228,7 @@ export const Table: FC<TableProps> = ({
     let frame: number;
 
     const animate = () => {
-      setAnimatedProgress(prev => {
+      setAnimatedProgress((prev) => {
         const diff = votePercentage - prev;
 
         if (Math.abs(diff) < 0.5) {
@@ -280,7 +268,7 @@ export const Table: FC<TableProps> = ({
               hsl(var(--accent) / 0.25) 0%,
               transparent 65%
             )
-          `,
+          `
         }}
       >
         <div className="absolute inset-0 rounded-full border border-white/20 dark:border-white/10" />
@@ -296,7 +284,8 @@ export const Table: FC<TableProps> = ({
               transparent 0deg
             )
           `,
-          WebkitMask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+          WebkitMask:
+            "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
           WebkitMaskComposite: "xor",
           maskComposite: "exclude"
         }}
@@ -339,7 +328,7 @@ export const Table: FC<TableProps> = ({
                       {selectedCardLabel}
                     </span>
                   </span>
-                    <span className="text-[clamp(9px,1vw,12px)] text-accent mt-1">
+                  <span className="text-[clamp(9px,1vw,12px)] text-accent mt-1">
                     Waiting to start new game...
                   </span>
                 </div>
@@ -347,10 +336,12 @@ export const Table: FC<TableProps> = ({
             } else {
               return (
                 <div className="flex flex-col items-center text-center">
-                  <span className="text-[clamp(10px,1.5vw,16px)]">You did not select vote</span>
+                  <span className="text-[clamp(10px,1.5vw,16px)]">
+                    You did not select vote
+                  </span>
                   <span className="text-[clamp(9px,1vw,12px)] text-accent mt-1">
-                  Waiting to start new game...
-                </span>
+                    Waiting to start new game...
+                  </span>
                 </div>
               );
             }
@@ -373,17 +364,16 @@ export const Table: FC<TableProps> = ({
                     {voteCount}/{totalPlayers} voted ({votePercentage}%)
                   </span>
                 </Button>
-
               );
             } else {
               return (
                 <div className="flex flex-col items-center text-center">
-                <span className="text-[clamp(10px,1.5vw,16px)] text-muted-foreground">
-                  No votes yet
-                </span>
+                  <span className="text-[clamp(10px,1.5vw,16px)] text-muted-foreground">
+                    No votes yet
+                  </span>
                   <span className="text-[clamp(9px,1vw,12px)] text-accent mt-1">
-                  Waiting for players to vote...
-                </span>
+                    Waiting for players to vote...
+                  </span>
                 </div>
               );
             }
@@ -391,25 +381,25 @@ export const Table: FC<TableProps> = ({
             if (userHasSubmitted) {
               return (
                 <div className="flex flex-col items-center text-center">
-                <span className="text-[clamp(10px,1.5vw,16px)] font-semibold text-accent">
-                  Waiting to reveal cards...
-                </span>
-                <span className="text-[clamp(9px,1vw,12px)] mt-1">
-                  The owner will reveal when ready
-                </span>
+                  <span className="text-[clamp(10px,1.5vw,16px)] font-semibold text-accent">
+                    Waiting to reveal cards...
+                  </span>
+                  <span className="text-[clamp(9px,1vw,12px)] mt-1">
+                    The owner will reveal when ready
+                  </span>
                 </div>
               );
             } else {
               return (
                 <div className="flex flex-col items-center text-center">
-                <span className="text-[clamp(10px,1.5vw,16px)]">
-                  Select card to vote
-                </span>
-                {voteCount > 0 && (
-                  <span className="text-[clamp(9px,1vw,12px)] text-accent mt-1">
-                    Waiting to reveal cards...
+                  <span className="text-[clamp(10px,1.5vw,16px)]">
+                    Select card to vote
                   </span>
-                )}
+                  {voteCount > 0 && (
+                    <span className="text-[clamp(9px,1vw,12px)] text-accent mt-1">
+                      Waiting to reveal cards...
+                    </span>
+                  )}
                 </div>
               );
             }
@@ -417,7 +407,10 @@ export const Table: FC<TableProps> = ({
         })()}
       </div>
 
-      {showCountdownOverlay && localCountdown !== null && roomOverlayRef && roomOverlayRef.current &&
+      {showCountdownOverlay &&
+        localCountdown !== null &&
+        roomOverlayRef &&
+        roomOverlayRef.current &&
         createPortal(
           <div
             className="absolute left-0 right-0 z-50 pointer-events-none"
@@ -426,12 +419,12 @@ export const Table: FC<TableProps> = ({
               height: roomOverlayRef.current.clientHeight
             }}
           >
-          {/* Backdrop */}
+            {/* Backdrop */}
             <div
               className="absolute inset-0"
               style={{
                 background:
-                  "radial-gradient(circle at center, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.45) 20%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0) 100%)",
+                  "radial-gradient(circle at center, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.45) 20%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0) 100%)"
               }}
             />
             {/* Countdown */}
@@ -441,15 +434,14 @@ export const Table: FC<TableProps> = ({
                 isRoomOwner={currentIsRoomOwner}
                 onCancel={() =>
                   cancelRevealCountdownMutation({
-                    variables: { roomId: room.id, userId: currentUserId },
+                    variables: { roomId: room.id, userId: currentUserId }
                   })
                 }
               />
             </div>
           </div>,
           roomOverlayRef.current
-        )
-      }
+        )}
       <NewGameDialog
         open={openNewGameDialog}
         setOpen={setOpenNewGameDialog}

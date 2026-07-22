@@ -1,28 +1,32 @@
-import { Sun, Moon, Laptop, Check } from "lucide-react";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { Sun, Moon, Laptop, Check, Settings } from "lucide-react";
 import { FC, useEffect, useRef, useState } from "react";
 
+import Mountain from "@/assets/silhouetted-mountain-range-at-dusk.jpg";
+import starrySkyThumbnail from "@/assets/StarrySkyThumb.png";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent, DialogDescription,
-  DialogFooter, DialogTitle,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogTitle
 } from "@/components/ui/dialog";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger
 } from "@/components/ui/popover";
-import { Settings } from "lucide-react";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { Switch } from "@/components/ui/switch.tsx";
+import { ThumbSwitch } from "@/components/ui/thumb-switch.tsx";
+import { useBackgroundConfig } from "@/contexts/BackgroundContext.tsx";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DEFAULT_BACKGROUND_CONFIG,
+  loadBackgroundConfig
+} from "@/lib/background-config.ts";
 import { applyAccent } from "@/lib/theme-accent";
-import {ThumbSwitch} from "@/components/ui/thumb-switch.tsx";
-import starrySkyThumbnail from "@/assets/StarrySkyThumb.png";
-import Mountain from "@/assets/silhouetted-mountain-range-at-dusk.jpg";
-import {DEFAULT_BACKGROUND_CONFIG, loadBackgroundConfig} from "@/lib/background-config.ts";
-import {useBackgroundConfig} from "@/contexts/BackgroundContext.tsx";
-import {Switch} from "@/components/ui/switch.tsx";
 
 interface ToggleModeDialogProps {
   open: boolean;
@@ -236,11 +240,14 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
     () => localStorage.getItem("accent") || "lilac"
   );
 
+  const wasOpenRef = useRef(false);
   const originalThemeRef = useRef<"light" | "dark" | "system">("system");
   const originalAccentRef = useRef<string>(
     localStorage.getItem("accent") || "lilac"
   );
-  const originalBackgroundRef = useRef<ReturnType<typeof loadBackgroundConfig>>(DEFAULT_BACKGROUND_CONFIG);
+  const originalBackgroundRef = useRef<ReturnType<typeof loadBackgroundConfig>>(
+    DEFAULT_BACKGROUND_CONFIG
+  );
 
   // system pref tracking for accurate System preview
   const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(() =>
@@ -251,10 +258,16 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
 
   const { setBackground } = useBackgroundConfig();
 
-  const [previewBackgroundsEnabled, setPreviewBackgroundsEnabled] = useState<boolean>(false);
-  const [previewBackgroundId, setPreviewBackgroundId] = useState<string>(BACKGROUNDS[0]?.id ?? "starry");
-  const [previewBackgroundOptions, setPreviewBackgroundOptions] = useState<Record<string, boolean>>({});
-  const isStarryPreviewActive = previewBackgroundsEnabled && previewBackgroundId === "starry";
+  const [previewBackgroundsEnabled, setPreviewBackgroundsEnabled] =
+    useState<boolean>(false);
+  const [previewBackgroundId, setPreviewBackgroundId] = useState<string>(
+    BACKGROUNDS[0]?.id ?? "starry"
+  );
+  const [previewBackgroundOptions, setPreviewBackgroundOptions] = useState<
+    Record<string, boolean>
+  >({});
+  const isStarryPreviewActive =
+    previewBackgroundsEnabled && previewBackgroundId === "starry";
   const bgOpt = (id: string) => previewBackgroundOptions[id] ?? true;
 
   const starFieldRef = useRef<Star[]>([]);
@@ -285,11 +298,11 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
     const stored = localStorage.getItem("accent") || "lilac";
     setPreviewAccent(stored);
     setAccentVarsPreview(stored);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (open) {
+    // snapshot only on the closed -> open transition, not while open
+    if (open && !wasOpenRef.current) {
       originalThemeRef.current =
         currentTheme === "light" ||
         currentTheme === "dark" ||
@@ -302,8 +315,8 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
       setPreviewAccent(originalAccentRef.current);
       setAccentVarsPreview(originalAccentRef.current);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+    wasOpenRef.current = open;
+  }, [open, currentTheme]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) return;
@@ -418,12 +431,15 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
       const accentChanged = previewAccent !== originalAccentRef.current;
       const originalBg = originalBackgroundRef.current;
 
-      const backgroundChanged = !!originalBg && (
-        originalBg.enabled !== previewBackgroundsEnabled ||
-        originalBg.id !== (previewBackgroundsEnabled ? previewBackgroundId : null) ||
-        JSON.stringify(originalBg.options ?? {}) !==
-        JSON.stringify(previewBackgroundsEnabled ? previewBackgroundOptions : {})
-      );
+      const backgroundChanged =
+        !!originalBg &&
+        (originalBg.enabled !== previewBackgroundsEnabled ||
+          originalBg.id !==
+            (previewBackgroundsEnabled ? previewBackgroundId : null) ||
+          JSON.stringify(originalBg.options ?? {}) !==
+            JSON.stringify(
+              previewBackgroundsEnabled ? previewBackgroundOptions : {}
+            ));
 
       // Apply theme and accent regardless (so it stays consistent)
       setTheme(previewTheme);
@@ -437,7 +453,8 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
       // Only show toast if something actually changed
       if (themeChanged || accentChanged || backgroundChanged) {
         const backgroundLabel = previewBackgroundsEnabled
-          ? BACKGROUNDS.find(b => b.id === previewBackgroundId)?.label ?? "Custom"
+          ? BACKGROUNDS.find((b) => b.id === previewBackgroundId)?.label ??
+            "Custom"
           : "Disabled";
 
         toast({
@@ -462,7 +479,8 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                     )}
                   </div>
                   <div style={{ fontWeight: 600 }}>
-                    {previewTheme.charAt(0).toUpperCase() + previewTheme.slice(1)}
+                    {previewTheme.charAt(0).toUpperCase() +
+                      previewTheme.slice(1)}
                   </div>
                 </div>
               )}
@@ -471,7 +489,8 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                 <div className="flex items-baseline gap-2">
                   <div style={{ fontWeight: 700 }}>Accent Color:</div>
                   <div style={{ fontWeight: 600 }} className="text-accent">
-                    {previewAccent.charAt(0).toUpperCase() + previewAccent.slice(1)}
+                    {previewAccent.charAt(0).toUpperCase() +
+                      previewAccent.slice(1)}
                   </div>
                 </div>
               )}
@@ -479,9 +498,7 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
               {backgroundChanged && (
                 <div className="flex items-baseline gap-2">
                   <div style={{ fontWeight: 700 }}>Background:</div>
-                  <div style={{ fontWeight: 600 }}>
-                    {backgroundLabel}
-                  </div>
+                  <div style={{ fontWeight: 600 }}>{backgroundLabel}</div>
                 </div>
               )}
             </>
@@ -530,10 +547,12 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
           "border border-border/50",
           "shadow-[0_8px_32px_rgb(0_0_0_/_0.4)]",
           "transition-all duration-700 ease-out",
-          livePreviewEnabled ? "max-w-[80vw] lg:max-w-[980px] min-w-[400px]" : "max-w-[500px] min-w-[400px]"
+          livePreviewEnabled
+            ? "max-w-[80vw] lg:max-w-[980px] min-w-[400px]"
+            : "max-w-[500px] min-w-[400px]"
         ].join(" ")}
       >
-      <VisuallyHidden>
+        <VisuallyHidden>
           <DialogTitle>Theme and Color Settings</DialogTitle>
           <DialogDescription>
             Adjust your appearance mode and accent color preferences
@@ -568,9 +587,7 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
               </div>
 
               <div className="flex flex-col items-center rounded-lg border border-border/60 bg-background/40 p-2 w-32">
-                <p className="text-sm tracking-tight mb-2">
-                  Live Preview
-                </p>
+                <p className="text-sm tracking-tight mb-2">Live Preview</p>
                 <div className="hidden lg:flex">
                   <Switch
                     id="live-preview"
@@ -595,16 +612,30 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
 
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { id: "light", icon: <Sun className="h-4 w-4" />, label: "Light" },
-                    { id: "dark", icon: <Moon className="h-4 w-4" />, label: "Dark" },
-                    { id: "system", icon: <Laptop className="h-4 w-4" />, label: "System" }
+                    {
+                      id: "light",
+                      icon: <Sun className="h-4 w-4" />,
+                      label: "Light"
+                    },
+                    {
+                      id: "dark",
+                      icon: <Moon className="h-4 w-4" />,
+                      label: "Dark"
+                    },
+                    {
+                      id: "system",
+                      icon: <Laptop className="h-4 w-4" />,
+                      label: "System"
+                    }
                   ].map(({ id, icon, label }) => {
                     const selected = previewTheme === id;
 
                     return (
                       <button
                         key={id}
-                        onClick={() => setPreviewTheme(id as "light" | "dark" | "system")}
+                        onClick={() =>
+                          setPreviewTheme(id as "light" | "dark" | "system")
+                        }
                         className={[
                           "flex flex-col items-center justify-center gap-1 rounded-md py-2 text-xs font-medium transition-all",
                           selected
@@ -654,7 +685,9 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                           {/* Actual color swatch */}
                           <span
                             className="block h-6 w-6 rounded-sm"
-                            style={{ backgroundColor: hslFromToken(mapEntry.base) }}
+                            style={{
+                              backgroundColor: hslFromToken(mapEntry.base)
+                            }}
                           />
                         </span>
 
@@ -682,7 +715,9 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
 
                 <ThumbSwitch
                   checked={previewBackgroundsEnabled}
-                  onCheckedChange={(next: boolean) => setPreviewBackgroundsEnabled(next)}
+                  onCheckedChange={(next: boolean) =>
+                    setPreviewBackgroundsEnabled(next)
+                  }
                   label="Enable backgrounds"
                 />
               </div>
@@ -703,7 +738,7 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                     max-w-[250px] lg:max-w-[400px] overflow-auto
                   "
                 >
-                {BACKGROUNDS.map((bg) => {
+                  {BACKGROUNDS.map((bg) => {
                     const selected = previewBackgroundId === bg.id;
 
                     return (
@@ -768,7 +803,8 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
 
                               <div className="space-y-2">
                                 {bg.options.map((option) => {
-                                  const enabled = previewBackgroundOptions[option.id] ?? true;
+                                  const enabled =
+                                    previewBackgroundOptions[option.id] ?? true;
 
                                   return (
                                     <div
@@ -786,14 +822,20 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                                         )}
                                       </div>
 
-                                      <div onPointerDown={(e) => e.stopPropagation()}>
+                                      <div
+                                        onPointerDown={(e) =>
+                                          e.stopPropagation()
+                                        }
+                                      >
                                         <ThumbSwitch
                                           checked={enabled}
                                           onCheckedChange={(next: boolean) =>
-                                            setPreviewBackgroundOptions((prev) => ({
-                                              ...prev,
-                                              [option.id]: next
-                                            }))
+                                            setPreviewBackgroundOptions(
+                                              (prev) => ({
+                                                ...prev,
+                                                [option.id]: next
+                                              })
+                                            )
                                           }
                                           label={option.label}
                                         />
@@ -820,7 +862,7 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                             bg-background/70 backdrop-blur-sm
                           "
                         >
-                        <div className="min-w-0">
+                          <div className="min-w-0">
                             <div className="text-sm font-semibold leading-none truncate">
                               {bg.label}
                             </div>
@@ -850,8 +892,8 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
             </div>
 
             {/* Footer */}
-          <DialogFooter className="flex flex-row justify-end gap-2 pb-1">
-            <Button
+            <DialogFooter className="flex flex-row justify-end gap-2 pb-1">
+              <Button
                 variant="ghost"
                 className="text-sm font-medium px-3 py-1.5"
                 onClick={handleCancel}
@@ -996,7 +1038,9 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                         <div className="absolute inset-0 pointer-events-none z-[1] p-4">
                           {(() => {
                             const surface = hslFromToken(previewTokens.card);
-                            const surfaceMuted = hslFromToken(previewTokens.muted);
+                            const surfaceMuted = hslFromToken(
+                              previewTokens.muted
+                            );
                             const stroke = `hsl(${previewTokens.foreground} / 0.12)`;
                             const accent = hslFromToken(accentPreview.base);
 
@@ -1133,7 +1177,9 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                                         style={{
                                           width: 40,
                                           height: 58,
-                                          background: selected ? accent : surfaceMuted,
+                                          background: selected
+                                            ? accent
+                                            : surfaceMuted,
                                           borderRadius: 10,
                                           border: selected
                                             ? `2px solid ${accent}`

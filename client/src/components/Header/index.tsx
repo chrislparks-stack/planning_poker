@@ -1,21 +1,21 @@
 import { Link } from "@tanstack/react-router";
 import { Copy } from "lucide-react";
-import {FC, useMemo} from "react";
+import { FC, useMemo } from "react";
 
+import SummitIcon from "@/assets/SummitIcon.png";
 import { AccountMenu } from "@/components/AccountMenu";
 import { Button } from "@/components/ui/button";
+import AvatarCarousel from "@/components/ui/carousel.tsx";
 import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger
 } from "@/components/ui/tooltip";
-import { withTestUsers } from "@/utils/testUtils.tsx";
 import { useAuth } from "@/contexts";
 import { useCopyRoomUrlToClipboard } from "@/hooks";
 import { Room, User } from "@/types";
-import SummitIcon from "@/assets/SummitIcon.png";
-import AvatarCarousel from "@/components/ui/carousel.tsx";
+import { withTestUsers } from "@/utils/testUtils.tsx";
 
 interface HeaderProps {
   room?: Room;
@@ -25,13 +25,16 @@ interface HeaderProps {
   highlightAppearance?: boolean;
 }
 
-export const Header: FC<HeaderProps> = ({ room, users, onMenuOpenChange, chatOpen, highlightAppearance }) => {
+export const Header: FC<HeaderProps> = ({
+  room,
+  users,
+  onMenuOpenChange,
+  chatOpen,
+  highlightAppearance
+}) => {
   const { user } = useAuth();
   const { copyRoomUrlToClipboard } = useCopyRoomUrlToClipboard();
-  const displayUsers = useMemo(
-    () => withTestUsers(0, users),
-    [users]
-  );
+  const displayUsers = useMemo(() => withTestUsers(0, users), [users]);
 
   const handleCopyRoomUrl = async () => {
     if (room) {
@@ -39,7 +42,8 @@ export const Header: FC<HeaderProps> = ({ room, users, onMenuOpenChange, chatOpe
     }
   };
 
-  const storedRoom = useMemo(() => {
+  // read on every render so a new room snapshot always sees fresh storage
+  const storedRoom = (() => {
     try {
       const raw = localStorage.getItem("Room");
       if (!raw) return null;
@@ -47,7 +51,7 @@ export const Header: FC<HeaderProps> = ({ room, users, onMenuOpenChange, chatOpe
       if (parsed?.RoomID && Array.isArray(parsed?.Cards)) return parsed;
     } catch {}
     return null;
-  }, [room]);
+  })();
 
   function handleOpenChange(open: boolean) {
     onMenuOpenChange?.(open);
@@ -93,11 +97,18 @@ export const Header: FC<HeaderProps> = ({ room, users, onMenuOpenChange, chatOpe
         <div className="flex items-center space-x-4">
           {displayUsers && (
             <div className="hidden md:flex items-center gap-3">
-              <AvatarCarousel users={displayUsers} chatOpen={chatOpen || false}/>
+              <AvatarCarousel
+                users={displayUsers}
+                chatOpen={chatOpen || false}
+              />
               <Separator orientation="vertical" className="h-6" />
             </div>
           )}
-          <AccountMenu room={room} onOpenChange={handleOpenChange} highlightAppearance={highlightAppearance} />
+          <AccountMenu
+            room={room}
+            onOpenChange={handleOpenChange}
+            highlightAppearance={highlightAppearance}
+          />
         </div>
       )}
     </header>

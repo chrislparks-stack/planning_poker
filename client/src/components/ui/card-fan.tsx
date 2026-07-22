@@ -4,7 +4,7 @@ interface CardFanProps {
   selectedCards: (string | number)[];
   toggleCardSelection: (card: string | number) => void;
   className?: string;
-  options?: boolean
+  options?: boolean;
 }
 
 const DEFAULT_CARDS = [0, 0.5, 1, 2, 3, 5, 8, 13, 21, "?", "☕"];
@@ -44,10 +44,14 @@ export const CardFan: FC<CardFanProps> = ({
       ref={containerRef}
     >
       <div className="flex flex-row justify-between">
-        {!options && <div className="mb-2 text-sm">Pick poker cards to use:</div>}
+        {!options && (
+          <div className="mb-2 text-sm">Pick poker cards to use:</div>
+        )}
         <div className="text-xs text-muted-foreground">
           Selected:{" "}
-          <span className="font-medium text-foreground">{selectedCards.length}</span>
+          <span className="font-medium text-foreground">
+            {selectedCards.length}
+          </span>
         </div>
       </div>
       <div className="flex justify-center items-baseline h-full overflow-visible">

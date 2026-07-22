@@ -8,12 +8,13 @@ import {
   Sun,
   User
 } from "lucide-react";
-import {FC, useEffect, useRef, useState} from "react";
+import { FC, useEffect, useRef, useState } from "react";
 
 import { useLogoutMutation, useSetRoomOwnerMutation } from "@/api";
 import { ConfirmLogoutDialog } from "@/components/ConfirmLogoutDialog";
 import { EditUserDialog } from "@/components/EditUserDialog";
 import { RoomOptionsDialog } from "@/components/RoomOptionsDialog";
+import { SupportDialog } from "@/components/SupportDialog";
 import { ToggleModeDialog } from "@/components/ToggleModeDialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -33,9 +34,8 @@ import {
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils.ts";
 import { Room } from "@/types";
-import {SupportDialog} from "@/components/SupportDialog";
-import {cn} from "@/lib/utils.ts";
 
 interface AccountMenuProps {
   room?: Room;
@@ -43,7 +43,11 @@ interface AccountMenuProps {
   highlightAppearance?: boolean;
 }
 
-export const AccountMenu: FC<AccountMenuProps> = ({ room, onOpenChange, highlightAppearance }) => {
+export const AccountMenu: FC<AccountMenuProps> = ({
+  room,
+  onOpenChange,
+  highlightAppearance
+}) => {
   const { user, logout } = useAuth();
   const { toast } = useToast();
   const hoverTimerRef = useRef<number | null>(null);
@@ -92,13 +96,13 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room, onOpenChange, highligh
     if (!user) return;
 
     if (room && room.id && user.id === room.roomOwnerId) {
-      const nextOwner = room.users.find(u => u.id !== user.id);
+      const nextOwner = room.users.find((u) => u.id !== user.id);
 
       await setRoomOwner({
         variables: {
           roomId: room.id,
-          userId: nextOwner?.id ?? null,
-        },
+          userId: nextOwner?.id ?? null
+        }
       });
     }
 
@@ -134,24 +138,28 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room, onOpenChange, highligh
             clearTooltipTimer();
           }}
         >
-          <Tooltip key={user.id} open={!menuOpen && allowTooltip} disableHoverableContent>
+          <Tooltip
+            key={user.id}
+            open={!menuOpen && allowTooltip}
+            disableHoverableContent
+          >
             <DropdownMenuTrigger asChild>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="relative h-10 w-10 rounded-full"
-                    aria-label="Account menu"
-                    onPointerEnter={startTooltipTimer}
-                    onPointerLeave={clearTooltipTimer}
-                    onPointerDown={clearTooltipTimer}
-                  >
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback>
-                        <Settings />
-                      </AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </TooltipTrigger>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="relative h-10 w-10 rounded-full"
+                  aria-label="Account menu"
+                  onPointerEnter={startTooltipTimer}
+                  onPointerLeave={clearTooltipTimer}
+                  onPointerDown={clearTooltipTimer}
+                >
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback>
+                      <Settings />
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </TooltipTrigger>
             </DropdownMenuTrigger>
             <DropdownMenuContent
               className="w-56 z-[200]"
@@ -171,10 +179,10 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room, onOpenChange, highligh
                   className={cn(
                     "cursor-pointer transition-all duration-500",
                     flashAppearance &&
-                    "relative bg-accent/15 ring-1 ring-accent/80 shadow-[0_0_12px_hsl(var(--accent)/0.8)]"
+                      "relative bg-accent/15 ring-1 ring-accent/80 shadow-[0_0_12px_hsl(var(--accent)/0.8)]"
                   )}
                 >
-                {localStorage.getItem("vite-ui-theme") == "light" ? (
+                  {localStorage.getItem("vite-ui-theme") == "light" ? (
                     <Sun className="mr-2 h-4 w-4" />
                   ) : localStorage.getItem("vite-ui-theme") == "dark" ? (
                     <Moon className="mr-2 h-4 w-4" />
@@ -186,7 +194,10 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room, onOpenChange, highligh
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem onClick={() => setOpenEditUserDialog(true)} className="cursor-pointer">
+                <DropdownMenuItem
+                  onClick={() => setOpenEditUserDialog(true)}
+                  className="cursor-pointer"
+                >
                   <User className="mr-2 h-4 w-4" />
                   <span>Change Username</span>
                 </DropdownMenuItem>
@@ -198,16 +209,18 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room, onOpenChange, highligh
                     <DropdownMenuItem
                       onClick={() => {
                         if (user.id === room.roomOwnerId) {
-                          setOpenRoomOptionsDialog(true)
+                          setOpenRoomOptionsDialog(true);
                         } else {
                           toast({
                             title: "Error",
-                            description: "Only the room owner can update the room options.  You do not have the proper permissions.",
+                            description:
+                              "Only the room owner can update the room options.  You do not have the proper permissions.",
                             variant: "default"
                           });
                         }
                       }}
-                      className="cursor-pointer">
+                      className="cursor-pointer"
+                    >
                       <Settings2 className="mr-2 h-4 w-4" />
                       <span>Change Room Options</span>
                     </DropdownMenuItem>
@@ -216,13 +229,19 @@ export const AccountMenu: FC<AccountMenuProps> = ({ room, onOpenChange, highligh
                 </div>
               )}
               <DropdownMenuGroup>
-                <DropdownMenuItem onClick={() => setOpenSupportDialog(true)} className="cursor-pointer">
+                <DropdownMenuItem
+                  onClick={() => setOpenSupportDialog(true)}
+                  className="cursor-pointer"
+                >
                   <Coffee className="mr-2 h-4 w-4" />
                   <span>Support</span>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setOpenConfirmLogoutDialog(true)} className="cursor-pointer">
+              <DropdownMenuItem
+                onClick={() => setOpenConfirmLogoutDialog(true)}
+                className="cursor-pointer"
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Logout</span>
               </DropdownMenuItem>

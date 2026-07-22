@@ -1,28 +1,57 @@
-import React, {useEffect, useMemo, useRef, useState} from "react";
+import {
+  Ban,
+  CheckCircle2,
+  CircleOff,
+  Crown,
+  DoorOpen,
+  Hourglass,
+  MessageSquareText,
+  MessagesSquare
+} from "lucide-react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import {
-  useGetRoomQuery,
-  useRoomSubscription,
   useKickUserMutation,
   useBanUserMutation,
-  useSendChatMessageMutation,
+  useSendChatMessageMutation
 } from "@/api";
-import { useToast } from "@/hooks/use-toast";
-import {Room, User} from "@/types";
-import {useTheme} from "@/components";
-import {Ban, Crown, DoorOpen, MessageSquareText, MessagesSquare} from "lucide-react";
-import {ChatInputWrapper} from "@/components/ui/chat-input-wrapper.tsx";
-import {useCardPosition} from "@/utils/cardPositionContext.tsx";
-import {useBackgroundConfig} from "@/contexts/BackgroundContext.tsx";
 import darkModeDiscussion from "@/assets/dark-mode-discussion.gif";
 import lightModeDiscussion from "@/assets/light-mode-discussion.gif";
 import noVoteGif from "@/assets/no-vote.gif";
 import pickedGif from "@/assets/picked.gif";
+import { useTheme } from "@/components";
+import { ChatInputWrapper } from "@/components/ui/chat-input-wrapper.tsx";
+import { useBackgroundConfig } from "@/contexts/BackgroundContext.tsx";
+import { useToast } from "@/hooks/use-toast";
+import { Room, User } from "@/types";
+import { useCardPosition } from "@/utils/cardPositionContext.tsx";
 
+if (typeof window !== "undefined") {
+  [darkModeDiscussion, lightModeDiscussion, noVoteGif, pickedGif].forEach(
+    (src) => {
+      const img = new Image();
+      img.src = src;
+    }
+  );
+}
+
+interface CardIconImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+  alt: string;
+  fallback: React.ReactNode;
+}
+
+function CardIconImage({ fallback, alt, ...imgProps }: CardIconImageProps) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <>{fallback}</>;
+  return <img {...imgProps} alt={alt} onError={() => setFailed(true)} />;
+}
 
 interface PlayerProps {
   user: User;
+  /** The room from the page-level subscription — do NOT subscribe per player,
+   * with N players on screen that multiplies every server event by N. */
+  room: Room;
   isCardPicked: boolean;
   isGameOver: boolean;
   card?: string | null | undefined;
@@ -37,6 +66,7 @@ type MenuPos = { x: number; y: number } | null;
 
 export function Player({
   user,
+  room,
   isCardPicked,
   isGameOver,
   card,
@@ -55,17 +85,13 @@ export function Player({
   const { registerCardRef } = useCardPosition();
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const systemPrefersDark = typeof window !== "undefined" && window.matchMedia ?
-    window.matchMedia("(prefers-color-scheme: dark)").matches : false;
+  const systemPrefersDark =
+    typeof window !== "undefined" && window.matchMedia
+      ? window.matchMedia("(prefers-color-scheme: dark)").matches
+      : false;
 
-  // --- Queries & Subscriptions ---
-  const { data: roomData } = useGetRoomQuery({ variables: { roomId } });
-  const { data: subscriptionData } = useRoomSubscription({
-    variables: { roomId }
-  });
   const [sendChatMessage] = useSendChatMessageMutation();
 
-  const room = subscriptionData?.room ?? roomData?.roomById;
   const roomName = room?.name ?? "this room";
   const [kickUser] = useKickUserMutation();
   const [banUser] = useBanUserMutation();
@@ -94,10 +120,6 @@ export function Player({
       : playerPos.y < window.innerHeight / 2
     : false;
 
-  const portalRootRef = useRef<Element | null>(
-    typeof document !== "undefined" ? document.body : null
-  );
-
   // --- Identity & permissions ---
   const currentUserId =
     typeof window !== "undefined"
@@ -120,31 +142,34 @@ export function Player({
       : false;
 
   const hasUnreadFromUser = useMemo(() => {
-    if (!room || !currentUserId) return false
+    if (!room || !currentUserId) return false;
 
-    const currentUser = room.users.find(u => u.id === currentUserId)
-    const lastSeenId = currentUser?.lastSeenChatMessageId
+    const currentUser = room.users.find((u) => u.id === currentUserId);
+    const lastSeenId = currentUser?.lastSeenChatMessageId;
 
-    if (!room.chatHistory?.length) return false
+    if (!room.chatHistory?.length) return false;
 
-    const history = room.chatHistory
+    const history = room.chatHistory;
 
     if (!lastSeenId) {
       // If never seen anything, unread if this user has sent anything
-      return history.some(m => m.userId === user.id && m.userId !== currentUserId)
+      return history.some(
+        (m) => m.userId === user.id && m.userId !== currentUserId
+      );
     }
 
-    const lastSeenIndex = history.findIndex(m => m.id === lastSeenId)
+    const lastSeenIndex = history.findIndex((m) => m.id === lastSeenId);
 
     if (lastSeenIndex === -1) {
-      return history.some(m => m.userId === user.id && m.userId !== currentUserId)
+      return history.some(
+        (m) => m.userId === user.id && m.userId !== currentUserId
+      );
     }
 
     return history
       .slice(lastSeenIndex + 1)
-      .some(m => m.userId === user.id && m.userId !== currentUserId)
-
-  }, [room?.chatHistory, room?.users, currentUserId, user.id])
+      .some((m) => m.userId === user.id && m.userId !== currentUserId);
+  }, [room, currentUserId, user.id]);
 
   // --- Track kick/ban status only (no toasts here) ---
   useEffect(() => {
@@ -173,7 +198,11 @@ export function Player({
 
   const cardIcon = useMemo(() => {
     const waitingIcon = () => {
-      if (theme === "dark" || (theme === "system" && systemPrefersDark) || isStarry) {
+      if (
+        theme === "dark" ||
+        (theme === "system" && systemPrefersDark) ||
+        isStarry
+      ) {
         return darkModeDiscussion;
       }
       return lightModeDiscussion;
@@ -185,9 +214,7 @@ export function Player({
           <div
             className={[
               "text-3xl font-semibold",
-              isStarry
-                ? "text-gray-300"
-                : "text-gray-900 dark:text-gray-300"
+              isStarry ? "text-gray-300" : "text-gray-900 dark:text-gray-300"
             ].join(" ")}
           >
             {card}
@@ -195,12 +222,13 @@ export function Player({
         );
       } else {
         return (
-          <img
+          <CardIconImage
             key="picked"
             src={pickedGif}
             alt="Card picked"
             className="max-w-none max-h-none"
             style={{ width: 90, height: 70 }}
+            fallback={<CheckCircle2 className="text-glass w-8 h-8" />}
           />
         );
       }
@@ -226,24 +254,26 @@ export function Player({
             backdropFilter: "blur(2px)"
           }}
         >
-          <img
+          <CardIconImage
             key="gameover"
             src={noVoteGif}
             alt="Game over"
             className="max-w-none max-h-none"
             style={{ width: 35, height: 30 }}
+            fallback={<CircleOff className="text-glass w-6 h-6" />}
           />
         </div>
       );
     }
 
     return (
-      <img
+      <CardIconImage
         key="waiting"
         src={waitingIcon()}
         alt="Waiting"
         className="max-w-none max-h-none"
-        style={{ width: 50, height: 50}}
+        style={{ width: 50, height: 50 }}
+        fallback={<Hourglass className="text-glass w-6 h-6" />}
       />
     );
   }, [isCardPicked, isGameOver, theme, systemPrefersDark, card, isStarry]);
@@ -286,7 +316,9 @@ export function Player({
   useEffect(() => {
     if (!menuPos) return;
     const onDocMouseDown = (ev: MouseEvent) => {
-      const path = (ev.composedPath && ev.composedPath()) || (ev as any).path;
+      const path =
+        (ev.composedPath && ev.composedPath()) ||
+        (ev as MouseEvent & { path?: EventTarget[] }).path;
       if (menuRef.current) {
         if (Array.isArray(path)) {
           if (path.includes(menuRef.current)) return;
@@ -322,28 +354,29 @@ export function Player({
       currentOwnerId === currentUserId
     ) {
       const previousOwnerUsername =
-        room.users.find(u => u.id === previousOwnerId)?.username ?? "The previous owner";
+        room.users.find((u) => u.id === previousOwnerId)?.username ??
+        "The previous owner";
 
       toast({
         title: "Control transferred 👑",
-        description: `${previousOwnerUsername} has passed you room owner status\nYou now control ${roomName}`,
+        description: `${previousOwnerUsername} has passed you room owner status\nYou now control ${roomName}`
       });
     }
 
     previousOwnerRef.current = currentOwnerId;
-  }, [room?.roomOwnerId, room?.users, currentUserId, toast, roomName]);
+  }, [room, currentUserId, toast, roomName]);
 
   // --- Actions ---
   const handleMakeOwner = async () => {
     closeMenu();
     if (!onMakeOwner || !room) return;
     try {
-      await onMakeOwner(user.id, room as Room);
+      await onMakeOwner(user.id, room);
       toast({
         title: "Ownership transferred",
         description: `${user.username} is now the room owner`
       });
-    } catch(e) {
+    } catch (e) {
       console.error(e);
       toast({
         title: "Error",
@@ -397,10 +430,7 @@ export function Player({
     registerCardRef(user.id, cardRef);
   }, [user.id, registerCardRef, cardRef]);
 
-  const handleSendChat = async (
-    plain: string,
-    formatted: string
-  ) => {
+  const handleSendChat = async (plain: string, formatted: string) => {
     if (!currentUserId || !roomId) return;
     try {
       const rect = cardRef.current?.getBoundingClientRect();
@@ -410,14 +440,14 @@ export function Player({
           x: rect.left / window.innerWidth,
           y: rect.top / window.innerHeight,
           width: rect.width / window.innerWidth,
-          height: rect.height / window.innerHeight,
+          height: rect.height / window.innerHeight
         };
       } else {
         position = {
           x: 0.5,
           y: 0.5,
           width: 0.5,
-          height: 0.5,
+          height: 0.5
         };
       }
 
@@ -429,15 +459,15 @@ export function Player({
           content: plain,
           formattedContent: formatted,
           contentType: "html",
-          position,
-        },
+          position
+        }
       });
     } catch (err) {
       console.error("Failed to send chat:", err);
       toast({
         title: "Message failed",
         description: err instanceof Error ? err.message : "Unknown error",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
@@ -447,6 +477,7 @@ export function Player({
     <div
       ref={menuRef}
       role="menu"
+      tabIndex={-1}
       aria-label={`Actions for ${menuTargetUser.username}`}
       className="fixed z-[1000] w-56 rounded-md border bg-popover text-popover-foreground shadow-lg"
       style={{ left: menuPos.x, top: menuPos.y, minWidth: 180 }}
@@ -455,26 +486,32 @@ export function Player({
       <div className="py-1">
         {currentIsRoomOwner && room?.roomOwnerId !== user.id && (
           <>
-            <div className="w-full text-left px-3 py-2 text-sm font-semibold"> Room Owner Options</div>
+            <div className="w-full text-left px-3 py-2 text-sm font-semibold">
+              {" "}
+              Room Owner Options
+            </div>
             <button
               onClick={handleMakeOwner}
               className="w-full text-left px-3 py-1 text-sm hover:bg-accent/10 flex flex-row"
             >
-              <Crown className="h-4 w-4 mr-2"/> Make room owner
+              <Crown className="h-4 w-4 mr-2" /> Make room owner
             </button>
             <div className="my-1 border-t border-muted" />
-            <div className="w-full text-left px-3 py-2 text-sm font-semibold"> Kick/Ban Options</div>
+            <div className="w-full text-left px-3 py-2 text-sm font-semibold">
+              {" "}
+              Kick/Ban Options
+            </div>
             <button
               onClick={handleKick}
               className="w-full text-left px-3 py-1 text-sm hover:bg-accent/10 flex flex-row"
             >
-              Kick user <DoorOpen className="h-4 w-4 ml-2"/>
+              Kick user <DoorOpen className="h-4 w-4 ml-2" />
             </button>
             <button
               onClick={handleBan}
               className="w-full text-left px-3 py-1 text-sm text-destructive hover:bg-destructive/10 flex flex-row"
             >
-              Ban user <Ban className="h-4 w-4 text-red-600 ml-2"/>
+              Ban user <Ban className="h-4 w-4 text-red-600 ml-2" />
             </button>
           </>
         )}
@@ -493,39 +530,37 @@ export function Player({
       : { tabIndex: 0 };
 
   const truncateUsername = (name: string) =>
-    name.length < 30 ? name : `${name.slice(0, 26)}...`
+    name.length < 30 ? name : `${name.slice(0, 26)}...`;
 
   const title = useMemo(() => {
     if (isTargetSelf && !chatVisible) {
-      return "Click to chat"
+      return "Click to chat";
     }
 
-    const name = truncateUsername(user.username)
+    const name = truncateUsername(user.username);
 
     if (hasUnreadFromUser) {
-      return `${name} has a new message...`
+      return `${name} has a new message...`;
     }
 
     if (!isGameOver) {
       return user.lastCardPicked == null
         ? `${name} is thinking...`
-        : `${name} has voted`
+        : `${name} has voted`;
     }
 
     return user.lastCardPicked == null
       ? `${name} did not vote`
-      : `${name} voted ${user.lastCardValue}`
+      : `${name} voted ${user.lastCardValue}`;
   }, [
     isTargetSelf,
-    room?.roomOwnerId,
-    user.id,
     user.username,
     user.lastCardPicked,
     user.lastCardValue,
     isGameOver,
     hasUnreadFromUser,
     chatVisible
-  ])
+  ]);
 
   return (
     <div className="flex flex-col items-center" data-testid="player">
@@ -535,9 +570,22 @@ export function Player({
         }`}
         ref={cardRef}
         title={title}
-        onClick={() => {
-          if (isTargetSelf && !chatVisible) setShowChatInput(!showChatInput);
-        }}
+        {...(isTargetSelf && !chatVisible
+          ? {
+              role: "button",
+              tabIndex: 0,
+              onClick: () => setShowChatInput(!showChatInput),
+              onKeyDown: (e: React.KeyboardEvent) => {
+                // only when the card itself is focused — keystrokes inside the
+                // chat composer (message editor, gif search) bubble up here
+                if (e.target !== e.currentTarget) return;
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setShowChatInput((v) => !v);
+                }
+              }
+            }
+          : {})}
       >
         <div
           {...interactiveProps}
@@ -556,7 +604,7 @@ export function Player({
                   hsl(var(--accent) / 0.55) 0%,
                   transparent var(--glass-fade-stop)
                 )
-              `,
+              `
             }}
           />
 
@@ -582,7 +630,7 @@ export function Player({
                     0 0 1px rgba(255,255,255,0.5),
                     0 1px 2px rgba(0,0,0,0.6),
                     0 0 6px hsla(var(--accent), 0.45)
-                  `,
+                  `
                 }}
               >
                 <span
@@ -605,7 +653,7 @@ export function Player({
                     group-hover:text-accent
                     transition-all duration-500
                   "
-                                  >
+                >
                   Click to chat
                 </span>
               </div>
@@ -619,9 +667,7 @@ export function Player({
               "
             >
               {/* Avatar */}
-              <div className="flex items-center justify-center">
-                {cardIcon}
-              </div>
+              <div className="flex items-center justify-center">{cardIcon}</div>
             </div>
             <div className={isStarry ? "starry" : undefined}>
               <div
@@ -633,10 +679,21 @@ export function Player({
               >
                 <div
                   className="flex flex-row items-center justify-center gap-[3px] break-all"
-                  style={{fontSize: Math.max(7, Math.min(80 / user.username.length, 14))}}
+                  style={{
+                    fontSize: Math.max(
+                      7,
+                      Math.min(80 / user.username.length, 14)
+                    )
+                  }}
                 >
-                  {room?.roomOwnerId === user.id && <Crown className="text-glass w-3 h-3" />}
-                  <span>{user.username.length < 30 ? user.username : `${user.username.slice(0, 26)}...`}</span>
+                  {room?.roomOwnerId === user.id && (
+                    <Crown className="text-glass w-3 h-3" />
+                  )}
+                  <span>
+                    {user.username.length < 30
+                      ? user.username
+                      : `${user.username.slice(0, 26)}...`}
+                  </span>
                   {hasUnreadFromUser && (
                     <MessagesSquare className="w-[10px] h-[10px] -ml-1 -mt-1 text-accent animate-pulse" />
                   )}
@@ -651,14 +708,16 @@ export function Player({
             onSend={(plain, formatted) => handleSendChat(plain, formatted)}
             onClose={() => setShowChatInput(false)}
             isOpen={showChatInput}
-            className={`${isLeftSide ? "right-[20px] top-5" : "-right-[280px] top-5"}`}
+            className={`${
+              isLeftSide ? "right-[20px] top-5" : "-right-[280px] top-5"
+            }`}
             isLeftSide={isLeftSide}
             isTopSide={isTopSide}
           />
         )}
       </div>
-      {portalRootRef.current && menu
-        ? createPortal(menu, portalRootRef.current)
+      {menu && typeof document !== "undefined"
+        ? createPortal(menu, document.body)
         : menu}
     </div>
   );

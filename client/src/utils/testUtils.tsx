@@ -1,4 +1,4 @@
-import {User} from "@/types";
+import { User } from "@/types";
 
 export function withTestUsers(testUserCount: number, users?: User[]): User[] {
   const safeUsers = users ?? [];
@@ -9,7 +9,7 @@ export function withTestUsers(testUserCount: number, users?: User[]): User[] {
     ...safeUsers,
     ...Array.from({ length: testUserCount }, (_, i) => ({
       id: `test-user-${i}`,
-      username: `Test User ${i + 1}`,
-    })),
+      username: `Test User ${i + 1}`
+    }))
   ];
 }

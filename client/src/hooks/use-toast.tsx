@@ -307,7 +307,6 @@ function useToast() {
       }
     };
     // intentionally not depending on state setter
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {

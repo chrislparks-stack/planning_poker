@@ -1,5 +1,6 @@
-import {ChevronCascade} from "@/components/ui/spinners.tsx";
 import { motion } from "framer-motion";
+
+import { ChevronCascade } from "@/components/ui/spinners.tsx";
 
 interface ThemeHintProps {
   onDismiss: () => void;
@@ -16,7 +17,7 @@ export function ThemeHint({ onDismiss }: ThemeHintProps) {
       }}
       transition={{
         duration: 3,
-        ease: "easeOut",
+        ease: "easeOut"
       }}
       className="absolute top-[65px] right-3 z-50"
     >
@@ -31,7 +32,7 @@ export function ThemeHint({ onDismiss }: ThemeHintProps) {
                 hsl(var(--accent) / 0.45),
                 transparent 100%
               )
-            `,
+            `
           }}
         />
 
@@ -61,8 +62,7 @@ export function ThemeHint({ onDismiss }: ThemeHintProps) {
           <div className="space-y-2 pr-6">
             <div className="font-semibold text-foreground">
               <span>Not feeling very</span>{" "}
-              <span className="text-accent">purple</span>{" "}
-              <span>today?</span>
+              <span className="text-accent">purple</span> <span>today?</span>
             </div>
 
             <p className="leading-relaxed text-foreground">

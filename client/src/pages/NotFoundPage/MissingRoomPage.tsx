@@ -1,4 +1,5 @@
-import {useParams, useRouter} from "@tanstack/react-router";
+import { useParams, useRouter } from "@tanstack/react-router";
+
 import { useCreateRoomMutation } from "@/api";
 
 export function MissingRoomPage() {
@@ -12,7 +13,7 @@ export function MissingRoomPage() {
       if (!newId) return;
 
       navigate({ to: `/room/${newId}`, replace: true });
-    },
+    }
   });
 
   return (
@@ -36,11 +37,10 @@ export function MissingRoomPage() {
             variables: {
               roomId,
               name: `Restored from ${roomId}`,
-              cards: [],
-            },
+              cards: []
+            }
           });
         }}
-
         className={`px-6 py-2.5 rounded-md bg-accent text-white font-medium transition ${
           loading ? "opacity-60 cursor-not-allowed" : "hover:opacity-90"
         }`}

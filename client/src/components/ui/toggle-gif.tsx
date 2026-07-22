@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from "react";
-import {cn} from "@/lib/utils.ts";
 
-export const ToggleGif: React.FC<{ src: string; alt?: string }> = ({ src, alt }) => {
+import { cn } from "@/lib/utils.ts";
+
+export const ToggleGif: React.FC<{ src: string; alt?: string }> = ({
+  src,
+  alt
+}) => {
   const [isPlaying, setIsPlaying] = useState(true);
   const [staticFrame, setStaticFrame] = useState<string | null>(null);
 
@@ -25,8 +29,17 @@ export const ToggleGif: React.FC<{ src: string; alt?: string }> = ({ src, alt })
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label={isPlaying ? "Pause gif" : "Play gif"}
       className="relative group cursor-pointer inline-block rounded-xl overflow-hidden"
       onClick={() => setIsPlaying((p) => !p)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setIsPlaying((p) => !p);
+        }
+      }}
     >
       <img
         src={isPlaying ? src : staticFrame || src}
@@ -59,7 +72,11 @@ export const ToggleGif: React.FC<{ src: string; alt?: string }> = ({ src, alt })
               stroke="currentColor"
               strokeWidth={2}
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10 9v6m4-6v6" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M10 9v6m4-6v6"
+              />
             </svg>
           ) : (
             <svg

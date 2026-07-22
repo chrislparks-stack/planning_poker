@@ -1,4 +1,5 @@
-import {FC, FormEvent, useEffect, useState} from "react";
+import { FC, FormEvent, useEffect, useState } from "react";
+
 import { useEditUserMutation } from "@/api";
 import { Button } from "@/components/ui/button";
 import {
@@ -6,13 +7,13 @@ import {
   DialogContent,
   DialogDescription,
   DialogFooter,
-  DialogTitle,
+  DialogTitle
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts";
 import { useToast } from "@/hooks/use-toast";
-import {MAX_LEN} from "@/utils/enums.ts";
+import { MAX_LEN } from "@/utils/enums.ts";
 
 interface EditUserDialogProps {
   open: boolean;
@@ -50,22 +51,22 @@ export const EditUserDialog: FC<EditUserDialogProps> = ({ open, setOpen }) => {
       // mutation only runs when the username has actually changed, so this is a true update
       login?.({
         id: data.editUser.id,
-        username: data.editUser.username,
+        username: data.editUser.username
       });
       setOpen(false);
 
       toast({
         title: "Username updated",
-        description: "Your username has been successfully changed",
+        description: "Your username has been successfully changed"
       });
     },
     onError: (error) => {
       toast({
         title: "Update failed",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
-    },
+    }
   });
 
   const handleSubmit = async (e?: FormEvent) => {
@@ -77,7 +78,7 @@ export const EditUserDialog: FC<EditUserDialogProps> = ({ open, setOpen }) => {
       toast({
         title: "Username required",
         description: "Please enter a valid username",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
@@ -93,14 +94,14 @@ export const EditUserDialog: FC<EditUserDialogProps> = ({ open, setOpen }) => {
       await editUserMutation({
         variables: {
           userId: user.id,
-          username: trimmed,
-        },
+          username: trimmed
+        }
       });
     } else {
       toast({
         title: "Not signed in",
         description: "Please sign in before updating your username",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
@@ -157,11 +158,15 @@ export const EditUserDialog: FC<EditUserDialogProps> = ({ open, setOpen }) => {
                   const triedTooLong = allowedOnly.length > MAX_LEN.username;
 
                   if (triedInvalidChar) {
-                    setUsernameError("Only letters, numbers, and spaces are allowed.");
+                    setUsernameError(
+                      "Only letters, numbers, and spaces are allowed."
+                    );
                   } else if (triedTooLong) {
-                    setUsernameError(`Username must be ${MAX_LEN.username} characters or less.`);
+                    setUsernameError(
+                      `Username must be ${MAX_LEN.username} characters or less.`
+                    );
                   } else if (clamped.trim().length === 0) {
-                    setUsernameError("Please enter a valid username")
+                    setUsernameError("Please enter a valid username");
                   } else {
                     setUsernameError(null);
                   }
@@ -173,13 +178,15 @@ export const EditUserDialog: FC<EditUserDialogProps> = ({ open, setOpen }) => {
                 className={`
                   transition-all
                   focus:ring-2 focus:ring-accent focus:ring-offset-1
-                  ${usernameError ? "border-destructive focus:ring-destructive" : ""}
+                  ${
+                    usernameError
+                      ? "border-destructive focus:ring-destructive"
+                      : ""
+                  }
                 `}
               />
               {usernameError && (
-                <p className="mt-1 text-sm text-destructive">
-                  {usernameError}
-                </p>
+                <p className="mt-1 text-sm text-destructive">{usernameError}</p>
               )}
             </div>
 

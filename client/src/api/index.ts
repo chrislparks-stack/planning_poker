@@ -1,22 +1,21 @@
-import {TypedTypePolicies} from "@/api/apollo-helpers.generated.ts";
-
-export * from "./operations.generated";
-
 import { ApolloClient, HttpLink, InMemoryCache, split } from "@apollo/client";
 import { GraphQLWsLink } from "@apollo/client/link/subscriptions";
 import { getMainDefinition } from "@apollo/client/utilities";
 import { createClient } from "graphql-ws";
 
+import { TypedTypePolicies } from "@/api/apollo-helpers.generated.ts";
 import { GRAPHQL_ENDPOINT, GRAPHQL_WS_ENDPOINT } from "@/settings";
 
+export * from "./operations.generated";
+
 const httpLink = new HttpLink({
-  uri: GRAPHQL_ENDPOINT,
+  uri: GRAPHQL_ENDPOINT
 });
 
 const wsLink = new GraphQLWsLink(
   createClient({
-    url: GRAPHQL_WS_ENDPOINT,
-  }),
+    url: GRAPHQL_WS_ENDPOINT
+  })
 );
 
 const splitLink = split(
@@ -28,19 +27,19 @@ const splitLink = split(
     );
   },
   wsLink,
-  httpLink,
+  httpLink
 );
 
 const typePolicies: TypedTypePolicies = {
   Room: {
     fields: {
       users: { merge: false },
-      chatHistory: { merge: false },
-    },
-  },
+      chatHistory: { merge: false }
+    }
+  }
 };
 
 export const client = new ApolloClient({
   link: splitLink,
-  cache: new InMemoryCache({ typePolicies }),
+  cache: new InMemoryCache({ typePolicies })
 });

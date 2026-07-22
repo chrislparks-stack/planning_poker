@@ -1,20 +1,22 @@
+/* eslint-disable react-compiler/react-compiler -- the compiler cannot optimize this hook because the options memo uses a caller-supplied dependency list */
 import {
   DependencyList,
   useCallback,
   useContext,
   useEffect,
   useId,
-  useMemo,
+  useMemo
 } from "react";
 
-import { ConfirmationDialogContext } from "./ConfirmationDialogProvider";
+import { ConfirmationDialogContext } from "@/components";
+
 import { ModalOptions } from "./types";
 
 export const useModal = (
   options?: Omit<ModalOptions, "resolve" | "reject">,
-  deps: DependencyList = [],
+  deps: DependencyList = []
 ): ((
-  options?: ModalOptions | ((close: () => void) => ModalOptions),
+  options?: ModalOptions | ((close: () => void) => ModalOptions)
 ) => Promise<void>) => {
   const id = useId();
   const handlers = useContext(ConfirmationDialogContext);
@@ -23,7 +25,7 @@ export const useModal = (
     throw new Error("useModal must be used within a ModalProvider");
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- caller supplies the dependency list for options
   const memoizedOptions = useMemo(() => options, deps);
 
   const closeModalHandler = useCallback(() => {
@@ -42,10 +44,10 @@ export const useModal = (
 
       return handlers.open?.(id, {
         ...memoizedOptions,
-        ...newOptions,
+        ...newOptions
       });
     },
-    [closeModalHandler, handlers, id, memoizedOptions],
+    [closeModalHandler, handlers, id, memoizedOptions]
   );
 
   useEffect(() => {
@@ -56,7 +58,7 @@ export const useModal = (
     () => () => {
       handlers?.clear?.(id);
     },
-    [id, handlers],
+    [id, handlers]
   );
 
   return openModalHandler;

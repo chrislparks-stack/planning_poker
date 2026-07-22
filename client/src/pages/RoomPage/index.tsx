@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { validate as validateUUID } from "uuid";
 
 import {
   useGetRoomQuery,
@@ -15,14 +16,13 @@ import { Deck } from "@/components/Deck";
 import { PageLayout } from "@/components/PageLayout";
 import { Room } from "@/components/Room";
 import { RoomOptionsDialog } from "@/components/RoomOptionsDialog";
+import { StarrySky } from "@/components/StarrySky";
+import { ResultsTag } from "@/components/ui/results-tag.tsx";
 import { VoteDistributionChart } from "@/components/vote-distribution-chart";
 import { useAuth } from "@/contexts";
+import { useBackgroundConfig } from "@/contexts/BackgroundContext.tsx";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "@/types";
-import { validate as validateUUID } from "uuid";
-import {ResultsTag} from "@/components/ui/results-tag.tsx";
-import {StarrySky} from "@/components/StarrySky";
-import {useBackgroundConfig} from "@/contexts/BackgroundContext.tsx";
 
 export function RoomPage() {
   const { roomId } = useParams({ from: "/room/$roomId" });
@@ -167,8 +167,7 @@ export function RoomPage() {
       sessionStorage.removeItem("HAS_JOINED_ROOM");
       navigate({ to: "/" });
     }
-  }, [roomEventsData, user, toast, navigate]);
-
+  }, [roomEventsData, user, toast, navigate, logout, logoutMutation]);
 
   // --- Initial join logic ---
   useEffect(() => {
@@ -227,9 +226,11 @@ export function RoomPage() {
           user: {
             id: user.id,
             username: user.username,
-            roomName: roomName && roomName.trim().length > 0 ? roomName : undefined
+            roomName:
+              roomName && roomName.trim().length > 0 ? roomName : undefined
           },
-          roomOwnerId: roomOwner && roomOwner.trim().length > 0 ? roomOwner : undefined
+          roomOwnerId:
+            roomOwner && roomOwner.trim().length > 0 ? roomOwner : undefined
         }
       }).then(({ data }) => {
         const room = data?.joinRoom;
@@ -255,7 +256,7 @@ export function RoomPage() {
 
       isJoinRoomCalledRef.current = true;
     }
-  }, [roomData, user, joinRoomMutation, roomId]);
+  }, [roomData, user, joinRoomMutation, roomId, setRoomOwner]);
 
   // --- Join helper ---
   async function handleJoinRoomMutation(
@@ -335,17 +336,26 @@ export function RoomPage() {
 
   useEffect(() => {
     if (!prevTitleRef.current) {
-      prevTitleRef.current = typeof document !== "undefined" ? document.title : APP_NAME;
+      prevTitleRef.current =
+        typeof document !== "undefined" ? document.title : APP_NAME;
     }
 
     if (room) {
       const userCount = room.users?.length ?? 0;
-      const hasName = typeof room.name === "string" && room.name.trim().length > 0;
+      const hasName =
+        typeof room.name === "string" && room.name.trim().length > 0;
 
       const titleBase = hasName
-        ? room.name!.trim() : openCreateUserDialog ? "Creating New Room..." : "Private Room";
+        ? room.name!.trim()
+        : openCreateUserDialog
+        ? "Creating New Room..."
+        : "Private Room";
 
-      document.title = `${titleBase} ${userCount > 0 ? ` (${userCount} player${userCount === 1 ? "" : "s"})` : ""} | ${APP_NAME}`;
+      document.title = `${titleBase} ${
+        userCount > 0
+          ? ` (${userCount} player${userCount === 1 ? "" : "s"})`
+          : ""
+      } | ${APP_NAME}`;
     } else {
       document.title = APP_NAME;
     }
@@ -378,7 +388,10 @@ export function RoomPage() {
   }, [room, user]);
 
   const isMissingRoom =
-    roomData && roomData.roomById === null && !joinRoomData && !subscriptionData;
+    roomData &&
+    roomData.roomById === null &&
+    !joinRoomData &&
+    !subscriptionData;
 
   // --- Redirects ---
   useEffect(() => {
@@ -470,21 +483,22 @@ export function RoomPage() {
                 </div>
               </div>
 
-              {/* Deck area */}
-              <div className="sticky bottom-0 w-full pt-4 pb-4 backdrop-blur-sm">
-                <div className="mx-auto max-w-4xl flex justify-center">
-                  <Deck
-                    roomId={roomId}
-                    isGameOver={room.isGameOver}
-                    cards={room.deck.cards}
-                    table={room.game.table}
-                  />
-                  {room.isGameOver && (
-                    <div className="flex justify-center ml-5">
-                      <ResultsTag active />
-                      <VoteDistributionChart room={room} />
-                    </div>
-                  )}
+              <div className="sticky bottom-0 w-full">
+                <div className="vote-results-scroller relative w-full pt-4 pb-6 backdrop-blur-sm [scrollbar-width:thin]">
+                  <div className="mx-auto flex w-full min-w-[660px] items-end justify-center px-2">
+                    <Deck
+                      roomId={roomId}
+                      isGameOver={room.isGameOver}
+                      cards={room.deck.cards}
+                      users={room.users}
+                    />
+                    {room.isGameOver && (
+                      <div className="ml-2 flex min-w-[246px] max-w-[548px] flex-[0_1_auto] justify-center">
+                        <ResultsTag />
+                        <VoteDistributionChart room={room} />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

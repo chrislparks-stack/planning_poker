@@ -1,15 +1,16 @@
 import path from "path";
-import { defineConfig, loadEnv, Plugin } from "vite";
-import react from "@vitejs/plugin-react";
+
 import { tanstackRouter } from "@tanstack/router-vite-plugin";
+import react from "@vitejs/plugin-react";
 import { visualizer } from "rollup-plugin-visualizer";
+import { defineConfig, loadEnv, Plugin } from "vite";
 import viteCompression from "vite-plugin-compression";
 
 // --- Google Analytics injector ---
 const injectGoogleAnalytics = ({
-                                 mode,
-                                 GOOGLE_ANALYTICS_ID,
-                               }: {
+  mode,
+  GOOGLE_ANALYTICS_ID
+}: {
   mode: string;
   GOOGLE_ANALYTICS_ID: string;
 }): Plugin => ({
@@ -31,8 +32,8 @@ const injectGoogleAnalytics = ({
         return html.replace("</head>", `${googleAnalyticsScript}</head>`);
       }
       return html;
-    },
-  },
+    }
+  }
 });
 
 export default defineConfig(({ mode }) => {
@@ -48,7 +49,7 @@ export default defineConfig(({ mode }) => {
         jsxRuntime: "automatic",
         babel: {
           parserOpts: {
-            plugins: ["jsx", "typescript"],
+            plugins: ["jsx", "typescript"]
           }
         }
       }),
@@ -57,17 +58,17 @@ export default defineConfig(({ mode }) => {
         filename: "dist/stats.html",
         open: false,
         gzipSize: true,
-        brotliSize: true,
+        brotliSize: true
       }),
       viteCompression({
         algorithm: "brotliCompress",
-        ext: ".br",
-      }),
+        ext: ".br"
+      })
     ],
     resolve: {
       alias: {
-        "@": path.resolve(__dirname, "./src"),
-      },
+        "@": path.resolve(__dirname, "./src")
+      }
     },
     build: {
       outDir: "dist",
@@ -76,24 +77,24 @@ export default defineConfig(({ mode }) => {
       modulePreload: true,
       cssCodeSplit: true,
       rollupOptions: {
-        input: "index.html",
+        input: "index.html"
       },
-      chunkSizeWarningLimit: 1000,
+      chunkSizeWarningLimit: 1000
     },
     server: {
       proxy: {
         "/api": {
           target: GRAPHQL_ENDPOINT,
           changeOrigin: true,
-          ws: true,
-        },
-      },
+          ws: true
+        }
+      }
     },
     test: {
       globals: true,
       environment: "jsdom",
       setupFiles: "./src/test/setup.ts",
-      include: ["**/*.test.tsx", "**/*.test.ts"],
-    },
+      include: ["**/*.test.tsx", "**/*.test.ts"]
+    }
   };
 });

@@ -1,15 +1,58 @@
-import React, {startTransition, useEffect, useRef, useState} from "react";
-import {createPortal} from "react-dom";
-import {cn} from "@/lib/utils";
-import {Bold, Camera, Droplet, ImagePlay, Italic, Palette, SendHorizonal, Smile, Underline, X,} from "lucide-react";
-import tenorLogo from "@/assets/PB_tenor_logo_grey_vertical.svg";
-import {HexColorPicker} from "react-colorful";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
-import {OverlayPortal} from "@/utils/overlayPortal.tsx";
-import {motion} from "framer-motion";
-import {compressMessage} from "@/utils/messageUtils.ts";
-import {getShiftedAccent} from "@/lib/theme-accent.ts";
+import { motion } from "framer-motion";
+import {
+  Bold,
+  Camera,
+  Droplet,
+  ImagePlay,
+  Italic,
+  Palette,
+  SendHorizonal,
+  Smile,
+  Underline,
+  X
+} from "lucide-react";
+import React, {
+  startTransition,
+  useCallback,
+  useEffect,
+  useRef,
+  useState
+} from "react";
+import { HexColorPicker } from "react-colorful";
+import { createPortal } from "react-dom";
+
+import { getShiftedAccent } from "@/lib/theme-accent.ts";
+import { cn } from "@/lib/utils";
+import { compressMessage } from "@/utils/messageUtils.ts";
+import { OverlayPortal } from "@/utils/overlayPortal.tsx";
+
+interface PickerGif {
+  id: string;
+  url: string;
+}
+
+interface PickerCategory {
+  searchterm: string;
+  image: string;
+  name: string;
+}
+
+interface GiphyGif {
+  id: string;
+  images?: {
+    fixed_width?: { url?: string };
+    downsized_medium?: { url?: string };
+    downsized?: { url?: string };
+    original?: { url?: string };
+  };
+}
+
+interface GiphyCategory {
+  name: string;
+  gif?: GiphyGif;
+}
 
 interface ChatInputProps {
   onSend: (
@@ -38,19 +81,23 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showGifPicker, setShowGifPicker] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [gifs, setGifs] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [gifs, setGifs] = useState<PickerGif[]>([]);
+  const [categories, setCategories] = useState<PickerCategory[]>([]);
+  const [gifError, setGifError] = useState(false);
   const [showCategories, setShowCategories] = useState(true);
   const [autocomplete, setAutocomplete] = useState<string[]>([]);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [hoveredGif, setHoveredGif] = useState<string | null>(null);
-  const [hoverPos, setHoverPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [hoverPos, setHoverPos] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0
+  });
   const hoverTimer = useRef<NodeJS.Timeout | null>(null);
   const [attachments, setAttachments] = useState<string[]>([]);
   const [activeFormats, setActiveFormats] = useState({
     bold: false,
     italic: false,
-    underline: false,
+    underline: false
   });
   const [isEmpty, setIsEmpty] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -65,7 +112,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const selectionRef = useRef<Range | null>(null);
   const gifScrollRef = useRef<HTMLDivElement>(null);
 
-  const [pickerPos, setPickerPos] = useState({ top: 0, left: 0, width: 0, height: 0 });
+  const [pickerPos, setPickerPos] = useState({
+    top: 0,
+    left: 0,
+    width: 0,
+    height: 0
+  });
 
   const portalRoot =
     typeof document !== "undefined"
@@ -80,7 +132,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     { color: "#0EA5E9", name: "Aqua" },
     { color: "#059669", name: "Emerald" },
     { color: "#E11D48", name: "Rose" },
-    { color: "#F59E0B", name: "Amber" },
+    { color: "#F59E0B", name: "Amber" }
   ];
 
   // Focus editor on mount (used by both overlay + panel, which mount lazily)
@@ -124,7 +176,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   }, []);
 
   // === Core handlers ===
-  const handleSend = () => {
+  const handleSend = useCallback(() => {
     const editor = editorRef.current;
     if (!editor) return;
     const hasText = editor.innerText.trim().length > 0;
@@ -146,32 +198,43 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     setAttachments([]);
     setIsEmpty(true);
     onClose?.();
-  };
+  }, [attachments, onSend, onClose]);
 
   const saveSelection = () => {
-    const selection = window.getSelection()
+    const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {
-      selectionRef.current = selection.getRangeAt(0)
+      selectionRef.current = selection.getRangeAt(0);
     }
-  }
+  };
 
   const restoreSelection = () => {
-    const selection = window.getSelection()
-    const range = selectionRef.current
+    const selection = window.getSelection();
+    const range = selectionRef.current;
     if (range && selection) {
-      selection.removeAllRanges()
-      selection.addRange(range)
+      selection.removeAllRanges();
+      selection.addRange(range);
     }
-  }
-
-  const applyCommand = (cmd: string, value?: string) => {
-    const editor = editorRef.current;
-    if (!editor) return;
-    if (document.activeElement !== editor) editor.focus();
-    document.execCommand(cmd, false, value);
-    updateActiveStates();
-    setTimeout(updateActiveStates, 10);
   };
+
+  const updateActiveStates = useCallback(() => {
+    setActiveFormats({
+      bold: document.queryCommandState("bold"),
+      italic: document.queryCommandState("italic"),
+      underline: document.queryCommandState("underline")
+    });
+  }, []);
+
+  const applyCommand = useCallback(
+    (cmd: string, value?: string) => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      if (document.activeElement !== editor) editor.focus();
+      document.execCommand(cmd, false, value);
+      updateActiveStates();
+      setTimeout(updateActiveStates, 10);
+    },
+    [updateActiveStates]
+  );
 
   const applyColor = (color: string) => {
     const editor = editorRef.current;
@@ -183,14 +246,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     setShowPalette(false);
     setShowCustomPicker(false);
     editor.focus();
-  };
-
-  const updateActiveStates = () => {
-    setActiveFormats({
-      bold: document.queryCommandState("bold"),
-      italic: document.queryCommandState("italic"),
-      underline: document.queryCommandState("underline"),
-    });
   };
 
   // === Global listeners ===
@@ -235,7 +290,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       document.removeEventListener("mouseup", handler, true);
       document.removeEventListener("keyup", handler, true);
     };
-  }, []);
+  }, [updateActiveStates]);
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -246,7 +301,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         const key = e.key.toLowerCase();
         if (["b", "i", "u"].includes(key)) {
           e.preventDefault();
-          applyCommand(key === "b" ? "bold" : key === "i" ? "italic" : "underline");
+          applyCommand(
+            key === "b" ? "bold" : key === "i" ? "italic" : "underline"
+          );
           return;
         }
       }
@@ -278,34 +335,49 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     e.target.value = "";
   };
 
-  const fetchCategories = async () => {
-    const apiKey =
-      import.meta.env.VITE_TENOR_KEY || process.env.TENOR_KEY;
+  const giphyGifUrl = (g: GiphyGif) =>
+    g.images?.fixed_width?.url ||
+    g.images?.downsized_medium?.url ||
+    g.images?.downsized?.url ||
+    g.images?.original?.url ||
+    "";
 
-    const url = `https://tenor.googleapis.com/v2/categories?key=${apiKey}&client_key=SummitPoker`;
+  const fetchCategories = useCallback(async () => {
+    const apiKey = import.meta.env.VITE_GIPHY_KEY;
+
+    const url = `https://api.giphy.com/v1/gifs/categories?api_key=${apiKey}`;
 
     try {
       const res = await fetch(url);
       const data = await res.json();
 
-      setCategories(data.tags || []);
+      setCategories(
+        ((data.data || []) as GiphyCategory[]).map((c) => ({
+          searchterm: c.name,
+          name: c.name,
+          image: c.gif ? giphyGifUrl(c.gif) : ""
+        }))
+      );
+      setGifError(false);
     } catch (e) {
-      console.error("Failed to fetch Tenor categories", e);
+      console.error("Failed to fetch GIPHY categories", e);
+      setGifError(true);
     }
-  };
+  }, []);
 
   const fetchAutocomplete = async (term: string) => {
-    const apiKey =
-      import.meta.env.VITE_TENOR_KEY || process.env.TENOR_KEY;
+    const apiKey = import.meta.env.VITE_GIPHY_KEY;
 
-    const url = `https://tenor.googleapis.com/v2/autocomplete?q=${encodeURIComponent(
+    const url = `https://api.giphy.com/v1/gifs/search/tags?api_key=${apiKey}&q=${encodeURIComponent(
       term
-    )}&key=${apiKey}&client_key=SummitPoker&limit=5`;
+    )}&limit=5`;
 
     try {
       const res = await fetch(url);
       const data = await res.json();
-      setAutocomplete(data.results || []);
+      setAutocomplete(
+        ((data.data || []) as Array<{ name: string }>).map((t) => t.name)
+      );
       setShowAutocomplete(true);
     } catch (e) {
       console.error("Autocomplete failed", e);
@@ -313,35 +385,30 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   const fetchGifs = async (query?: string) => {
-    const term = query?.trim() || "trending";
-    const apiKey = import.meta.env.VITE_TENOR_KEY || process.env.TENOR_KEY;
-    const url = `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(
-      term
-    )}&key=${apiKey}&client_key=SummitPoker&limit=12`;
+    const term = query?.trim();
+    const apiKey = import.meta.env.VITE_GIPHY_KEY;
+    const url = term
+      ? `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(
+          term
+        )}&limit=12`
+      : `https://api.giphy.com/v1/gifs/trending?api_key=${apiKey}&limit=12`;
 
     try {
       setIsLoading(true);
       const res = await fetch(url);
       const data = await res.json();
 
-      const normalized = (data.results || []).map((g: any) => {
-        const fm = g.media_formats || {};
-        const url =
-          fm.gif?.url ||
-          fm.mediumgif?.url ||
-          fm.tinygif?.url ||
-          g.media?.[0]?.gif?.url ||
-          g.url ||
-          "";
-        return { id: g.id, url };
-      });
+      const normalized = ((data.data || []) as GiphyGif[]).map((g) => ({
+        id: g.id,
+        url: giphyGifUrl(g)
+      }));
 
-      const filtered = normalized.filter((g: { url: string }) => !!g.url);
+      const filtered = normalized.filter((g) => !!g.url);
 
       // Preload all images before updating DOM
       const preloadAll = filtered.map(
-        (g: { url: any }) =>
-          new Promise((resolve) => {
+        (g) =>
+          new Promise<PickerGif>((resolve) => {
             const img = new Image();
             img.src = g.url;
             img.onload = img.onerror = () => resolve(g);
@@ -352,10 +419,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
       requestAnimationFrame(() => {
         setGifs(loaded);
+        setGifError(false);
         setIsLoading(false);
       });
     } catch (e) {
       console.error(e);
+      setGifError(true);
       setIsLoading(false);
     }
   };
@@ -399,23 +468,23 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   const handleGifHover = (url: string, e: React.MouseEvent) => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    const rect = (e.target as HTMLElement).getBoundingClientRect()
+    const rect = (e.target as HTMLElement).getBoundingClientRect();
     hoverTimer.current = setTimeout(() => {
-      setHoveredGif(url)
+      setHoveredGif(url);
       setHoverPos({
         x: rect.left + rect.width / 2,
-        y: rect.top - 8,
-      })
+        y: rect.top - 8
+      });
     }, 1000);
-  }
+  };
 
   const handleGifLeave = () => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
     setHoveredGif(null);
-  }
+  };
 
   useEffect(() => {
-    if (!showEmojiPicker) return
+    if (!showEmojiPicker) return;
 
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -423,24 +492,27 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         !emojiPickerRef.current.contains(e.target as Node) &&
         !emojiButtonRef.current?.contains(e.target as Node)
       ) {
-        setShowEmojiPicker(false)
+        setShowEmojiPicker(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showEmojiPicker]);
+
+  const wasGifPickerOpenRef = useRef(false);
+  useEffect(() => {
+    // reset only on the closed -> open transition, not while open
+    if (showGifPicker && !wasGifPickerOpenRef.current) {
+      setShowCategories(true);
+      setGifs([]);
+
+      if (categories.length === 0) {
+        fetchCategories();
       }
     }
-
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [showEmojiPicker])
-
-  useEffect(() => {
-    if (!showGifPicker) return;
-
-    setShowCategories(true);
-    setGifs([]);
-
-    if (categories.length === 0) {
-      fetchCategories();
-    }
-  }, [showGifPicker]);
+    wasGifPickerOpenRef.current = showGifPicker;
+  }, [showGifPicker, categories.length, fetchCategories]);
 
   useEffect(() => {
     const updatePosition = () => {
@@ -450,7 +522,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         top: rect.top + window.scrollY,
         left: rect.left + window.scrollX,
         width: rect.width,
-        height: rect.height,
+        height: rect.height
       });
     };
 
@@ -466,37 +538,42 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   // === Shared Render sections ===
   const renderToolbar = () => {
-    const iconSize = inPanel ? 17 : 14;        // slightly larger icons in panel
+    const iconSize = inPanel ? 17 : 14; // slightly larger icons in panel
     const pad = inPanel ? "p-1.5" : "p-[2px]"; // and looser button padding
 
     return (
       <div
+        role="presentation"
         className="flex justify-between px-1 items-center relative"
         onMouseDown={(e) => e.preventDefault()}
       >
         <div className="flex gap-1.5">
-          {[{ icon: <Bold size={iconSize} />, key: "bold", cmd: "bold" },
+          {[
+            { icon: <Bold size={iconSize} />, key: "bold", cmd: "bold" },
             { icon: <Italic size={iconSize} />, key: "italic", cmd: "italic" },
-            { icon: <Underline size={iconSize} />, key: "underline", cmd: "underline" }].map(
-            ({ icon, key, cmd }) => (
-              <button
-                key={key}
-                onClick={() => applyCommand(cmd)}
-                className={cn(
-                  `${pad} rounded-md text-accent hover:bg-accent/10 transition`,
-                  activeFormats[key as keyof typeof activeFormats] &&
+            {
+              icon: <Underline size={iconSize} />,
+              key: "underline",
+              cmd: "underline"
+            }
+          ].map(({ icon, key, cmd }) => (
+            <button
+              key={key}
+              onClick={() => applyCommand(cmd)}
+              className={cn(
+                `${pad} rounded-md text-accent hover:bg-accent/10 transition`,
+                activeFormats[key as keyof typeof activeFormats] &&
                   "bg-accent/25 ring-1 ring-accent/50"
-                )}
-              >
-                {icon}
-              </button>
-            )
-          )}
+              )}
+            >
+              {icon}
+            </button>
+          ))}
           <button
             ref={emojiButtonRef}
             onClick={(e) => {
-              e.stopPropagation()
-              setShowEmojiPicker((prev) => !prev)
+              e.stopPropagation();
+              setShowEmojiPicker((prev) => !prev);
             }}
             className={cn(
               `${pad} rounded-md text-accent hover:bg-accent/10 transition`,
@@ -555,6 +632,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         ref={editorRef}
         contentEditable
         suppressContentEditableWarning
+        role="textbox"
+        aria-multiline="true"
+        aria-label="Type message"
+        tabIndex={0}
         className={cn(
           "w-full bg-background/95 text-sm rounded-xl min-h-[38px] max-h-[80px]",
           "px-3 py-2 pr-10 outline-none overflow-y-auto focus:ring-1 focus:ring-accent"
@@ -600,9 +681,20 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 className="object-cover w-full h-full rounded-md transition-transform group-hover:scale-105"
               />
               <div
+                role="button"
+                tabIndex={0}
+                aria-label="Remove attachment"
                 onClick={() =>
                   setAttachments((prev) => prev.filter((_, idx) => idx !== i))
                 }
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setAttachments((prev) =>
+                      prev.filter((_, idx) => idx !== i)
+                    );
+                  }
+                }}
                 className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 text-[10px] font-medium tracking-wide"
               >
                 <X size={22} strokeWidth={2.5} className="opacity-80 mb-0.5" />
@@ -622,6 +714,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       return (
         <div
           ref={emojiPickerRef}
+          role="presentation"
           className="relative border border-border rounded-xl bg-popover shadow-xl overflow-hidden z-[60] w-fit -ml-1.5"
           onClick={(e) => e.stopPropagation()}
         >
@@ -636,7 +729,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           <div className="relative w-fit h-[260px] overflow-hidden">
             <Picker
               data={data}
-              onEmojiSelect={(emoji: any) => {
+              onEmojiSelect={(emoji: { native: string }) => {
                 const editor = editorRef.current;
                 if (!editor) return;
 
@@ -691,14 +784,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     return createPortal(
       <div
         ref={emojiPickerRef}
+        role="presentation"
         className="fixed w-[210px] h-[220px] border border-border rounded-xl shadow-xl bg-popover overflow-hidden z-[60]"
         style={{
-          top: `${isTopSide
-            ? pickerPos.top + pickerPos.height 
-            : pickerPos.top - 220}px`,
-          left: `${isLeftSide
-            ? pickerPos.left + 5
-            : pickerPos.left + pickerPos.width - 215}px`,
+          top: `${
+            isTopSide ? pickerPos.top + pickerPos.height : pickerPos.top - 220
+          }px`,
+          left: `${
+            isLeftSide
+              ? pickerPos.left + 5
+              : pickerPos.left + pickerPos.width - 215
+          }px`
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -713,7 +809,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         <div className="relative w-full h-full overflow-hidden">
           <Picker
             data={data}
-            onEmojiSelect={(emoji: any) => {
+            onEmojiSelect={(emoji: { native: string }) => {
               const editor = editorRef.current;
               if (!editor) return;
 
@@ -764,6 +860,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       return (
         <div
           ref={gifPickerRef}
+          role="presentation"
           className="border border-border rounded-xl bg-popover p-2 shadow-xl relative z-[60]"
           onClick={(e) => e.stopPropagation()}
         >
@@ -771,7 +868,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <div className="flex justify-between gap-2">
               <input
                 type="search"
-                placeholder="Search Tenor GIFs..."
+                placeholder="Search GIPHY..."
                 className="flex-1 text-xs rounded-md px-2 py-[3px] bg-background/70 border border-border focus:ring-1 focus:ring-accent outline-none"
                 value={searchTerm}
                 onChange={(e) => {
@@ -841,6 +938,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 </div>
               )}
               <div className="flex flex-col gap-2 p-1">
+                {gifError && (
+                  <div className="p-3 text-xs text-center text-muted-foreground">
+                    GIF search is unavailable right now
+                  </div>
+                )}
                 {showCategories ? (
                   <div className="grid grid-cols-2 gap-2 w-full">
                     {categories.map((cat) => (
@@ -855,7 +957,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                           alt={cat.name}
                           className="w-full h-[80px] object-cover"
                         />
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-xs font-medium">
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-center px-1 text-white text-xs font-medium">
                           {cat.name}
                         </div>
                       </motion.button>
@@ -905,7 +1007,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                     top: `${hoverPos.y - 100}px`,
                     left: `${hoverPos.x - 90}px`,
                     width: "200px",
-                    backgroundColor: "hsl(var(--popover))",
+                    backgroundColor: "hsl(var(--popover))"
                   }}
                 >
                   <img
@@ -918,9 +1020,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               )}
           </div>
 
-
           <div className="flex justify-center py-1">
-            <img src={tenorLogo} alt="Tenor" className="w-[60px] opacity-60" />
+            <span className="text-[10px] tracking-wide text-muted-foreground/60 select-none">
+              Powered by GIPHY
+            </span>
           </div>
         </div>
       );
@@ -932,14 +1035,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     return createPortal(
       <div
         ref={gifPickerRef}
+        role="presentation"
         className="fixed w-[218px] border border-border rounded-xl shadow-xl bg-popover overflow-hidden z-[60]"
         style={{
-          top: `${isTopSide
-            ? pickerPos.top + pickerPos.height
-            : pickerPos.top - 263}px`,
-          left: `${isLeftSide
-            ? pickerPos.left
-            : pickerPos.left + pickerPos.width - 220}px`,
+          top: `${
+            isTopSide ? pickerPos.top + pickerPos.height : pickerPos.top - 263
+          }px`,
+          left: `${
+            isLeftSide ? pickerPos.left : pickerPos.left + pickerPos.width - 220
+          }px`
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -948,7 +1052,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <div className="flex justify-between gap-2 items-center">
               <input
                 type="search"
-                placeholder="Search Tenor GIFs..."
+                placeholder="Search GIPHY..."
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
@@ -1017,6 +1121,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             </div>
           )}
           <div className="flex flex-col gap-2 p-3 pt-2">
+            {gifError && (
+              <div className="p-3 text-xs text-center text-muted-foreground">
+                GIF search is unavailable right now
+              </div>
+            )}
             {showCategories ? (
               <div className="grid grid-cols-2 gap-2">
                 {categories.map((cat) => (
@@ -1031,7 +1140,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                       alt={cat.name}
                       className="w-full h-[70px] object-cover rounded-md"
                     />
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-xs font-medium">
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-center px-1 text-white text-xs font-medium">
                       {cat.name}
                     </div>
                   </motion.div>
@@ -1073,7 +1182,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                     top: `${hoverPos.y - 120}px`,
                     left: `${hoverPos.x - 90}px`,
                     width: "200px",
-                    backgroundColor: "hsl(var(--popover))",
+                    backgroundColor: "hsl(var(--popover))"
                   }}
                 >
                   <img
@@ -1086,7 +1195,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               )}
           </div>
           <div className="sticky bottom-0 flex justify-center items-center bg-popover py-1">
-            <img src={tenorLogo} alt="Tenor" className="w-[80px] opacity-70 mt-1" />
+            <span className="text-[10px] tracking-wide text-muted-foreground/60 select-none">
+              Powered by GIPHY
+            </span>
           </div>
         </div>
       </div>,
@@ -1096,9 +1207,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   const renderColorPalette = () => (
     <div
+      role="presentation"
       className={cn(
         "relative flex justify-center items-center gap-1 transition-all duration-200 overflow-visible",
-        showPalette ? "max-h-12 opacity-100 mt-1" : "max-h-0 opacity-0 overflow-hidden"
+        showPalette
+          ? "max-h-12 opacity-100 mt-1"
+          : "max-h-0 opacity-0 overflow-hidden"
       )}
       onClick={(e) => e.stopPropagation()}
     >
@@ -1129,8 +1243,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           >
             {color === "auto" && (
               <span className="text-[10px] font-semibold leading-none text-foreground">
-              A
-            </span>
+                A
+              </span>
             )}
           </button>
 
@@ -1161,6 +1275,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           {inPanel ? (
             // INLINE MODE (panel)
             <div
+              role="presentation"
               className={cn(
                 "absolute z-[60] bg-popover border border-border rounded-xl shadow-xl p-3 w-[105px] h-[125px]",
                 "-top-[140px] right-0"
@@ -1183,6 +1298,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           ) : (
             // FLOATING / OVERLAY MODE (popup composer)
             <div
+              role="presentation"
               className={cn(
                 "absolute -top-[42px] bg-popover border border-border rounded-xl shadow-xl p-3 w-[105px] h-[120px]",
                 isLeftSide ? "right-[212px]" : "left-[212px]"
@@ -1212,6 +1328,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const coreContent = (
     <div
       ref={containerRef}
+      role="presentation"
       className={cn(
         "flex flex-col items-stretch justify-center space-y-2 relative",
         inPanel
@@ -1224,7 +1341,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         editorRef.current?.focus();
         e.stopPropagation();
 
-        if (!gifPickerRef?.current?.contains(e.target as Node) && showGifPicker) {
+        if (
+          !gifPickerRef?.current?.contains(e.target as Node) &&
+          showGifPicker
+        ) {
           setShowGifPicker(false);
           setSearchTerm("");
           setAutocomplete([]);
@@ -1232,7 +1352,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         }
       }}
     >
-     <input
+      <input
         ref={fileInputRef}
         type="file"
         accept="image/*"

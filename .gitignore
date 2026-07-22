@@ -1,0 +1,18 @@
+# Claude Code
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+
+# Agents
+AGENTS.md
+
+# IDE
+.idea/
+
+# dependencies
+node_modules/
+client/debug.log
+
+# stress test run reports and machine-specific baselines
+stress/results/
+stress/baselines/*.local.json

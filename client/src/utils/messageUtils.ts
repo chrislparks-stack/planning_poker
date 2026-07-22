@@ -1,5 +1,6 @@
 import { compress, decompress } from "lz4js";
-import {ChatMessage} from "@/types";
+
+import { ChatMessage } from "@/types";
 
 export function compressMessage(html: string): string {
   const utf8 = new TextEncoder().encode(html);
@@ -12,7 +13,7 @@ export function compressMessage(html: string): string {
   for (let i = 0; i < compressed.length; i += chunkSize) {
     binary += String.fromCharCode.apply(
       null,
-      compressed.subarray(i, i + chunkSize) as any
+      Array.from(compressed.subarray(i, i + chunkSize))
     );
   }
   return btoa(binary);
@@ -50,8 +51,7 @@ export function safeDecompressMessage(msg: ChatMessage): ChatMessage {
 
 type ClampValue = number | string;
 
-const toCss = (v: ClampValue) =>
-  typeof v === "number" ? `${v}px` : v;
+const toCss = (v: ClampValue) => (typeof v === "number" ? `${v}px` : v);
 
 export const clamp = (
   min: ClampValue,

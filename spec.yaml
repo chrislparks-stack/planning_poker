@@ -45,6 +45,9 @@ static_sites:
       - key: VITE_GOOGLE_ANALYTICS_ID
         scope: BUILD_TIME
         value: ${VITE_GOOGLE_ANALYTICS_ID}
+      - key: VITE_GIPHY_KEY
+        scope: BUILD_TIME
+        value: ${VITE_GIPHY_KEY}
     github:
       branch: main
       deploy_on_push: true
