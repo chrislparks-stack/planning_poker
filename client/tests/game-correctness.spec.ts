@@ -119,17 +119,66 @@ test("reveal shows each player's value and computes the average correctly", asyn
   await expect(host.getByText("4/4 voted (100%)")).toBeVisible();
   await revealEstimations(host);
 
-  // (1 + 2 + 3 + 5) / 4 = 2.75 → "2.8"; all votes differ → 25% agreement
+  // (1 + 2 + 3 + 5) / 4 = 2.75 → "2.8"; all votes differ → 25% consensus
   for (const page of all) {
-    await expect(page.getByTestId("vote-distribution-chart")).toBeVisible();
-    await expect(page.getByText("2.8", { exact: true })).toBeVisible();
-    await expect(page.getByText("avg • 25% agree")).toBeVisible();
+    const chart = page.getByTestId("vote-distribution-chart");
+    await expect(chart).toBeVisible();
+    await expect(chart.getByText("AVERAGE")).toBeVisible();
+    await expect(chart.getByText("2.8", { exact: true })).toBeVisible();
+    await expect(chart.getByText("25%", { exact: true })).toBeVisible();
+    await expect(chart.getByText("AGREE")).toBeVisible();
+    await expect(chart.getByText("CONSENSUS LEVEL")).toBeVisible();
+    await expect(chart.getByText("NEXT STEP")).toBeVisible();
+    await expect(
+      chart.getByText(
+        "Wide spread (1-5) - compare the highest and lowest assumptions."
+      )
+    ).toBeVisible();
     for (const [name, value] of Object.entries(votes)) {
+      // The SVG card exposes one combined accessible label even though its
+      // visible estimate/count/label are separate text nodes.
+      await expect(
+        chart.getByRole("img", {
+          name: `${value} story points: 1 vote`,
+          exact: true
+        })
+      ).toBeVisible();
       await expect(
         tile(page, name).getByText(value, { exact: true })
       ).toBeVisible();
     }
   }
+});
+
+test("fractional estimates render as 0.5 in numeric order", async ({
+  browser
+}) => {
+  const all = await setupRoom(browser, ["Alice", "Bruno", "Carol"]);
+  const [host] = all;
+
+  await vote(all[0], "0");
+  await vote(all[1], "0.5");
+  await vote(all[2], "1");
+  await revealEstimations(host);
+
+  const chart = host.getByTestId("vote-distribution-chart");
+  await expect(
+    chart.getByRole("img", {
+      name: "0.5 story points: 1 vote",
+      exact: true
+    })
+  ).toBeVisible();
+
+  const cardLabels = await chart
+    .locator('g[role="img"]')
+    .evaluateAll((nodes) =>
+      nodes.map((node) => node.getAttribute("aria-label"))
+    );
+  expect(cardLabels).toEqual([
+    "0 story points: 1 vote",
+    "0.5 story points: 1 vote",
+    "1 story points: 1 vote"
+  ]);
 });
 
 test("non-numeric votes are excluded from the average but count for agreement", async ({
@@ -146,8 +195,11 @@ test("non-numeric votes are excluded from the average but count for agreement", 
   // average over numeric votes only: (2 + 2) / 2 = "2.0";
   // agreement: 2 of 3 picked "2" → 67%
   for (const page of all) {
-    await expect(page.getByText("2.0", { exact: true })).toBeVisible();
-    await expect(page.getByText("avg • 67% agree")).toBeVisible();
+    const chart = page.getByTestId("vote-distribution-chart");
+    await expect(chart.getByText("2.0", { exact: true })).toBeVisible();
+    await expect(chart.getByText("67%", { exact: true })).toBeVisible();
+    await expect(chart.getByText("AGREE")).toBeVisible();
+    await expect(chart.getByText("CONSENSUS LEVEL")).toBeVisible();
   }
   await expect(
     tile(host, "Carol").getByText("?", { exact: true })
@@ -170,8 +222,11 @@ test("players who did not vote show no value after reveal", async ({
     tile(guest, "Alice").getByText("5", { exact: true })
   ).toBeVisible();
   // only the single numeric vote counts
-  await expect(host.getByText("5.0", { exact: true })).toBeVisible();
-  await expect(host.getByText("avg • 100% agree")).toBeVisible();
+  const chart = host.getByTestId("vote-distribution-chart");
+  await expect(chart.getByText("5.0", { exact: true })).toBeVisible();
+  await expect(chart.getByText("100%", { exact: true })).toBeVisible();
+  await expect(chart.getByText("AGREE")).toBeVisible();
+  await expect(chart.getByText("CONSENSUS LEVEL")).toBeVisible();
 });
 
 test("starting a new round resets every tab to the voting stage", async ({

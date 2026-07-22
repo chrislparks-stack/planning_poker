@@ -1,5 +1,6 @@
-import { FC, useEffect, useMemo, useRef, useState } from "react";
-import { Bar, BarChart, Cell, XAxis } from "recharts";
+import { UsersRound } from "lucide-react";
+import { CSSProperties, FC, memo, useMemo } from "react";
+import { Bar, BarChart } from "recharts";
 
 import { CardTitle } from "@/components/ui/card";
 import {
@@ -8,146 +9,281 @@ import {
   ChartTooltipContent
 } from "@/components/ui/chart";
 import { VoteLabel } from "@/components/ui/vote-label.tsx";
-import { useBackgroundConfig } from "@/contexts/BackgroundContext.tsx";
 import { Room } from "@/types";
 
 interface VoteDistributionChartProps {
   room: Room;
 }
 
+interface ChartDatum {
+  card: string;
+  cardValue: number;
+  Votes: number;
+  VisualHeight?: number;
+}
+
+interface DistributionBarsProps {
+  chartData: ChartDatum[];
+  maxCardCount: number;
+}
+
+const normalizeCardLabel = (card: string) =>
+  card === "½" || card === "1/2" ? "0.5" : card;
+
+const numericCardValue = (card: string) => {
+  const value = Number(normalizeCardLabel(card));
+  return Number.isFinite(value) ? value : null;
+};
+
+/**
+ * The chart, isolated behind `memo`. RoomPage hands the component a fresh `room`
+ * object on every subscription snapshot; without this boundary those re-renders
+ * would restart the CSS grow/label-reveal animations (a visible flicker) on each
+ * snapshot. Memoizing on the (stable) chartData/maxCardCount keeps the subtree
+ * from re-rendering unless the vote distribution actually changes.
+ */
+const DistributionBars = memo(function DistributionBars({
+  chartData,
+  maxCardCount
+}: DistributionBarsProps) {
+  // Only call out a MAJORITY when a single card wins outright; a tie for the
+  // top spot isn't a majority (and labeling every tied bar just adds clutter).
+  const uniqueMajority =
+    chartData.filter((d) => d.Votes === maxCardCount).length === 1;
+  const visualData = useMemo(
+    () =>
+      chartData.map((datum) => ({
+        ...datum,
+        // Preserve a substantial card frame for low tallies, then step each
+        // card upward toward the leader. Raw vote counts made 1-vote cards
+        // nearly disappear whenever one estimate had a large lead.
+        VisualHeight:
+          0.56 + (maxCardCount ? (datum.Votes / maxCardCount) * 0.44 : 0)
+      })),
+    [chartData, maxCardCount]
+  );
+  return (
+    <ChartContainer
+      className="vote-bars-enter h-[clamp(10rem,20vh,13.5rem)] w-full"
+      config={{
+        card: {
+          label: "Votes",
+          color: "hsl(var(--chart-1))"
+        }
+      }}
+    >
+      <BarChart
+        data={visualData}
+        margin={{ top: 18, right: 4, bottom: 2, left: 4 }}
+        barCategoryGap="10%"
+      >
+        <Bar
+          dataKey="VisualHeight"
+          maxBarSize={82}
+          // Recharts' own bar animation is disabled — see voteCardReveal in index.css
+          // for why. The grow is driven by CSS on each Cell instead so labels
+          // (which Recharts only paints after its animation ends) always render.
+          isAnimationActive={false}
+          shape={
+            <VoteLabel
+              data={chartData}
+              max={maxCardCount}
+              uniqueMajority={uniqueMajority}
+            />
+          }
+        />
+        <ChartTooltip
+          cursor={false}
+          content={
+            <ChartTooltipContent
+              labelFormatter={(_value, payload) =>
+                `Story Points | ${payload[0]?.payload.card ?? ""}`
+              }
+              formatter={(_value, _name, item) => (
+                <div className="flex min-w-[7rem] items-center justify-between gap-4">
+                  <span className="text-muted-foreground">Votes</span>
+                  <span className="font-mono font-medium tabular-nums text-foreground">
+                    {item.payload.Votes}
+                  </span>
+                </div>
+              )}
+            />
+          }
+        />
+      </BarChart>
+    </ChartContainer>
+  );
+});
+
 export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
   room
 }) => {
-  const chartRef = useRef<HTMLDivElement | null>(null);
-  const [showLabels, setShowLabels] = useState(false);
-
-  const { background } = useBackgroundConfig();
-  const isStarry = background.enabled && background.id === "starry";
-
+  // Single source of truth for the vote tallies. Everything below derives from
+  // this, so the debug override works and the whole card stays consistent.
   const voteCount = useMemo(() => {
-    const voteCount: { [key: string]: number } = {};
+    const counts: { [key: string]: number } = {};
     room.game.table.forEach((userCard) => {
       if (userCard.card) {
-        voteCount[userCard.card] = (voteCount[userCard.card] || 0) + 1;
+        const card = normalizeCardLabel(userCard.card);
+        counts[card] = (counts[card] || 0) + 1;
       }
     });
 
-    // const testVotes: Record<string, number> = {
-    //   2: 20,
-    //   3: 1,
-    // };
-    //
-    // Object.assign(voteCount, testVotes);
+    // Local styling fixture. Uncomment while tuning the distribution chart.
+    // Object.assign(counts, { "0": 1, "0.5": 1, "2": 10, "3": 3 });
 
-    return voteCount;
+    return counts;
   }, [room.game.table]);
 
-  const voteSignature = useMemo(() => {
-    const counts: Record<string, number> = {};
+  // Stable string key of the distribution so chartData — and the memoized bars —
+  // only change when the spread actually changes, not on every room snapshot.
+  const voteSignature = useMemo(
+    () =>
+      Object.entries(voteCount)
+        .sort(([a], [b]) => {
+          const aValue = numericCardValue(a);
+          const bValue = numericCardValue(b);
+          if (aValue != null && bValue != null) return aValue - bValue;
+          if (aValue != null) return -1;
+          if (bValue != null) return 1;
+          return a.localeCompare(b);
+        })
+        .map(([card, n]) => `${card}:${n}`)
+        .join("|"),
+    [voteCount]
+  );
 
-    room.game.table.forEach((userCard) => {
-      if (userCard.card) {
-        counts[userCard.card] = (counts[userCard.card] || 0) + 1;
-      }
-    });
-
-    return Object.entries(counts)
-      .sort(([a], [b]) => parseFloat(a) - parseFloat(b))
-      .map(([card, n]) => `${card}:${n}`)
-      .join("|");
-  }, [room.game.table]);
-
-  const chartData = useMemo(() => {
+  const chartData = useMemo<ChartDatum[]>(() => {
     if (!voteSignature) return [];
 
     return voteSignature.split("|").map((entry) => {
       const [card, count] = entry.split(":");
       return {
         card,
-        cardValue: parseFloat(card),
+        cardValue: numericCardValue(card) ?? Number.POSITIVE_INFINITY,
         Votes: Number(count)
       };
     });
   }, [voteSignature]);
 
-  const maxCardCount = useMemo(() => {
-    return Math.max(...chartData.map((card) => card.Votes));
-  }, [chartData]);
+  const maxCardCount = useMemo(
+    () => (chartData.length ? Math.max(...chartData.map((c) => c.Votes)) : 0),
+    [chartData]
+  );
 
   const averageVote = useMemo(() => {
-    const numericVotes = room.game.table
-      .map((userCard) => parseFloat(userCard.card || "0"))
-      .filter((vote) => !isNaN(vote));
-    const sum = numericVotes.reduce((acc, vote) => acc + vote, 0);
-    return numericVotes.length > 0 ? sum / numericVotes.length : 0;
-  }, [room.game.table]);
+    let sum = 0;
+    let n = 0;
+    Object.entries(voteCount).forEach(([card, c]) => {
+      const v = numericCardValue(card);
+      if (v != null) {
+        sum += v * c;
+        n += c;
+      }
+    });
+    return n > 0 ? sum / n : 0;
+  }, [voteCount]);
 
   const agreement = useMemo(() => {
-    const totalVotes = room.game.table.length;
-    const mostCommonVotes = Math.max(...Object.values(voteCount));
+    const counts = Object.values(voteCount);
+    const totalVotes = counts.reduce((total, n) => total + n, 0);
+    const mostCommonVotes = counts.length ? Math.max(...counts) : 0;
     return totalVotes > 0 ? (mostCommonVotes / totalVotes) * 100 : 0;
-  }, [room.game.table, voteCount]);
+  }, [voteCount]);
 
-  const numBars = chartData.length;
-  const dynamicWidth = 8 + numBars * 1.5;
-  const dynamicMinWidth = 10 + numBars * 2;
-  const dynamicMaxWidth = 120 + numBars * 70;
+  const consensusInsight = useMemo(() => {
+    const entries = Object.entries(voteCount);
+    const totalVotes = entries.reduce((total, [, count]) => total + count, 0);
+    if (!totalVotes) return "Wait for the team to vote before discussing.";
 
-  const chartContainerStyle = {
-    minWidth: `${dynamicMinWidth}px`,
-    width: `${dynamicWidth}vw`,
-    maxWidth: `${dynamicMaxWidth}px`,
-    minHeight: "170px"
-  };
+    const numericEntries = entries
+      .map(([card, count]) => ({
+        card,
+        count,
+        value: numericCardValue(card)
+      }))
+      .filter(
+        (entry): entry is { card: string; count: number; value: number } =>
+          entry.value != null
+      )
+      .sort((a, b) => a.value - b.value);
+    const nonNumericVotes =
+      totalVotes -
+      numericEntries.reduce((total, entry) => total + entry.count, 0);
+    const leading = entries.reduce((leader, entry) =>
+      entry[1] > leader[1] ? entry : leader
+    );
+    const numericByCount = [...numericEntries].sort(
+      (a, b) => b.count - a.count || a.value - b.value
+    );
+    const leadingValue = numericCardValue(leading[0]);
+    const runnerUp = numericByCount[1];
+    const closeTieThreshold = Math.max(1, Math.floor(totalVotes * 0.1));
+    const closeTie =
+      runnerUp &&
+      Math.abs(numericByCount[0].count - runnerUp.count) <= closeTieThreshold;
+    const high = numericEntries[numericEntries.length - 1];
+    const previousHigh = numericEntries[numericEntries.length - 2];
+    const low = numericEntries[0];
+    const nextLow = numericEntries[1];
+    const highOutlier =
+      numericEntries.length >= 3 &&
+      high?.count === 1 &&
+      previousHigh != null &&
+      (high.value >= previousHigh.value * 2 ||
+        high.value - previousHigh.value >= 5);
+    const lowOutlier =
+      numericEntries.length >= 3 &&
+      low?.count === 1 &&
+      nextLow != null &&
+      nextLow.value >= Math.max(low.value * 2, low.value + 3);
 
-  useEffect(() => {
-    if (!room.isGameOver) return;
-    if (!chartRef.current) return;
+    if (nonNumericVotes > 0) {
+      return `${nonNumericVotes} non-numeric ${
+        nonNumericVotes === 1 ? "vote needs" : "votes need"
+      } clarification before sizing.`;
+    }
 
-    let cancelled = false;
-    let attempts = 0;
-    const maxAttempts = 8;
+    if (leadingValue != null && leadingValue >= 13) {
+      return `The team centers on ${leading[0]} - this story maybe oversized, consider splitting before committing.`;
+    }
 
-    const verify = () => {
-      if (cancelled) return;
-      if (!chartRef.current) return;
+    if (closeTie) {
+      return `Close split between ${numericByCount[0].card} and ${runnerUp.card} - discuss any remaining assumptions.`;
+    }
 
-      const labels = chartRef.current.querySelectorAll("text");
+    if (highOutlier || lowOutlier) {
+      const outlier = highOutlier ? high : low;
+      return `Possible outlier at ${outlier.card} - ask about hidden scope or assumptions.`;
+    }
 
-      const expected = chartData.length;
+    if (agreement >= 75) {
+      return `Strong alignment on ${leading[0]} - confirm and commit.`;
+    }
 
-      if (labels.length < expected && attempts < maxAttempts) {
-        attempts++;
+    if (agreement >= 50) {
+      return `The team leans toward ${leading[0]} - confirm the key assumptions.`;
+    }
 
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            setTimeout(verify, 120);
-          });
-        });
-      }
-    };
+    if (numericEntries.length > 1) {
+      const low = numericEntries[0].card;
+      const high = numericEntries[numericEntries.length - 1].card;
+      return `Wide spread (${low}-${high}) - compare and discuss the lowest [${low}] and highest [${high}] assumptions.`;
+    }
 
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        verify();
-      });
-    });
+    return "No clear estimate yet - compare assumptions before committing.";
+  }, [agreement, voteCount]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [chartData, room]);
-
-  useEffect(() => {
-    if (!room.isGameOver) return;
-    setShowLabels(false);
-    const t = setTimeout(() => setShowLabels(true), 750);
-    return () => clearTimeout(t);
-  }, [chartData, room.isGameOver]);
+  const compactWidth = Math.min(520, Math.max(280, chartData.length * 78 + 20));
+  const chartStyle = {
+    "--vote-chart-width": `${compactWidth}px`
+  } as CSSProperties;
 
   return (
     <div
-      className="flex flex-col items-center justify-center overflow-visible"
+      className="vote-distribution-chart flex min-w-[220px] max-w-[520px] shrink flex-col items-center justify-center overflow-visible"
+      style={chartStyle}
+      data-expand-consensus={chartData.length >= 4}
       data-testid="vote-distribution-chart"
     >
       {chartData.length === 0 && (
@@ -157,113 +293,101 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
           </span>
         </div>
       )}
-      <ChartContainer
-        ref={chartRef}
-        style={chartContainerStyle}
-        className="-mb-5 h-[15vh] min-h-[170px]"
-        config={{
-          card: {
-            label: "Votes",
-            color: "hsl(var(--chart-1))"
-          }
-        }}
-      >
-        <BarChart data={chartData}>
-          <Bar
-            dataKey="Votes"
-            radius={10}
-            minPointSize={24}
-            fillOpacity={0.5}
-            isAnimationActive
-            animationBegin={0}
-            animationDuration={500}
-            label={
-              showLabels && (
-                <VoteLabel max={maxCardCount} barCount={chartData.length} />
-              )
-            }
-          >
-            {chartData.map((entry) => {
-              const isMajority = entry.Votes === maxCardCount;
-              return (
-                <Cell
-                  key={entry.card}
-                  fill="hsl(var(--accent))"
-                  style={{
-                    filter: isMajority
-                      ? "drop-shadow(0 0 10px hsl(var(--accent))) drop-shadow(0 0 24px rgba(var(--accent-rgb),0.4))"
-                      : "drop-shadow(0 0 10px rgba(var(--accent-rgb),0.3))",
-                    animation: isMajority
-                      ? "pulseGlow 3s ease-in-out infinite"
-                      : undefined
-                  }}
-                />
-              );
-            })}
-          </Bar>
-          <XAxis
-            dataKey="card"
-            tickLine={false}
-            axisLine={false}
-            tickMargin={4}
-          />
-          <ChartTooltip
-            cursor={false}
-            content={
-              <ChartTooltipContent
-                labelFormatter={(value) => `Story Points | ${value}`}
-              />
-            }
-          />
-        </BarChart>
-      </ChartContainer>
+      <DistributionBars chartData={chartData} maxCardCount={maxCardCount} />
 
-      {/* --- Gauge --- */}
-      <div className="relative w-[clamp(1.25rem,10vw,10rem)] h-[clamp(60px,10vw,100px)] flex items-end justify-center">
-        <svg
-          viewBox="0 0 100 50"
-          className="absolute top-0 left-0 w-full h-full"
-        >
-          <path
-            d="M10,50 A40,40 0 0,1 90,50"
-            fill="none"
-            stroke="hsl(var(--border))"
-            strokeWidth="6"
-            strokeLinecap="round"
-            opacity="0.25"
-          />
-          <path
-            d="M10,50 A40,40 0 0,1 90,50"
-            fill="none"
-            stroke="hsl(var(--accent))"
-            strokeWidth="6"
-            strokeLinecap="round"
-            strokeDasharray="126"
-            strokeDashoffset={126 - (agreement / 100) * 126}
-            style={{
-              filter: "drop-shadow(0 0 2px rgba(var(--accent-rgb),0.6))",
-              transition: "stroke-dashoffset 0.6s ease"
-            }}
-          />
-        </svg>
-
-        <div className="absolute bottom-0 flex flex-col items-center justify-center text-center">
-          <CardTitle
-            className={[
-              "text-[clamp(1rem,3vw,2rem)] tabular-nums",
-              isStarry
-                ? "text-accent-foreground"
-                : "text-foreground dark:text-accent-foreground",
-              "drop-shadow-[0_0_6px_rgba(var(--accent-rgb),0.4)]"
-            ].join(" ")}
-          >
-            {averageVote.toFixed(1)}
-          </CardTitle>
-          <span className="text-[clamp(0.45rem,1.2vw,0.75rem)] text-muted-foreground tracking-tight text-nowrap">
-            avg • {agreement.toFixed(0)}% agree
+      <div className="vote-distribution-summary mt-2 grid min-h-[76px] w-full items-center overflow-hidden rounded-xl px-1.5 py-1.5 backdrop-blur-md">
+        <div className="flex items-center justify-center">
+          <span className="vote-distribution-community flex size-8 items-center justify-center rounded-full border">
+            <UsersRound
+              className="size-[58%]"
+              strokeWidth={1.8}
+              aria-hidden="true"
+            />
           </span>
+        </div>
+        <Metric label="AVERAGE" value={averageVote.toFixed(1)} dividerAfter />
+
+        <div className="vote-consensus flex min-w-0 items-center justify-center gap-2 px-1">
+          <div className="relative h-[66px] w-[clamp(108px,46cqw,160px)] max-w-full shrink-0">
+            <svg
+              viewBox="0 0 180 94"
+              className="absolute inset-0 size-full"
+              aria-hidden="true"
+            >
+              <defs>
+                <linearGradient
+                  id="consensus-gradient"
+                  x1="0"
+                  y1="0"
+                  x2="1"
+                  y2="0"
+                >
+                  <stop offset="0%" stopColor="var(--vote-fill-top)" />
+                  <stop offset="100%" stopColor="var(--vote-neon)" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M18,80 A72,72 0 0,1 162,80"
+                fill="none"
+                stroke="var(--vote-track)"
+                strokeWidth="9"
+                strokeLinecap="round"
+              />
+              <path
+                d="M18,80 A72,72 0 0,1 162,80"
+                fill="none"
+                stroke="url(#consensus-gradient)"
+                strokeWidth="9"
+                strokeLinecap="round"
+                pathLength="100"
+                strokeDasharray="100"
+                strokeDashoffset={100 - agreement}
+                style={{
+                  filter: "var(--vote-gauge-shadow)",
+                  transition: "stroke-dashoffset 0.6s ease"
+                }}
+              />
+            </svg>
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center pt-5 text-center leading-none">
+              <CardTitle className="vote-distribution-value text-[1.5rem] tabular-nums">
+                {agreement.toFixed(0)}%
+              </CardTitle>
+              <span className="vote-distribution-label mt-0.5 text-[0.48rem] font-bold tracking-[0.14em]">
+                AGREE
+              </span>
+              <span className="vote-consensus-pill mt-1 rounded-full border px-3 py-0.5 text-[0.4rem] font-semibold tracking-[0.12em]">
+                CONSENSUS LEVEL
+              </span>
+            </div>
+          </div>
+          <p className="vote-consensus-copy min-w-0 text-[0.56rem] leading-4">
+            <span className="vote-distribution-label mb-0.5 block text-[0.44rem] font-bold tracking-[0.14em]">
+              NEXT STEP
+            </span>
+            {consensusInsight}
+          </p>
         </div>
       </div>
     </div>
   );
 };
+
+const Metric: FC<{
+  label: string;
+  value: string;
+  dividerAfter?: boolean;
+}> = ({ label, value, dividerAfter = false }) => (
+  <div
+    className={[
+      "flex min-w-0 flex-col items-center justify-center px-1 text-center",
+      dividerAfter ? "vote-distribution-divider border-r" : ""
+    ].join(" ")}
+  >
+    <span className="vote-distribution-label text-[0.48rem] font-semibold tracking-[0.12em]">
+      {label}
+    </span>
+    <CardTitle className="vote-distribution-value mt-1 text-[1.5rem] tabular-nums leading-none">
+      {value}
+    </CardTitle>
+  </div>
+);

@@ -50,8 +50,12 @@ export function Deck({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Once results are visible, reserve enough horizontal space for their
+  // compact panel. This lets the deck fold to two rows before the combined
+  // footer needs horizontal scrolling.
+  const resultsWidth = isGameOver ? 360 : 0;
   const shouldTwoRowLayout =
-    cards.length > 5 && windowWidth < 250 + 75 * cards.length;
+    cards.length > 5 && windowWidth < 250 + 75 * cards.length + resultsWidth;
   const cardsPerRow = shouldTwoRowLayout
     ? Math.ceil(cards.length / 2)
     : cards.length;

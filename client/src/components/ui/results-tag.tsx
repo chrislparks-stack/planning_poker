@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { Vote } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -12,14 +13,11 @@ export const ResultsTag: React.FC<ResultsTagProps> = ({ active }) => {
       initial={{ opacity: 0, y: 0 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
+      data-active={active}
       className={cn(
-        "flex items-center justify-center rounded-full py-3 select-none mr-2",
-        "text-[8px] font-semibold uppercase tracking-[0.2em]",
-        "text-[hsl(var(--accent))]",
-        "border border-[hsl(var(--accent)/0.3)]",
-        "bg-[hsl(var(--accent)/0.08)] backdrop-blur-[2px]",
-        "transition-all duration-300",
-        active ? "shadow-[0_0_8px_rgba(var(--accent-rgb),0.25)]" : "shadow-none"
+        "vote-distribution-rail mr-3 flex w-5 self-stretch items-center justify-start gap-1.5 rounded-lg border py-2 select-none",
+        "text-[6px] font-semibold uppercase tracking-[0.12em]",
+        "backdrop-blur-[2px] transition-all duration-300"
       )}
       style={{
         writingMode: "vertical-rl",
@@ -27,7 +25,12 @@ export const ResultsTag: React.FC<ResultsTagProps> = ({ active }) => {
         letterSpacing: "0.1em"
       }}
     >
-      VOTE RESULTS
+      <Vote
+        className="mb-0.5 size-3.5 shrink-0"
+        style={{ writingMode: "horizontal-tb" }}
+        aria-hidden="true"
+      />
+      <span>VOTE DISTRIBUTION</span>
     </motion.div>
   );
 };
