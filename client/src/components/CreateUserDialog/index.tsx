@@ -77,7 +77,8 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
 
       login?.({
         id: data.createUser.id,
-        username: data.createUser.username
+        username: data.createUser.username,
+        handRaised: data.createUser.handRaised
       });
 
       setOpen(false);

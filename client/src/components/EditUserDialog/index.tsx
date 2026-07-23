@@ -51,7 +51,8 @@ export const EditUserDialog: FC<EditUserDialogProps> = ({ open, setOpen }) => {
       // mutation only runs when the username has actually changed, so this is a true update
       login?.({
         id: data.editUser.id,
-        username: data.editUser.username
+        username: data.editUser.username,
+        handRaised: data.editUser.handRaised
       });
       setOpen(false);
 

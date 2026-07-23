@@ -25,6 +25,7 @@ import { createPortal } from "react-dom";
 
 import { getShiftedAccent } from "@/lib/theme-accent.ts";
 import { cn } from "@/lib/utils";
+import { GRAPHQL_ENDPOINT } from "@/settings";
 import { compressMessage } from "@/utils/messageUtils.ts";
 import { OverlayPortal } from "@/utils/overlayPortal.tsx";
 
@@ -53,6 +54,55 @@ interface GiphyCategory {
   name: string;
   gif?: GiphyGif;
 }
+
+interface GiphyResponse<T> {
+  data?: T;
+}
+
+const GIPHY_PROXY_BASE = `${GRAPHQL_ENDPOINT.replace(/\/+$/, "")}/giphy`;
+
+const fetchGiphy = async <T,>(
+  path: string,
+  params: Record<string, string> = {}
+): Promise<GiphyResponse<T>> => {
+  const query = new URLSearchParams(params);
+  const proxyUrl = `${GIPHY_PROXY_BASE}/${path}?${query.toString()}`;
+  const browserKey = import.meta.env.VITE_GIPHY_KEY;
+  const fetchDirect = async (apiKey: string) => {
+    const directQuery = new URLSearchParams(params);
+    directQuery.set("api_key", apiKey);
+    const directUrl = `https://api.giphy.com/v1/gifs/${path}?${directQuery.toString()}`;
+    const response = await fetch(directUrl);
+    if (!response.ok) throw new Error(`GIPHY returned ${response.status}`);
+    return (await response.json()) as GiphyResponse<T>;
+  };
+
+  // The local Rust process does not load client/.env.local. Keep local
+  // development quiet by using its browser key directly; production still
+  // goes through our first-party proxy for restrictive networks.
+  if (import.meta.env.DEV && browserKey) {
+    return fetchDirect(browserKey);
+  }
+
+  let proxyResponse: Response;
+  try {
+    proxyResponse = await fetch(proxyUrl);
+  } catch (proxyError) {
+    // Local setups may not have moved the browser key to the server yet.
+    if (!browserKey) throw proxyError;
+    return fetchDirect(browserKey);
+  }
+
+  if (proxyResponse.ok) {
+    return (await proxyResponse.json()) as GiphyResponse<T>;
+  }
+
+  if (!browserKey) {
+    throw new Error(`GIF proxy returned ${proxyResponse.status}`);
+  }
+
+  return fetchDirect(browserKey);
+};
 
 interface ChatInputProps {
   onSend: (
@@ -335,21 +385,22 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     e.target.value = "";
   };
 
-  const giphyGifUrl = (g: GiphyGif) =>
-    g.images?.fixed_width?.url ||
-    g.images?.downsized_medium?.url ||
-    g.images?.downsized?.url ||
-    g.images?.original?.url ||
-    "";
+  const giphyGifUrl = (g: GiphyGif) => {
+    const source =
+      g.images?.fixed_width?.url ||
+      g.images?.downsized_medium?.url ||
+      g.images?.downsized?.url ||
+      g.images?.original?.url ||
+      "";
+
+    return source
+      ? `${GIPHY_PROXY_BASE}/image?${new URLSearchParams({ url: source })}`
+      : "";
+  };
 
   const fetchCategories = useCallback(async () => {
-    const apiKey = import.meta.env.VITE_GIPHY_KEY;
-
-    const url = `https://api.giphy.com/v1/gifs/categories?api_key=${apiKey}`;
-
     try {
-      const res = await fetch(url);
-      const data = await res.json();
+      const data = await fetchGiphy<GiphyCategory[]>("categories");
 
       setCategories(
         ((data.data || []) as GiphyCategory[]).map((c) => ({
@@ -366,15 +417,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   }, []);
 
   const fetchAutocomplete = async (term: string) => {
-    const apiKey = import.meta.env.VITE_GIPHY_KEY;
-
-    const url = `https://api.giphy.com/v1/gifs/search/tags?api_key=${apiKey}&q=${encodeURIComponent(
-      term
-    )}&limit=5`;
-
     try {
-      const res = await fetch(url);
-      const data = await res.json();
+      const data = await fetchGiphy<Array<{ name: string }>>("search/tags", {
+        q: term,
+        limit: "5"
+      });
       setAutocomplete(
         ((data.data || []) as Array<{ name: string }>).map((t) => t.name)
       );
@@ -386,17 +433,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   const fetchGifs = async (query?: string) => {
     const term = query?.trim();
-    const apiKey = import.meta.env.VITE_GIPHY_KEY;
-    const url = term
-      ? `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(
-          term
-        )}&limit=12`
-      : `https://api.giphy.com/v1/gifs/trending?api_key=${apiKey}&limit=12`;
 
     try {
       setIsLoading(true);
-      const res = await fetch(url);
-      const data = await res.json();
+      const data = await fetchGiphy<GiphyGif[]>(
+        term ? "search" : "trending",
+        term ? { q: term, limit: "12" } : { limit: "12" }
+      );
 
       const normalized = ((data.data || []) as GiphyGif[]).map((g) => ({
         id: g.id,
@@ -519,8 +562,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
       setPickerPos({
-        top: rect.top + window.scrollY,
-        left: rect.left + window.scrollX,
+        top: rect.top,
+        left: rect.left,
         width: rect.width,
         height: rect.height
       });
@@ -1032,6 +1075,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     // FLOATING / OVERLAY MODE (popup composer)
     if (!portalRoot) return null;
 
+    const preferredLeft = isLeftSide
+      ? pickerPos.left
+      : pickerPos.left + pickerPos.width - 218;
+    const pickerLeft = Math.min(
+      Math.max(8, preferredLeft),
+      Math.max(8, window.innerWidth - 226)
+    );
+
     return createPortal(
       <div
         ref={gifPickerRef}
@@ -1039,11 +1090,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         className="fixed w-[218px] border border-border rounded-xl shadow-xl bg-popover overflow-hidden z-[60]"
         style={{
           top: `${
-            isTopSide ? pickerPos.top + pickerPos.height : pickerPos.top - 263
+            isTopSide ? pickerPos.top + pickerPos.height : pickerPos.top
           }px`,
-          left: `${
-            isLeftSide ? pickerPos.left : pickerPos.left + pickerPos.width - 220
-          }px`
+          left: `${pickerLeft}px`,
+          transform: isTopSide ? undefined : "translateY(-100%)"
         }}
         onClick={(e) => e.stopPropagation()}
       >

@@ -494,7 +494,11 @@ export function RoomPage() {
                     />
                     {room.isGameOver && (
                       <div className="ml-2 flex min-w-[246px] max-w-[548px] flex-[0_1_auto] justify-center">
-                        <ResultsTag />
+                        <ResultsTag
+                          hasBackground={
+                            background.enabled && background.id === "starry"
+                          }
+                        />
                         <VoteDistributionChart room={room} />
                       </div>
                     )}

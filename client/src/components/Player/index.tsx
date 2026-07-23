@@ -1,9 +1,9 @@
 import {
   Ban,
-  CheckCircle2,
   CircleOff,
   Crown,
   DoorOpen,
+  Hand,
   Hourglass,
   MessageSquareText,
   MessagesSquare
@@ -19,21 +19,25 @@ import {
 import darkModeDiscussion from "@/assets/dark-mode-discussion.gif";
 import lightModeDiscussion from "@/assets/light-mode-discussion.gif";
 import noVoteGif from "@/assets/no-vote.gif";
-import pickedGif from "@/assets/picked.gif";
 import { useTheme } from "@/components";
+import { CardPickedIcon } from "@/components/ui/card-picked-icon.tsx";
 import { ChatInputWrapper } from "@/components/ui/chat-input-wrapper.tsx";
+import {
+  PlayerReactionBurst,
+  QuickReactionPicker
+} from "@/components/ui/player-reaction.tsx";
 import { useBackgroundConfig } from "@/contexts/BackgroundContext.tsx";
 import { useToast } from "@/hooks/use-toast";
-import { Room, User } from "@/types";
+import { ReactionKind, Room, User } from "@/types";
 import { useCardPosition } from "@/utils/cardPositionContext.tsx";
 
 if (typeof window !== "undefined") {
-  [darkModeDiscussion, lightModeDiscussion, noVoteGif, pickedGif].forEach(
-    (src) => {
-      const img = new Image();
-      img.src = src;
-    }
-  );
+  // picked.gif is a one-shot animation. Preloading it can advance its shared
+  // Chromium animation timeline before the submitted-card state is mounted.
+  [darkModeDiscussion, lightModeDiscussion, noVoteGif].forEach((src) => {
+    const img = new Image();
+    img.src = src;
+  });
 }
 
 interface CardIconImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
@@ -60,6 +64,7 @@ interface PlayerProps {
   playerPositionMap?: Record<string, { x: number; y: number }>;
   tableRect?: DOMRect | null;
   chatVisible?: boolean;
+  reaction?: { id: string; reaction: ReactionKind };
 }
 
 type MenuPos = { x: number; y: number } | null;
@@ -74,7 +79,8 @@ export function Player({
   onMakeOwner,
   playerPositionMap,
   tableRect,
-  chatVisible
+  chatVisible,
+  reaction
 }: PlayerProps) {
   const { toast } = useToast();
   const { theme } = useTheme();
@@ -97,6 +103,19 @@ export function Player({
   const [banUser] = useBanUserMutation();
   const previousOwnerRef = useRef<string | null | undefined>(null);
   const [showChatInput, setShowChatInput] = useState(false);
+  const [showReactionMenu, setShowReactionMenu] = useState(false);
+  const reactionCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
+
+  useEffect(
+    () => () => {
+      if (reactionCloseTimerRef.current) {
+        clearTimeout(reactionCloseTimerRef.current);
+      }
+    },
+    []
+  );
 
   // --- Local state ---
   const [menuPos, setMenuPos] = useState<MenuPos>(null);
@@ -221,16 +240,7 @@ export function Player({
           </div>
         );
       } else {
-        return (
-          <CardIconImage
-            key="picked"
-            src={pickedGif}
-            alt="Card picked"
-            className="max-w-none max-h-none"
-            style={{ width: 90, height: 70 }}
-            fallback={<CheckCircle2 className="text-glass w-8 h-8" />}
-          />
-        );
+        return <CardPickedIcon />;
       }
     }
 
@@ -532,9 +542,27 @@ export function Player({
   const truncateUsername = (name: string) =>
     name.length < 30 ? name : `${name.slice(0, 26)}...`;
 
+  const openReactionMenu = () => {
+    if (reactionCloseTimerRef.current) {
+      clearTimeout(reactionCloseTimerRef.current);
+      reactionCloseTimerRef.current = null;
+    }
+    setShowReactionMenu(true);
+  };
+
+  const closeReactionMenuSoon = () => {
+    if (reactionCloseTimerRef.current) {
+      clearTimeout(reactionCloseTimerRef.current);
+    }
+    reactionCloseTimerRef.current = setTimeout(() => {
+      setShowReactionMenu(false);
+      reactionCloseTimerRef.current = null;
+    }, 120);
+  };
+
   const title = useMemo(() => {
     if (isTargetSelf && !chatVisible) {
-      return "Click to chat";
+      return isGameOver ? undefined : "Click to chat";
     }
 
     const name = truncateUsername(user.username);
@@ -553,169 +581,231 @@ export function Player({
       ? `${name} did not vote`
       : `${name} voted ${user.lastCardValue}`;
   }, [
-    isTargetSelf,
     user.username,
     user.lastCardPicked,
     user.lastCardValue,
     isGameOver,
     hasUnreadFromUser,
-    chatVisible
+    chatVisible,
+    isTargetSelf
   ]);
 
   return (
     <div className="flex flex-col items-center" data-testid="player">
       <div
-        className={`flex flex-col items-center ${
-          isTargetSelf && !chatVisible ? "cursor-pointer" : "cursor-default"
-        }`}
-        ref={cardRef}
-        title={title}
-        {...(isTargetSelf && !chatVisible
-          ? {
-              role: "button",
-              tabIndex: 0,
-              onClick: () => setShowChatInput(!showChatInput),
-              onKeyDown: (e: React.KeyboardEvent) => {
-                // only when the card itself is focused — keystrokes inside the
-                // chat composer (message editor, gif search) bubble up here
-                if (e.target !== e.currentTarget) return;
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  setShowChatInput((v) => !v);
-                }
-              }
-            }
-          : {})}
+        className="relative"
+        onMouseEnter={openReactionMenu}
+        onMouseLeave={closeReactionMenuSoon}
+        onFocusCapture={openReactionMenu}
+        onBlurCapture={(event) => {
+          if (
+            !event.currentTarget.contains(event.relatedTarget as Node | null)
+          ) {
+            closeReactionMenuSoon();
+          }
+        }}
       >
         <div
-          {...interactiveProps}
-          className="relative flex flex-col items-center z-20 hover:z-50 focus-within:z-50 transition-[z-index]"
+          className={`flex flex-col items-center ${
+            isTargetSelf && !chatVisible ? "cursor-pointer" : "cursor-default"
+          }`}
+          ref={cardRef}
+          title={title}
+          {...(isTargetSelf && !chatVisible
+            ? {
+                role: "button",
+                tabIndex: 0,
+                onClick: () => {
+                  setShowReactionMenu(false);
+                  setShowChatInput(!showChatInput);
+                },
+                onKeyDown: (e: React.KeyboardEvent) => {
+                  // only when the card itself is focused — keystrokes inside the
+                  // chat composer (message editor, gif search) bubble up here
+                  if (e.target !== e.currentTarget) return;
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setShowReactionMenu(false);
+                    setShowChatInput((v) => !v);
+                  }
+                }
+              }
+            : {})}
         >
-          {/* Glow Behind Card */}
           <div
-            className="absolute top-0 left-0 right-0 mx-auto rounded-xl blur-sm"
-            style={{
-              width: "4rem",
-              height: "6rem",
-              boxShadow: `0 0 5px 3px hsl(var(--accent) / 0.65)`,
-              background: `
+            {...interactiveProps}
+            className="relative flex flex-col items-center z-20 hover:z-50 focus-within:z-50 transition-[z-index]"
+          >
+            {/* Glow Behind Card */}
+            <div
+              className="absolute top-0 left-0 right-0 mx-auto rounded-xl blur-sm"
+              style={{
+                width: "4rem",
+                height: "6rem",
+                boxShadow: `0 0 5px 3px hsl(var(--accent) / 0.65)`,
+                background: `
                 radial-gradient(
                   circle at 50% 50%,
                   hsl(var(--accent) / 0.55) 0%,
                   transparent var(--glass-fade-stop)
                 )
               `
-            }}
-          />
+              }}
+            />
 
-          {/* Glass Card */}
-          <div
-            className="
+            {/* Glass Card */}
+            <div
+              data-hand-raised={user.handRaised || undefined}
+              className={`
               relative w-[4rem] h-[6rem]
               rounded-xl isolate
               backdrop-blur-[2px]
               shadow-[inset_0_0_6px_rgba(0,0,0,0.45),inset_0_0_20px_rgba(0,0,0,0.25)]
               group
-            "
-          >
-            {isTargetSelf && !chatVisible && (
-              <div
-                className="
+              ${user.handRaised ? "player-card-hand-raised" : ""}
+            `}
+            >
+              {isTargetSelf && !chatVisible && (
+                <div
+                  className="
                   flex mt-1.5 ml-1
                   text-[5px] uppercase tracking-[0.14em]
                   select-none flex-row
                 "
-                style={{
-                  textShadow: `
+                  style={{
+                    textShadow: `
                     0 0 1px rgba(255,255,255,0.5),
                     0 1px 2px rgba(0,0,0,0.6),
                     0 0 6px hsla(var(--accent), 0.45)
                   `
-                }}
-              >
-                <span
-                  className="
+                  }}
+                >
+                  <span
+                    className={`
                     flex flex-row items-center
                     text-center font-bold
-                    text-accent/50 dark:text-accent/25
-                    group-hover:text-accent/90
                     transition-all duration-500
                     scale-x-[-1]
-                  "
-                >
-                  <MessageSquareText className="text-glass w-2.5 h-2.5 ml-[2px]" />
-                </span>
-                <span
-                  className="
+                    ${
+                      showReactionMenu
+                        ? "text-accent/90"
+                        : "text-accent/50 dark:text-accent/25"
+                    }
+                  `}
+                  >
+                    <MessageSquareText className="text-glass w-2.5 h-2.5 ml-[2px]" />
+                  </span>
+                  <span
+                    className={`
                     flex flex-row items-center
                     text-center font-bold
-                    text-accent/0
-                    group-hover:text-accent
-                    transition-all duration-500
-                  "
-                >
-                  Click to chat
-                </span>
-              </div>
-            )}
+                    transition-all duration-300
+                    ${
+                      showReactionMenu
+                        ? "text-accent delay-100"
+                        : "text-accent/0"
+                    }
+                  `}
+                  >
+                    Click to chat
+                  </span>
+                </div>
+              )}
 
-            <div
-              className="
+              {user.handRaised && (
+                <div
+                  aria-label="Hand raised"
+                  role="img"
+                  className={`player-hand-raised-status pointer-events-none absolute right-0 top-0 z-10 flex h-[19px] w-[15px] items-center justify-center rounded-bl-[8px] rounded-tr-xl transition-opacity duration-100 ${
+                    showReactionMenu ? "opacity-0" : "opacity-100"
+                  }`}
+                >
+                  <Hand
+                    aria-hidden="true"
+                    strokeWidth={1.2}
+                    className="h-[13px] w-[10px]"
+                  />
+                </div>
+              )}
+
+              <div
+                className="
                 absolute inset-0
                 flex flex-col items-center justify-center
                 pointer-events-none
               "
-            >
-              {/* Avatar */}
-              <div className="flex items-center justify-center">{cardIcon}</div>
-            </div>
-            <div className={isStarry ? "starry" : undefined}>
-              <div
-                className="
+              >
+                {/* Avatar */}
+                <div className="flex items-center justify-center">
+                  {cardIcon}
+                </div>
+              </div>
+              <div className={isStarry ? "starry" : undefined}>
+                <div
+                  className="
                   absolute bottom-[4px] w-full text-center text-[14px]
                   font-semibold tracking-wide pointer-events-none select-none
                   text-glass
                 "
-              >
-                <div
-                  className="flex flex-row items-center justify-center gap-[3px] break-all"
-                  style={{
-                    fontSize: Math.max(
-                      7,
-                      Math.min(80 / user.username.length, 14)
-                    )
-                  }}
                 >
-                  {room?.roomOwnerId === user.id && (
-                    <Crown className="text-glass w-3 h-3" />
-                  )}
-                  <span>
-                    {user.username.length < 30
-                      ? user.username
-                      : `${user.username.slice(0, 26)}...`}
-                  </span>
-                  {hasUnreadFromUser && (
-                    <MessagesSquare className="w-[10px] h-[10px] -ml-1 -mt-1 text-accent animate-pulse" />
-                  )}
+                  <div
+                    className="relative inline-flex max-w-full flex-row items-center justify-center gap-[3px] whitespace-nowrap"
+                    style={{
+                      fontSize: Math.max(
+                        7,
+                        Math.min(80 / user.username.length, 14)
+                      )
+                    }}
+                  >
+                    {room?.roomOwnerId === user.id && (
+                      <Crown className="text-glass w-3 h-3" />
+                    )}
+                    <span>
+                      {user.username.length < 30
+                        ? user.username
+                        : `${user.username.slice(0, 26)}...`}
+                    </span>
+                    {hasUnreadFromUser && (
+                      <MessagesSquare className="w-[10px] h-[10px] -ml-1 -mt-1 text-accent animate-pulse" />
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
-        {isTargetSelf && (
-          <ChatInputWrapper
-            onSend={(plain, formatted) => handleSendChat(plain, formatted)}
-            onClose={() => setShowChatInput(false)}
-            isOpen={showChatInput}
-            className={`${
-              isLeftSide ? "right-[20px] top-5" : "-right-[280px] top-5"
-            }`}
-            isLeftSide={isLeftSide}
-            isTopSide={isTopSide}
+        {isGameOver && isTargetSelf && !showChatInput && (
+          <QuickReactionPicker
+            roomId={roomId}
+            userId={user.id}
+            open={showReactionMenu}
+            onClose={() => setShowReactionMenu(false)}
+            openBelow={isTopSide}
+            onMenuEnter={openReactionMenu}
+            onMenuLeave={closeReactionMenuSoon}
+            handRaised={user.handRaised}
+          />
+        )}
+        {reaction && (
+          <PlayerReactionBurst
+            key={reaction.id}
+            eventId={reaction.id}
+            reaction={reaction.reaction}
           />
         )}
       </div>
+      {isTargetSelf && (
+        <ChatInputWrapper
+          onSend={(plain, formatted) => handleSendChat(plain, formatted)}
+          onClose={() => setShowChatInput(false)}
+          isOpen={showChatInput}
+          className={`${
+            isLeftSide ? "right-[20px] top-5" : "-right-[280px] top-5"
+          }`}
+          isLeftSide={isLeftSide}
+          isTopSide={isTopSide}
+        />
+      )}
       {menu && typeof document !== "undefined"
         ? createPortal(menu, document.body)
         : menu}

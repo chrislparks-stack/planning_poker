@@ -530,6 +530,144 @@ body.dialog-open .chat-panel {
   color: var(--vote-copy);
 }
 
+/* Quick reactions share the vote distribution's accent-driven glass palette. */
+.reaction-picker {
+  --reaction-panel-bg: hsl(var(--accent-hue) 58% 98% / 0.97);
+  --reaction-panel-bg-end: hsl(var(--accent-hue) 42% 95% / 0.98);
+  --reaction-panel-border: hsl(var(--accent-hue) 48% 52% / 0.5);
+  --reaction-label: hsl(var(--accent-hue) 76% 38%);
+  --reaction-item-bg: hsl(var(--accent-hue) 58% 96% / 0.9);
+  --reaction-item-border: hsl(var(--accent-hue) 48% 58% / 0.28);
+  --reaction-item-hover: hsl(var(--accent-hue) 68% 91% / 0.98);
+  border: 1px solid var(--reaction-panel-border);
+  background: linear-gradient(
+    135deg,
+    var(--reaction-panel-bg),
+    var(--reaction-panel-bg-end)
+  );
+  box-shadow:
+    inset 0 0 18px rgba(var(--accent-rgb), 0.08),
+    0 6px 18px rgba(15, 23, 42, 0.2),
+    0 0 13px rgba(var(--accent-rgb), 0.16);
+  cursor: pointer;
+  user-select: none;
+}
+
+.reaction-picker * {
+  cursor: pointer;
+}
+
+.dark .reaction-picker {
+  --reaction-panel-bg: hsl(var(--accent-hue) 46% 7% / 0.94);
+  --reaction-panel-bg-end: hsl(var(--accent-hue) 38% 6% / 0.97);
+  --reaction-panel-border: hsl(var(--accent-hue) 52% 42% / 0.7);
+  --reaction-label: hsl(var(--accent-hue) 88% 68%);
+  --reaction-item-bg: hsl(var(--accent-hue) 48% 12% / 0.78);
+  --reaction-item-border: hsl(var(--accent-hue) 58% 48% / 0.3);
+  --reaction-item-hover: hsl(var(--accent-hue) 54% 20% / 0.96);
+  box-shadow:
+    inset 0 0 20px rgba(var(--accent-rgb), 0.1),
+    0 8px 22px rgba(0, 0, 0, 0.42),
+    0 0 15px rgba(var(--accent-rgb), 0.2);
+}
+
+.reaction-picker-label {
+  color: var(--reaction-label);
+  filter: drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.35));
+}
+
+.reaction-picker-rule {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--accent-hue) 60% 52% / 0.45),
+    transparent
+  );
+}
+
+.reaction-picker-item {
+  border: 1px solid var(--reaction-item-border);
+  background: var(--reaction-item-bg);
+  box-shadow: inset 0 0 8px rgba(var(--accent-rgb), 0.06);
+  transition:
+    transform 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.reaction-picker-item:hover {
+  transform: translateY(-1px);
+  border-color: hsl(var(--accent-hue) 64% 54% / 0.58);
+  background: var(--reaction-item-hover);
+  box-shadow:
+    inset 0 0 9px rgba(var(--accent-rgb), 0.1),
+    0 0 9px rgba(var(--accent-rgb), 0.18);
+}
+
+.reaction-picker-item[data-selected="true"] {
+  transform: translateY(-1px);
+  border-color: hsl(var(--accent-hue) 72% 58% / 0.88);
+  background: hsl(var(--accent-hue) 70% 86% / 0.98);
+  box-shadow:
+    inset 0 0 10px rgba(var(--accent-rgb), 0.2),
+    0 0 10px rgba(var(--accent-rgb), 0.4);
+}
+
+.dark .reaction-picker-item[data-selected="true"] {
+  background: hsl(var(--accent-hue) 58% 27% / 0.98);
+}
+
+.player-card-hand-raised {
+  background: linear-gradient(
+    160deg,
+    hsl(var(--accent-hue) 68% 62% / 0.13),
+    transparent 55%
+  );
+  box-shadow:
+    inset 0 0 6px rgba(0, 0, 0, 0.38),
+    inset 0 0 20px rgba(var(--accent-rgb), 0.18),
+    0 0 0 1px hsl(var(--accent-hue) 72% 58% / 0.58),
+    0 0 13px rgba(var(--accent-rgb), 0.42) !important;
+}
+
+.player-hand-raised-status {
+  color: hsl(var(--accent-hue) 72% 40%);
+  background: linear-gradient(
+    145deg,
+    hsl(var(--accent-hue) 84% 72% / 0.2),
+    hsl(var(--accent-hue) 72% 58% / 0.07)
+  );
+  border-left: 1px solid hsl(var(--accent-hue) 70% 48% / 0.28);
+  border-bottom: 1px solid hsl(var(--accent-hue) 70% 48% / 0.22);
+  filter: drop-shadow(0 1px 3px rgba(var(--accent-rgb), 0.24));
+}
+
+.dark .player-hand-raised-status {
+  color: hsl(var(--accent-hue) 82% 70%);
+  background: linear-gradient(
+    145deg,
+    hsl(var(--accent-hue) 76% 60% / 0.25),
+    hsl(var(--accent-hue) 66% 42% / 0.1)
+  );
+  border-left-color: hsl(var(--accent-hue) 84% 68% / 0.26);
+  border-bottom-color: hsl(var(--accent-hue) 84% 68% / 0.2);
+  filter: drop-shadow(0 1px 4px rgba(var(--accent-rgb), 0.34));
+}
+
+.reaction-picker-caret {
+  background: var(--reaction-panel-bg-end);
+}
+
+.reaction-picker-caret[data-side="bottom"] {
+  border-right: 1px solid var(--reaction-panel-border);
+  border-bottom: 1px solid var(--reaction-panel-border);
+}
+
+.reaction-picker-caret[data-side="top"] {
+  border-top: 1px solid var(--reaction-panel-border);
+  border-left: 1px solid var(--reaction-panel-border);
+}
+
 @container vote-distribution (min-width: 450px) {
   .vote-distribution-summary {
     grid-template-columns: 42px 72px minmax(150px, 160px) minmax(100px, 1fr);
@@ -546,13 +684,33 @@ body.dialog-open .chat-panel {
 }
 
 .vote-distribution-rail {
-  color: var(--vote-neon);
+  color: hsl(var(--accent-hue) 76% 43%);
   border-color: hsl(var(--accent-hue) 66% 58% / 0.72);
-  background: var(--vote-rail-bg);
+  background: hsl(var(--accent-hue) 54% 97% / 0.78);
   box-shadow:
     0 0 8px rgba(var(--accent-rgb), 0.42),
     0 0 20px rgba(var(--accent-rgb), 0.22),
     inset 0 0 14px rgba(var(--accent-rgb), 0.08);
+}
+
+.light .vote-distribution-rail[data-background="true"] {
+  color: hsl(var(--accent-hue) 72% 34%);
+  border-color: hsl(var(--accent-hue) 62% 52% / 0.78);
+  background: linear-gradient(
+    180deg,
+    hsl(var(--accent-hue) 72% 99% / 0.97),
+    hsl(var(--accent-hue) 48% 94% / 0.95)
+  );
+  box-shadow:
+    0 0 9px rgba(var(--accent-rgb), 0.42),
+    0 0 22px rgba(var(--accent-rgb), 0.24),
+    inset 0 0 16px rgba(var(--accent-rgb), 0.1);
+}
+
+.dark .vote-distribution-rail {
+  color: hsl(var(--accent-hue) 88% 62%);
+  border-color: hsl(var(--accent-hue) 66% 58% / 0.72);
+  background: hsl(var(--accent-hue) 46% 7% / 0.93);
 }
 
 .vote-results-scroller {

@@ -235,7 +235,7 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
     });
 
     // Local styling fixture. Uncomment while tuning the distribution chart.
-    // Object.entries({ "0": 1, "0.5": 1, "2": 10, "3": 4 }).forEach(
+    // Object.entries({ "0.5": 1, "2": 4 }).forEach(
     //   ([card, count]) => {
     //     counts[card] = (counts[card] || 0) + count;
     //   }

@@ -28,7 +28,7 @@ export type GameFieldPolicy = {
 	id?: FieldPolicy<any> | FieldReadFunction<any>,
 	table?: FieldPolicy<any> | FieldReadFunction<any>
 };
-export type MutationRootKeySpecifier = ('banUser' | 'cancelRevealCountdown' | 'createRoom' | 'createUser' | 'editUser' | 'joinRoom' | 'kickUser' | 'logout' | 'markChatSeen' | 'pickCard' | 'renameRoom' | 'resetGame' | 'sendChatMessage' | 'setRoomOwner' | 'showCards' | 'startRevealCountdown' | 'toggleConfirmNewGame' | 'toggleCountdownOption' | 'unbanUser' | 'updateDeck' | MutationRootKeySpecifier)[];
+export type MutationRootKeySpecifier = ('banUser' | 'cancelRevealCountdown' | 'createRoom' | 'createUser' | 'editUser' | 'joinRoom' | 'kickUser' | 'logout' | 'markChatSeen' | 'pickCard' | 'renameRoom' | 'resetGame' | 'sendChatMessage' | 'sendReaction' | 'setRoomOwner' | 'showCards' | 'startRevealCountdown' | 'toggleConfirmNewGame' | 'toggleCountdownOption' | 'unbanUser' | 'updateDeck' | MutationRootKeySpecifier)[];
 export type MutationRootFieldPolicy = {
 	banUser?: FieldPolicy<any> | FieldReadFunction<any>,
 	cancelRevealCountdown?: FieldPolicy<any> | FieldReadFunction<any>,
@@ -43,6 +43,7 @@ export type MutationRootFieldPolicy = {
 	renameRoom?: FieldPolicy<any> | FieldReadFunction<any>,
 	resetGame?: FieldPolicy<any> | FieldReadFunction<any>,
 	sendChatMessage?: FieldPolicy<any> | FieldReadFunction<any>,
+	sendReaction?: FieldPolicy<any> | FieldReadFunction<any>,
 	setRoomOwner?: FieldPolicy<any> | FieldReadFunction<any>,
 	showCards?: FieldPolicy<any> | FieldReadFunction<any>,
 	startRevealCountdown?: FieldPolicy<any> | FieldReadFunction<any>,
@@ -81,14 +82,23 @@ export type RoomEventFieldPolicy = {
 	roomId?: FieldPolicy<any> | FieldReadFunction<any>,
 	targetUserId?: FieldPolicy<any> | FieldReadFunction<any>
 };
-export type SubscriptionRootKeySpecifier = ('room' | 'roomChat' | 'roomEvents' | SubscriptionRootKeySpecifier)[];
+export type RoomReactionKeySpecifier = ('id' | 'reaction' | 'roomId' | 'userId' | RoomReactionKeySpecifier)[];
+export type RoomReactionFieldPolicy = {
+	id?: FieldPolicy<any> | FieldReadFunction<any>,
+	reaction?: FieldPolicy<any> | FieldReadFunction<any>,
+	roomId?: FieldPolicy<any> | FieldReadFunction<any>,
+	userId?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type SubscriptionRootKeySpecifier = ('room' | 'roomChat' | 'roomEvents' | 'roomReactions' | SubscriptionRootKeySpecifier)[];
 export type SubscriptionRootFieldPolicy = {
 	room?: FieldPolicy<any> | FieldReadFunction<any>,
 	roomChat?: FieldPolicy<any> | FieldReadFunction<any>,
-	roomEvents?: FieldPolicy<any> | FieldReadFunction<any>
+	roomEvents?: FieldPolicy<any> | FieldReadFunction<any>,
+	roomReactions?: FieldPolicy<any> | FieldReadFunction<any>
 };
-export type UserKeySpecifier = ('id' | 'lastCardPicked' | 'lastCardValue' | 'lastSeenChatMessageId' | 'username' | UserKeySpecifier)[];
+export type UserKeySpecifier = ('handRaised' | 'id' | 'lastCardPicked' | 'lastCardValue' | 'lastSeenChatMessageId' | 'username' | UserKeySpecifier)[];
 export type UserFieldPolicy = {
+	handRaised?: FieldPolicy<any> | FieldReadFunction<any>,
 	id?: FieldPolicy<any> | FieldReadFunction<any>,
 	lastCardPicked?: FieldPolicy<any> | FieldReadFunction<any>,
 	lastCardValue?: FieldPolicy<any> | FieldReadFunction<any>,
@@ -132,6 +142,10 @@ export type StrictTypedTypePolicies = {
 	RoomEvent?: Omit<TypePolicy, "fields" | "keyFields"> & {
 		keyFields?: false | RoomEventKeySpecifier | (() => undefined | RoomEventKeySpecifier),
 		fields?: RoomEventFieldPolicy,
+	},
+	RoomReaction?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | RoomReactionKeySpecifier | (() => undefined | RoomReactionKeySpecifier),
+		fields?: RoomReactionFieldPolicy,
 	},
 	SubscriptionRoot?: Omit<TypePolicy, "fields" | "keyFields"> & {
 		keyFields?: false | SubscriptionRootKeySpecifier | (() => undefined | SubscriptionRootKeySpecifier),
