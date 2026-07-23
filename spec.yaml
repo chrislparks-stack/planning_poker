@@ -33,6 +33,9 @@ services:
       - key: APP_APPLICATION__BASE_URL
         scope: RUN_TIME
         value: /graphql
+      - key: GIPHY_KEY
+        scope: RUN_TIME
+        value: ${VITE_GIPHY_KEY}
 static_sites:
   - environment_slug: node-js
     envs:

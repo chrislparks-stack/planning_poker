@@ -1,7 +1,7 @@
 use async_graphql::SimpleObject;
-use uuid::Uuid;
 use chrono::{DateTime, Duration, Utc};
 use std::time::Instant;
+use uuid::Uuid;
 
 use crate::types::{Card, EntityId};
 
@@ -32,7 +32,7 @@ pub struct Room {
     pub last_active: DateTime<Utc>,
 
     #[graphql(skip)]
-    pub last_active_instant: Instant
+    pub last_active_instant: Instant,
 }
 
 impl Room {
@@ -198,7 +198,8 @@ impl Room {
     pub fn prune_chat_history(&mut self, max_age: Duration) -> usize {
         let now = Utc::now();
         let before = self.chat_history.len();
-        self.chat_history.retain(|msg| (now - msg.timestamp) < max_age);
+        self.chat_history
+            .retain(|msg| (now - msg.timestamp) < max_age);
         before - self.chat_history.len()
     }
 
@@ -233,10 +234,7 @@ impl Room {
 
 #[async_graphql::ComplexObject]
 impl Room {
-    async fn has_unread_chat(
-        &self,
-        user_id: EntityId,
-    ) -> Option<bool> {
+    async fn has_unread_chat(&self, user_id: EntityId) -> Option<bool> {
         Some(self.has_unread_chat_internal(user_id))
     }
 }

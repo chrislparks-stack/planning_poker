@@ -83,41 +83,54 @@ export const VoteLabel: FC<VoteLabelProps> = ({
     estimateAreaTop + estimateAreaHeight - 2,
     estimateY + estimateFont * 0.6 + 3
   );
-  const compactTextLift = compactFill ? 8 : 0;
-  const countY =
-    fillY +
-    Math.max(
-      countFont * (compactFill ? 0.54 : 0.58),
-      fillHeight * (compactFill ? 0.24 : 0.35)
-    ) -
-    compactTextLift;
-  const voteY =
-    countY + (countFont + labelFont) * 0.62 + (compactFill ? 1.5 : 2.25);
-  const avatarZoneTop = voteY + labelFont * 0.5 + 4;
-  const avatarBottomInset = compactFill ? 2 : clamp(4, fillHeight * 0.05, 7);
-  const avatarZoneBottom = fillY + fillHeight - avatarBottomInset;
-  const avatarZoneHeight = Math.max(0, avatarZoneBottom - avatarZoneTop);
-  const avatarHeightFactor = 3.07 + (avatarRows - 1) * 3.15;
+  const fillTopPadding = clamp(2, fillHeight * 0.05, 4);
+  const fillBottomPadding = clamp(2, fillHeight * 0.05, 4);
+  const countLabelGap = compactFill ? 0 : 0.75;
+  const labelAvatarGap = compactFill ? 1.5 : 2.25;
+  const avatarHeightFactor = 3.25 + (avatarRows - 1) * 3.15;
   const avatarWidthFactor = 2 + Math.max(0, widestAvatarRow - 1) * 2.7;
-  const avatarSize = clamp(
-    0.8,
+  const minimumAvatarSize =
+    avatarCount === 1 ? 2.4 : avatarCount <= 3 ? 1.7 : 0.8;
+  const availableAvatarHeight = Math.max(
+    0,
+    fillHeight -
+      fillTopPadding -
+      fillBottomPadding -
+      countFont -
+      countLabelGap -
+      labelFont -
+      labelAvatarGap
+  );
+  const preferredAvatarSize = clamp(
+    minimumAvatarSize,
     Math.min(
       width * 0.043,
       fillHeight * 0.07,
-      (width - inset * 8) / Math.max(3, avatarWidthFactor),
-      avatarZoneHeight / avatarHeightFactor
+      (width - inset * 8) / Math.max(3, avatarWidthFactor)
     ),
     3.5
+  );
+  const avatarSize = Math.min(
+    preferredAvatarSize,
+    availableAvatarHeight / avatarHeightFactor
   );
   const avatarGap = avatarSize * 2.7;
   const avatarRowGap = avatarSize * 3.15;
   const avatarWidthScale = avatarCount <= 3 ? 1.25 : 1;
   const avatarBlockHeight = avatarSize * avatarHeightFactor;
-  const avatarBlockOffset = Math.max(
-    0,
-    (avatarZoneHeight - avatarBlockHeight) / 2
-  );
-  const firstAvatarY = avatarZoneTop + avatarBlockOffset + avatarSize * 1.82;
+  const fillContentHeight =
+    countFont + countLabelGap + labelFont + labelAvatarGap + avatarBlockHeight;
+  const fillContentTop =
+    fillY + Math.max(fillTopPadding, (fillHeight - fillContentHeight) / 2);
+  const countY = fillContentTop + countFont * 0.5;
+  const voteY = fillContentTop + countFont + countLabelGap + labelFont * 0.5;
+  const firstAvatarY =
+    fillContentTop +
+    countFont +
+    countLabelGap +
+    labelFont +
+    labelAvatarGap +
+    avatarSize * 2;
   const crownSize = clamp(6, width * 0.13, 13);
   const majorityFont = clamp(4.2, width * 0.082, 8.5);
   const majorityGap = clamp(2, width * 0.05, 4);
@@ -155,6 +168,15 @@ export const VoteLabel: FC<VoteLabelProps> = ({
             y={y + inset}
             width={Math.max(0, width - inset * 2)}
             height={Math.max(0, majorityBandHeight - inset)}
+          />
+        </clipPath>
+        <clipPath id={`vote-fill-clip-${index ?? 0}`}>
+          <rect
+            x={x + inset * 1.5}
+            y={fillY}
+            width={Math.max(0, width - inset * 3)}
+            height={fillHeight}
+            rx={clamp(7, width * 0.11, 12)}
           />
         </clipPath>
       </defs>
@@ -269,6 +291,7 @@ export const VoteLabel: FC<VoteLabelProps> = ({
       />
 
       <text
+        data-vote-count="true"
         x={cx}
         y={countY}
         textAnchor="middle"
@@ -284,6 +307,7 @@ export const VoteLabel: FC<VoteLabelProps> = ({
         {count}
       </text>
       <text
+        data-vote-count-label="true"
         x={cx}
         y={voteY}
         textAnchor="middle"
@@ -297,48 +321,52 @@ export const VoteLabel: FC<VoteLabelProps> = ({
         {count === 1 ? "VOTE" : "VOTES"}
       </text>
 
-      {fillHeight >= 26 &&
-        Array.from({ length: avatarCount }, (_, avatar) => {
-          const row = Math.floor(avatar / maxAvatarsPerRow);
-          const firstAvatarInRow = row * maxAvatarsPerRow;
-          const rowCount = Math.min(
-            maxAvatarsPerRow,
-            avatarCount - firstAvatarInRow
-          );
-          const column = avatar - firstAvatarInRow;
-          const rowStart = cx - ((rowCount - 1) * avatarGap) / 2;
-          const avatarX = rowStart + column * avatarGap;
-          const avatarY = firstAvatarY + row * avatarRowGap;
-          return (
-            <g
-              key={avatar}
-              fill="var(--vote-icon-color)"
-              stroke="var(--vote-icon-outline)"
-              strokeWidth={Math.max(0.15, avatarSize * 0.12)}
-              strokeLinejoin="round"
-              style={{
-                filter: "var(--vote-icon-shadow)"
-              }}
-            >
-              <circle
-                cx={avatarX}
-                cy={avatarY - avatarSize * 1.1}
-                r={avatarSize * 0.72 * avatarWidthScale}
-              />
-              <path
-                d={`M ${avatarX - avatarSize * avatarWidthScale} ${
-                  avatarY + avatarSize * 1.25
-                } Q ${avatarX - avatarSize * avatarWidthScale} ${
-                  avatarY - avatarSize * 0.15
-                } ${avatarX} ${avatarY - avatarSize * 0.15} Q ${
-                  avatarX + avatarSize * avatarWidthScale
-                } ${avatarY - avatarSize * 0.15} ${
-                  avatarX + avatarSize * avatarWidthScale
-                } ${avatarY + avatarSize * 1.25} Z`}
-              />
-            </g>
-          );
-        })}
+      {fillHeight >= 26 && (
+        <g clipPath={`url(#vote-fill-clip-${index ?? 0})`}>
+          {Array.from({ length: avatarCount }, (_, avatar) => {
+            const row = Math.floor(avatar / maxAvatarsPerRow);
+            const firstAvatarInRow = row * maxAvatarsPerRow;
+            const rowCount = Math.min(
+              maxAvatarsPerRow,
+              avatarCount - firstAvatarInRow
+            );
+            const column = avatar - firstAvatarInRow;
+            const rowStart = cx - ((rowCount - 1) * avatarGap) / 2;
+            const avatarX = rowStart + column * avatarGap;
+            const avatarY = firstAvatarY + row * avatarRowGap;
+            return (
+              <g
+                key={avatar}
+                data-voter-icon="true"
+                fill="var(--vote-icon-color)"
+                stroke="var(--vote-icon-outline)"
+                strokeWidth={Math.max(0.15, avatarSize * 0.12)}
+                strokeLinejoin="round"
+                style={{
+                  filter: "var(--vote-icon-shadow)"
+                }}
+              >
+                <circle
+                  cx={avatarX}
+                  cy={avatarY - avatarSize * 1.1}
+                  r={avatarSize * 0.72 * avatarWidthScale}
+                />
+                <path
+                  d={`M ${avatarX - avatarSize * avatarWidthScale} ${
+                    avatarY + avatarSize * 1.25
+                  } Q ${avatarX - avatarSize * avatarWidthScale} ${
+                    avatarY - avatarSize * 0.15
+                  } ${avatarX} ${avatarY - avatarSize * 0.15} Q ${
+                    avatarX + avatarSize * avatarWidthScale
+                  } ${avatarY - avatarSize * 0.15} ${
+                    avatarX + avatarSize * avatarWidthScale
+                  } ${avatarY + avatarSize * 1.25} Z`}
+                />
+              </g>
+            );
+          })}
+        </g>
+      )}
     </g>
   );
 };

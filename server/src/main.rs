@@ -1,33 +1,56 @@
 use crate::{
     configuration::get_configuration,
     handlers::{health_check, index, index_playground, index_ws},
-    schema::{MutationRoot, QueryRoot, SubscriptionRoot, RoomEvent},
+    schema::{MutationRoot, QueryRoot, RoomEvent, SubscriptionRoot},
     types::Storage,
 };
 use actix_cors::Cors;
 use actix_web::{
-    guard, middleware,
+    App, HttpResponse, HttpServer, guard, middleware,
     web::{self, Data},
-    App, HttpResponse, HttpServer,
 };
 use async_graphql::Schema;
 use env_logger::Env;
-use log::{info, warn, debug};
+use log::{debug, info, warn};
 
 mod configuration;
 mod domain;
+mod giphy;
 mod handlers;
 mod schema;
 mod simple_broker;
 mod types;
 
-use std::{collections::HashMap, sync::Arc, time::Duration as StdDuration};
 use std::env;
+use std::{collections::HashMap, sync::Arc, time::Duration as StdDuration};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use prometheus::{Encoder, TextEncoder, Registry, IntCounter, IntGauge};
+use prometheus::{Encoder, IntCounter, IntGauge, Registry, TextEncoder};
 use sysinfo::{Pid, System};
+
+fn http_request_kind(method: &str, path: &str, websocket: bool) -> &'static str {
+    match (method, path, websocket) {
+        ("OPTIONS", _, _) => "cors_preflight",
+        ("GET", "/", true) => "graphql_websocket",
+        ("POST", "/", _) => "graphql_http",
+        ("GET", "/", _) => "graphql_playground",
+        ("GET", "/health_check", _) => "health_check",
+        ("GET", "/metrics", _) => "metrics",
+        ("GET", path, _) if path.starts_with("/giphy/") => "giphy_proxy",
+        _ => "http",
+    }
+}
+
+fn http_outcome(status: u16) -> &'static str {
+    match status {
+        101 => "upgraded",
+        200..=299 => "success",
+        400..=499 => "client_error",
+        500..=599 => "server_error",
+        _ => "other",
+    }
+}
 
 fn spawn_room_cleanup_task(
     storage: Storage,
@@ -44,7 +67,7 @@ fn spawn_room_cleanup_task(
         id: Uuid,
         name: Option<String>,
         last_active: chrono::DateTime<chrono::Utc>,
-        estimated_bytes: usize
+        estimated_bytes: usize,
     }
 
     tokio::spawn(async move {
@@ -92,7 +115,7 @@ fn spawn_room_cleanup_task(
                         id: *id,
                         name: room.name.clone(),
                         last_active: room.last_active,
-                        estimated_bytes: est
+                        estimated_bytes: est,
                     });
 
                     if room.is_safe_to_remove() && room.is_inactive(room_ttl) {
@@ -146,7 +169,10 @@ fn spawn_room_cleanup_task(
             }
 
             if stale_ids.is_empty() {
-                info!("Room cleanup: no inactive rooms to clean up this tick ({} rooms total).", total_seen);
+                info!(
+                    "Room cleanup: no inactive rooms to clean up this tick ({} rooms total).",
+                    total_seen
+                );
                 continue;
             }
 
@@ -164,9 +190,7 @@ fn spawn_room_cleanup_task(
 
                     info!(
                         "Room cleanup: removing stale room {} (name: {:?}, users: {})",
-                        id,
-                        expired_room.name,
-                        user_count
+                        id, expired_room.name, user_count
                     );
 
                     let event = RoomEvent {
@@ -179,7 +203,10 @@ fn spawn_room_cleanup_task(
                     crate::simple_broker::SimpleBroker::publish(event);
                     rooms_evicted.inc();
                 } else {
-                    warn!("Room cleanup: attempted to remove stale room {}, but it was not found (race?)", id);
+                    warn!(
+                        "Room cleanup: attempted to remove stale room {}, but it was not found (race?)",
+                        id
+                    );
                 }
             }
 
@@ -229,47 +256,58 @@ fn spawn_heartbeat_task(
                     total_chat_messages += room.chat_history.len();
 
                     for msg in &room.chat_history {
-                        let formatted_len = msg
-                            .formatted_content
-                            .as_ref()
-                            .map(|s| s.len())
-                            .unwrap_or(0);
+                        let formatted_len =
+                            msg.formatted_content.as_ref().map(|s| s.len()).unwrap_or(0);
 
                         let content_len = msg.content.len();
-                        total_chat_bytes = total_chat_bytes.saturating_add(formatted_len.max(content_len));
+                        total_chat_bytes =
+                            total_chat_bytes.saturating_add(formatted_len.max(content_len));
                     }
                 }
 
-                (guard.len(), total_users, total_deck_cards, total_chat_messages, total_chat_bytes)
+                (
+                    guard.len(),
+                    total_users,
+                    total_deck_cards,
+                    total_chat_messages,
+                    total_chat_bytes,
+                )
             };
 
             // ---- Derived stats ----
             let avg_users_per_room = if room_count > 0 {
                 total_users as f64 / room_count as f64
-            } else { 0.0 };
+            } else {
+                0.0
+            };
 
             let avg_chat_per_room = if room_count > 0 {
                 total_chat_messages as f64 / room_count as f64
-            } else { 0.0 };
+            } else {
+                0.0
+            };
 
             let avg_chat_memory_per_room = if room_count > 0 {
                 total_chat_bytes as f64 / room_count as f64
-            } else { 0.0 };
+            } else {
+                0.0
+            };
 
             // ---- Memory estimation ----
             const BASE_PER_ROOM: usize = 200;
             const PER_USER_BYTES: usize = 180;
             const PER_DECK_CARD_BYTES: usize = 16;
 
-            let total_estimated_room_bytes =
-                BASE_PER_ROOM.saturating_mul(room_count)
+            let total_estimated_room_bytes = BASE_PER_ROOM.saturating_mul(room_count)
                 + total_users.saturating_mul(PER_USER_BYTES)
                 + total_deck_cards.saturating_mul(PER_DECK_CARD_BYTES)
                 + total_chat_bytes;
 
             let avg_room_bytes = if room_count > 0 {
                 (total_estimated_room_bytes as f64 / room_count as f64).round() as i64
-            } else { 0 };
+            } else {
+                0
+            };
 
             // ---- Update gauges ----
             total_users_gauge.set(total_users as i64);
@@ -287,23 +325,25 @@ fn spawn_heartbeat_task(
                 let mem_mib = (proc.memory() / 1024 / 1024) as i64;
                 let cpu_pct_x100 = (proc.cpu_usage() * 100.0) as i64;
                 (mem_mib, cpu_pct_x100)
-            } else { (0, 0) };
+            } else {
+                (0, 0)
+            };
 
             process_memory_mib.set(mem_mib);
             process_cpu_percent_x100.set(cpu_pct_x100);
 
             info!(
-              "[heartbeat] \
+                "[heartbeat] \
                 CPU: {:.2}% | MEM: {} MiB | \
                 Rooms: {} | Users: {} ({:.1}/room) | \
                 Chat: {} msgs | Avg Room Size: {:.1} KB",
-              cpu_pct_x100 as f64 / 100.0,
-              mem_mib,
-              room_count,
-              total_users,
-              avg_users_per_room,
-              total_chat_messages,
-              avg_room_bytes as f64 / 1024.0,
+                cpu_pct_x100 as f64 / 100.0,
+                mem_mib,
+                room_count,
+                total_users,
+                avg_users_per_room,
+                total_chat_messages,
+                avg_room_bytes as f64 / 1024.0,
             );
         }
     });
@@ -337,61 +377,96 @@ async fn main() -> std::io::Result<()> {
     // ----- Prometheus setup -----
     let registry = Registry::new();
 
-    let rooms_evicted = IntCounter::new("rooms_evicted_total", "Total rooms evicted by cleanup").unwrap();
-    let rooms_scanned = IntCounter::new("rooms_scanned_total", "Total rooms scanned by cleanup").unwrap();
-    let rooms_current = IntGauge::new("rooms_current", "Current number of rooms in memory").unwrap();
+    let rooms_evicted =
+        IntCounter::new("rooms_evicted_total", "Total rooms evicted by cleanup").unwrap();
+    let rooms_scanned =
+        IntCounter::new("rooms_scanned_total", "Total rooms scanned by cleanup").unwrap();
+    let rooms_current =
+        IntGauge::new("rooms_current", "Current number of rooms in memory").unwrap();
     let rooms_total_bytes_estimate = IntGauge::new(
         "rooms_total_bytes_estimate",
-        "Estimated total bytes for all rooms (metadata-only estimator)"
-    ).unwrap();
+        "Estimated total bytes for all rooms (metadata-only estimator)",
+    )
+    .unwrap();
     let rooms_avg_bytes_estimate = IntGauge::new(
         "rooms_avg_bytes_estimate",
-        "Estimated average bytes per room (metadata-only estimator)"
-    ).unwrap();
+        "Estimated average bytes per room (metadata-only estimator)",
+    )
+    .unwrap();
 
     // Heartbeat-related gauges
     let total_users = IntGauge::new("rooms_total_users", "Total users across all rooms").unwrap();
-    let avg_users_per_room = IntGauge::new("rooms_avg_users_per_room", "Average users per room").unwrap();
+    let avg_users_per_room =
+        IntGauge::new("rooms_avg_users_per_room", "Average users per room").unwrap();
     let process_memory_mib = IntGauge::new("process_memory_mib", "Process memory (MiB)").unwrap();
-    let process_cpu_percent_x100 = IntGauge::new("process_cpu_percent_x100", "Process CPU percent * 100").unwrap();
+    let process_cpu_percent_x100 =
+        IntGauge::new("process_cpu_percent_x100", "Process CPU percent * 100").unwrap();
     let total_chat_messages = IntGauge::new(
         "total_chat_messages",
-        "Total number of chat messages across all rooms"
-    ).unwrap();
+        "Total number of chat messages across all rooms",
+    )
+    .unwrap();
 
     let avg_chat_messages_per_room = IntGauge::new(
         "avg_chat_messages_per_room",
-        "Average number of chat messages per room"
-    ).unwrap();
+        "Average number of chat messages per room",
+    )
+    .unwrap();
     let total_chat_memory_bytes = IntGauge::new(
         "total_chat_memory_bytes",
-        "Estimated memory bytes consumed by all chat messages (compressed)"
-    ).unwrap();
+        "Estimated memory bytes consumed by all chat messages (compressed)",
+    )
+    .unwrap();
 
     let avg_chat_memory_per_room = IntGauge::new(
         "avg_chat_memory_per_room",
-        "Average estimated memory bytes consumed by chat messages per room"
-    ).unwrap();
-    let total_room_bytes_gauge =
-        IntGauge::new("rooms_estimated_total_bytes", "Estimated total bytes for all rooms").unwrap();
-    let avg_room_bytes_gauge =
-        IntGauge::new("rooms_estimated_avg_bytes", "Estimated average bytes per room").unwrap();
+        "Average estimated memory bytes consumed by chat messages per room",
+    )
+    .unwrap();
+    let total_room_bytes_gauge = IntGauge::new(
+        "rooms_estimated_total_bytes",
+        "Estimated total bytes for all rooms",
+    )
+    .unwrap();
+    let avg_room_bytes_gauge = IntGauge::new(
+        "rooms_estimated_avg_bytes",
+        "Estimated average bytes per room",
+    )
+    .unwrap();
 
-    registry.register(Box::new(rooms_total_bytes_estimate.clone())).ok();
-    registry.register(Box::new(rooms_avg_bytes_estimate.clone())).ok();
+    registry
+        .register(Box::new(rooms_total_bytes_estimate.clone()))
+        .ok();
+    registry
+        .register(Box::new(rooms_avg_bytes_estimate.clone()))
+        .ok();
     registry.register(Box::new(rooms_evicted.clone())).ok();
     registry.register(Box::new(rooms_scanned.clone())).ok();
     registry.register(Box::new(rooms_current.clone())).ok();
     registry.register(Box::new(total_users.clone())).ok();
     registry.register(Box::new(avg_users_per_room.clone())).ok();
     registry.register(Box::new(process_memory_mib.clone())).ok();
-    registry.register(Box::new(process_cpu_percent_x100.clone())).ok();
-    registry.register(Box::new(total_chat_messages.clone())).ok();
-    registry.register(Box::new(avg_chat_messages_per_room.clone())).ok();
-    registry.register(Box::new(total_chat_memory_bytes.clone())).ok();
-    registry.register(Box::new(avg_chat_memory_per_room.clone())).ok();
-    registry.register(Box::new(total_room_bytes_gauge.clone())).ok();
-    registry.register(Box::new(avg_room_bytes_gauge.clone())).ok();
+    registry
+        .register(Box::new(process_cpu_percent_x100.clone()))
+        .ok();
+    registry
+        .register(Box::new(total_chat_messages.clone()))
+        .ok();
+    registry
+        .register(Box::new(avg_chat_messages_per_room.clone()))
+        .ok();
+    registry
+        .register(Box::new(total_chat_memory_bytes.clone()))
+        .ok();
+    registry
+        .register(Box::new(avg_chat_memory_per_room.clone()))
+        .ok();
+    registry
+        .register(Box::new(total_room_bytes_gauge.clone()))
+        .ok();
+    registry
+        .register(Box::new(avg_room_bytes_gauge.clone()))
+        .ok();
 
     let registry = Arc::new(registry);
 
@@ -432,13 +507,38 @@ async fn main() -> std::io::Result<()> {
         .data(storage.clone())
         .finish();
 
+    let http_client = reqwest::Client::builder()
+        .user_agent("SummitPlanningPoker/1.0")
+        .build()
+        .expect("Failed to build HTTP client");
+
     HttpServer::new(move || {
         let registry = registry.clone();
 
         App::new()
             .app_data(Data::new(schema.clone()))
+            .app_data(Data::new(storage.clone()))
+            .app_data(Data::new(http_client.clone()))
             .wrap(Cors::permissive())
-            .wrap(middleware::Logger::default())
+            .wrap(
+                middleware::Logger::new(
+                    "[http] kind=%{KIND}xi method=%m path=%U status=%s outcome=%{OUTCOME}xo duration_ms=%D bytes=%b peer=%a origin=\"%{Origin}i\"",
+                )
+                .custom_request_replace("KIND", |request| {
+                    let path = request.path();
+                    let method = request.method().as_str();
+                    let websocket = request
+                        .headers()
+                        .get("upgrade")
+                        .and_then(|value| value.to_str().ok())
+                        .is_some_and(|value| value.eq_ignore_ascii_case("websocket"));
+
+                    http_request_kind(method, path, websocket).to_string()
+                })
+                .custom_response_replace("OUTCOME", |response| {
+                    http_outcome(response.status().as_u16()).to_string()
+                }),
+            )
             .service(
                 web::resource("/metrics").route(web::get().to(move || {
                     let registry = registry.clone();
@@ -466,8 +566,25 @@ async fn main() -> std::io::Result<()> {
                     .guard(guard::Get())
                     .to(health_check),
             )
+            .service(web::resource("/giphy/image").route(web::get().to(giphy::image)))
+            .service(web::resource("/giphy/{path:.*}").route(web::get().to(giphy::api)))
     })
     .bind(server_bind_addr)?
     .run()
     .await
+}
+
+#[cfg(test)]
+mod http_log_tests {
+    use super::{http_outcome, http_request_kind};
+
+    #[test]
+    fn classifies_the_previously_opaque_http_requests() {
+        assert_eq!(http_request_kind("GET", "/", true), "graphql_websocket");
+        assert_eq!(http_request_kind("OPTIONS", "/", false), "cors_preflight");
+        assert_eq!(http_request_kind("POST", "/", false), "graphql_http");
+        assert_eq!(http_outcome(101), "upgraded");
+        assert_eq!(http_outcome(200), "success");
+        assert_eq!(http_outcome(503), "server_error");
+    }
 }
