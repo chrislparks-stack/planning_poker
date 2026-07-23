@@ -384,25 +384,36 @@ impl MutationRoot {
             })
             .collect();
 
-        let (last_card_picked, last_card_value, last_seen_chat_message_id, hand_raised) = storage
+        let (
+            last_card_picked,
+            last_card_value,
+            previous_card_picked,
+            previous_card_value,
+            last_seen_chat_message_id,
+            hand_raised,
+        ) = storage
             .values()
             .find_map(|room| {
                 room.users.iter().find(|u| u.id == user_id).map(|u| {
                     (
                         u.last_card_picked.clone(),
                         u.last_card_value,
+                        u.previous_card_picked.clone(),
+                        u.previous_card_value,
                         u.last_seen_chat_message_id,
                         u.hand_raised,
                     )
                 })
             })
-            .unwrap_or((None, None, None, false));
+            .unwrap_or((None, None, None, None, None, false));
 
         Ok(User {
             id: user_id,
             username,
             last_card_picked,
             last_card_value,
+            previous_card_picked,
+            previous_card_value,
             last_seen_chat_message_id,
             hand_raised,
         })
@@ -470,7 +481,7 @@ impl MutationRoot {
 
         match storage.get_mut(&room_id) {
             Some(room) => {
-                room.is_game_over = true;
+                room.reveal_cards();
 
                 room.touch();
 
@@ -550,6 +561,8 @@ impl MutationRoot {
                 for u in room.users.iter_mut() {
                     u.last_card_picked = None;
                     u.last_card_value = None;
+                    u.previous_card_picked = None;
+                    u.previous_card_value = None;
                     u.hand_raised = false;
                 }
 
@@ -657,6 +670,27 @@ impl MutationRoot {
         match storage.get_mut(&room_id) {
             Some(room) => {
                 room.toggle_confirm_new_game(enabled);
+
+                room.touch();
+
+                SimpleBroker::publish(room.get_room());
+                Ok(room.get_room())
+            }
+            None => Err(Error::new("Room not found")),
+        }
+    }
+
+    async fn toggle_show_vote_changes(
+        &self,
+        ctx: &Context<'_>,
+        room_id: Uuid,
+        enabled: bool,
+    ) -> Result<Room> {
+        let mut storage = get_storage(ctx).await;
+
+        match storage.get_mut(&room_id) {
+            Some(room) => {
+                room.toggle_show_vote_changes(enabled);
 
                 room.touch();
 
@@ -828,6 +862,38 @@ mod reaction_tests {
     }
 
     #[tokio::test]
+    async fn vote_change_visibility_defaults_on_and_can_be_disabled() {
+        let (schema, room_id, _) = schema_with_room(false);
+
+        let initial = schema
+            .execute(Request::new(format!(
+                "query {{ roomById(roomId: \"{room_id}\") {{ showVoteChanges }} }}"
+            )))
+            .await;
+        assert!(initial.errors.is_empty(), "{:?}", initial.errors);
+        let initial_data = initial
+            .data
+            .into_json()
+            .expect("initial room data should be JSON");
+        assert_eq!(initial_data["roomById"]["showVoteChanges"], true);
+
+        let updated = schema
+            .execute(Request::new(format!(
+                "mutation {{ toggleShowVoteChanges(roomId: \"{room_id}\", enabled: false) {{ showVoteChanges }} }}"
+            )))
+            .await;
+        assert!(updated.errors.is_empty(), "{:?}", updated.errors);
+        let updated_data = updated
+            .data
+            .into_json()
+            .expect("updated room data should be JSON");
+        assert_eq!(
+            updated_data["toggleShowVoteChanges"]["showVoteChanges"],
+            false
+        );
+    }
+
+    #[tokio::test]
     async fn raised_hand_toggles_and_reset_game_clears_it() {
         let (schema, room_id, user_id) = schema_with_room(true);
 
@@ -890,5 +956,96 @@ mod reaction_tests {
             .into_json()
             .expect("reset room data should be JSON");
         assert_eq!(reset_data["resetGame"]["users"][0]["handRaised"], false);
+    }
+
+    #[tokio::test]
+    async fn post_reveal_vote_changes_keep_the_original_revealed_vote() {
+        let (schema, room_id, user_id) = schema_with_room(false);
+
+        let first_vote = schema
+            .execute(Request::new(format!(
+                "mutation {{ pickCard(roomId: \"{room_id}\", userId: \"{user_id}\", card: \"1\") {{ users {{ lastCardPicked previousCardPicked }} }} }}"
+            )))
+            .await;
+        assert!(first_vote.errors.is_empty(), "{:?}", first_vote.errors);
+
+        let reveal = schema
+            .execute(Request::new(format!(
+                "mutation {{ showCards(roomId: \"{room_id}\") {{ isGameOver users {{ previousCardPicked previousCardValue }} }} }}"
+            )))
+            .await;
+        assert!(reveal.errors.is_empty(), "{:?}", reveal.errors);
+        let reveal_data = reveal
+            .data
+            .into_json()
+            .expect("revealed vote data should be JSON");
+        let revealed_user = &reveal_data["showCards"]["users"][0];
+        assert_eq!(revealed_user["previousCardPicked"], "1");
+        assert_eq!(revealed_user["previousCardValue"].as_f64(), Some(1.0));
+
+        let changed_vote = schema
+            .execute(Request::new(format!(
+                "mutation {{ pickCard(roomId: \"{room_id}\", userId: \"{user_id}\", card: \"2\") {{ users {{ lastCardPicked lastCardValue previousCardPicked previousCardValue }} }} }}"
+            )))
+            .await;
+        assert!(changed_vote.errors.is_empty(), "{:?}", changed_vote.errors);
+        let changed_data = changed_vote
+            .data
+            .into_json()
+            .expect("changed vote data should be JSON");
+        let changed_user = &changed_data["pickCard"]["users"][0];
+        assert_eq!(changed_user["lastCardPicked"], "2");
+        assert_eq!(changed_user["lastCardValue"].as_f64(), Some(2.0));
+        assert_eq!(changed_user["previousCardPicked"], "1");
+        assert_eq!(changed_user["previousCardValue"].as_f64(), Some(1.0));
+
+        let changed_again = schema
+            .execute(Request::new(format!(
+                "mutation {{ pickCard(roomId: \"{room_id}\", userId: \"{user_id}\", card: \"8\") {{ users {{ lastCardPicked previousCardPicked }} }} }}"
+            )))
+            .await;
+        assert!(
+            changed_again.errors.is_empty(),
+            "{:?}",
+            changed_again.errors
+        );
+        let changed_again_data = changed_again
+            .data
+            .into_json()
+            .expect("second changed vote data should be JSON");
+        let changed_again_user = &changed_again_data["pickCard"]["users"][0];
+        assert_eq!(changed_again_user["lastCardPicked"], "8");
+        assert_eq!(changed_again_user["previousCardPicked"], "1");
+
+        let returned_to_original = schema
+            .execute(Request::new(format!(
+                "mutation {{ pickCard(roomId: \"{room_id}\", userId: \"{user_id}\", card: \"1\") {{ users {{ lastCardPicked previousCardPicked }} }} }}"
+            )))
+            .await;
+        assert!(
+            returned_to_original.errors.is_empty(),
+            "{:?}",
+            returned_to_original.errors
+        );
+        let returned_to_original_data = returned_to_original
+            .data
+            .into_json()
+            .expect("original vote data should be JSON");
+        let original_user = &returned_to_original_data["pickCard"]["users"][0];
+        assert_eq!(original_user["lastCardPicked"], "1");
+        assert_eq!(original_user["previousCardPicked"], "1");
+
+        let reset = schema
+            .execute(Request::new(format!(
+                "mutation {{ resetGame(roomId: \"{room_id}\") {{ users {{ previousCardPicked previousCardValue }} }} }}"
+            )))
+            .await;
+        assert!(reset.errors.is_empty(), "{:?}", reset.errors);
+        let reset_data = reset
+            .data
+            .into_json()
+            .expect("reset vote data should be JSON");
+        assert!(reset_data["resetGame"]["users"][0]["previousCardPicked"].is_null());
+        assert!(reset_data["resetGame"]["users"][0]["previousCardValue"].is_null());
     }
 }

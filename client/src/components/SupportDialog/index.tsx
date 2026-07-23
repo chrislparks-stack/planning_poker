@@ -1,4 +1,4 @@
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { Coffee } from "lucide-react";
 import { FC, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import {
@@ -9,12 +9,12 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
+import { OptionDialogContent } from "@/components/ui/option-dialog-content";
 
 interface SupportDialogProps {
   open: boolean;
@@ -92,31 +92,31 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent
-        className="
-          flex flex-col w-[90vw] max-w-[620px] max-h-[88vh]
-          rounded-2xl backdrop-blur-md bg-background/85
-          border border-border/50 shadow-[0_8px_32px_rgb(0_0_0_/_0.35)]
-          p-0 overflow-hidden animate-in fade-in-0 zoom-in-95
-        "
+      <OptionDialogContent
+        data-testid="support-dialog"
+        className="max-w-[640px]"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        <div className="h-1.5 w-full bg-gradient-to-r from-accent to-accent/60" />
+        <div className="h-1.5 w-full shrink-0 bg-gradient-to-r from-accent via-accent/85 to-accent/35" />
 
-        <VisuallyHidden>
-          <DialogDescription>
-            Ko-fi support page for anyone who like to contribute
-          </DialogDescription>
-        </VisuallyHidden>
-
-        <DialogHeader className="px-6 pt-5 pb-3 border-b shrink-0">
-          <DialogTitle className="text-lg font-semibold tracking-tight">
-            Support the Developer
-          </DialogTitle>
+        <DialogHeader className="shrink-0 border-b border-border/60 bg-card/30 px-5 py-4 text-left sm:px-6 sm:py-5">
+          <div className="flex items-start gap-3.5 pr-8">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-accent/25 bg-accent/10 text-accent shadow-sm">
+              <Coffee aria-hidden="true" className="size-5" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl font-semibold tracking-tight">
+                Support the developer
+              </DialogTitle>
+              <DialogDescription className="mt-1 text-sm leading-relaxed">
+                Help support continued development of Summit Planning Poker.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="flex-1 px-6 py-5 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto p-5 sm:p-6">
           {/* Collapsible description wrapper */}
           <div
             style={{
@@ -141,7 +141,7 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
                   ? "opacity 0.25s cubic-bezier(0.5,0,0.75,0.35), transform 0.25s ease-out"
                   : "opacity 0.8s cubic-bezier(0.25,0.1,0.25,1), transform 0.8s ease-in-out"
               }}
-              className="rounded-lg border bg-card/60 backdrop-blur-sm p-4 shadow-sm"
+              className="rounded-xl border border-border/55 bg-card/45 p-4"
             >
               <p className="text-sm leading-relaxed text-muted-foreground">
                 This project runs on caffeine, curiosity, and late-night coding.
@@ -174,7 +174,7 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
           >
             <AccordionItem
               value="tip"
-              className="rounded-lg border bg-card/60 backdrop-blur-sm shadow-sm overflow-hidden"
+              className="overflow-hidden rounded-xl border border-border/55 bg-card/45"
             >
               <AccordionTrigger className="px-4 py-3 text-sm font-semibold justify-center hover:no-underline focus:outline-none focus:ring-0 transition-all duration-700">
                 {isOpen ? "Close Tip Panel" : "Tip Here!"}
@@ -212,7 +212,7 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
           </Accordion>
         </div>
 
-        <DialogFooter className="px-6 py-3 border-t bg-card/60 backdrop-blur-sm shrink-0">
+        <DialogFooter className="shrink-0 border-t border-border/60 bg-card/45 px-5 py-3.5 sm:px-6">
           <Button
             onClick={() => setOpen(false)}
             variant="default"
@@ -221,7 +221,7 @@ export const SupportDialog: FC<SupportDialogProps> = ({ open, setOpen }) => {
             Close
           </Button>
         </DialogFooter>
-      </DialogContent>
+      </OptionDialogContent>
     </Dialog>
   );
 };

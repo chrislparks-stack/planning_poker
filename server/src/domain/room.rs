@@ -26,6 +26,7 @@ pub struct Room {
     pub reveal_stage: Option<String>,
     pub countdown_value: Option<i32>,
     pub confirm_new_game: bool,
+    pub show_vote_changes: bool,
     pub chat_history: Vec<crate::domain::chat::ChatMessage>,
 
     #[graphql(skip)]
@@ -50,6 +51,7 @@ impl Room {
             reveal_stage: Some("idle".to_string()),
             countdown_value: None,
             confirm_new_game: true,
+            show_vote_changes: true,
             last_active: Utc::now(),
             last_active_instant: Instant::now(),
             chat_history: Vec::new(),
@@ -158,10 +160,21 @@ impl Room {
         self.countdown_value = Some(value);
     }
 
+    pub fn reveal_cards(&mut self) {
+        if !self.is_game_over {
+            for user in &mut self.users {
+                user.previous_card_picked = user.last_card_picked.clone();
+                user.previous_card_value = user.last_card_value;
+            }
+        }
+
+        self.is_game_over = true;
+    }
+
     pub fn complete_countdown(&mut self) {
         self.reveal_stage = Some("revealed".to_string());
         self.countdown_value = None;
-        self.is_game_over = true;
+        self.reveal_cards();
     }
 
     pub fn cancel_countdown(&mut self) {
@@ -171,6 +184,10 @@ impl Room {
 
     pub fn toggle_confirm_new_game(&mut self, enabled: bool) {
         self.confirm_new_game = enabled;
+    }
+
+    pub fn toggle_show_vote_changes(&mut self, enabled: bool) {
+        self.show_vote_changes = enabled;
     }
 
     // === Activity / cleanup helpers ===

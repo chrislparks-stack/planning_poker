@@ -67,7 +67,8 @@ export default defineConfig(({ mode }) => {
     ],
     resolve: {
       alias: {
-        "@": path.resolve(__dirname, "./src")
+        "@": path.resolve(__dirname, "./src"),
+        "@test": path.resolve(__dirname, "./tests/unit/test-utils.tsx")
       }
     },
     build: {
@@ -93,8 +94,8 @@ export default defineConfig(({ mode }) => {
     test: {
       globals: true,
       environment: "jsdom",
-      setupFiles: "./src/test/setup.ts",
-      include: ["**/*.test.tsx", "**/*.test.ts"]
+      setupFiles: "./tests/unit/setup.ts",
+      include: ["tests/unit/**/*.test.tsx", "tests/unit/**/*.test.ts"]
     }
   };
 });

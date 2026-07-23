@@ -3,6 +3,8 @@ fragment UserFragment on User {
   username
   lastCardPicked
   lastCardValue
+  previousCardPicked
+  previousCardValue
   lastSeenChatMessageId
   handRaised
 }
@@ -64,6 +66,7 @@ fragment RoomFragment on Room {
   revealStage
   countdownValue
   confirmNewGame
+  showVoteChanges
   chatHistory {
     ...ChatMessageFragment
   }
@@ -187,6 +190,12 @@ mutation UnbanUser($roomId: UUID!, $targetUserId: UUID!) {
 
 mutation ToggleConfirmNewGame($roomId: UUID!, $enabled: Boolean!) {
   toggleConfirmNewGame(roomId: $roomId, enabled: $enabled) {
+    ...RoomFragment
+  }
+}
+
+mutation ToggleShowVoteChanges($roomId: UUID!, $enabled: Boolean!) {
+  toggleShowVoteChanges(roomId: $roomId, enabled: $enabled) {
     ...RoomFragment
   }
 }

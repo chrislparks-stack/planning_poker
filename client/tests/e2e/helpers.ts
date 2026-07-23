@@ -69,3 +69,4 @@ export async function verifyNewRound(pages: Page[]) {
     })
   );
 }
+// Shared Playwright end-to-end helpers.

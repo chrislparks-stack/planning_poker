@@ -24,10 +24,11 @@
 
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@test": ["./tests/unit/test-utils.tsx"]
     },
     "allowSyntheticDefaultImports": true
   },
-  "include": ["src"],
+  "include": ["src", "tests/unit"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

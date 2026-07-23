@@ -28,7 +28,7 @@ export type UserInput = {
   username: string;
 };
 
-export type UserFragmentFragment = { id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean };
+export type UserFragmentFragment = { id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean };
 
 export type DeckFragmentFragment = { id: string, cards: Array<string> };
 
@@ -40,9 +40,9 @@ export type ChatPositionFragmentFragment = { x: number, y: number, width: number
 
 export type ChatMessageFragmentFragment = { id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null };
 
-export type RoomFragmentFragment = { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> };
+export type RoomFragmentFragment = { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, showVoteChanges: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> };
 
-export type RoomEventFragmentFragment = { roomId: string, eventType: string, targetUserId: string | null, room: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
+export type RoomEventFragmentFragment = { roomId: string, eventType: string, targetUserId: string | null, room: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, showVoteChanges: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
 
 export type RoomReactionFragmentFragment = { id: string, roomId: string, userId: string, reaction: Types.ReactionKind };
 
@@ -53,14 +53,14 @@ export type CreateRoomMutationVariables = Exact<{
 }>;
 
 
-export type CreateRoomMutation = { createRoom: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
+export type CreateRoomMutation = { createRoom: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, showVoteChanges: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
 
 export type CreateUserMutationVariables = Exact<{
   username: string;
 }>;
 
 
-export type CreateUserMutation = { createUser: { id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean } };
+export type CreateUserMutation = { createUser: { id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean } };
 
 export type JoinRoomMutationVariables = Exact<{
   roomId: string;
@@ -69,7 +69,7 @@ export type JoinRoomMutationVariables = Exact<{
 }>;
 
 
-export type JoinRoomMutation = { joinRoom: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
+export type JoinRoomMutation = { joinRoom: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, showVoteChanges: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
 
 export type UpdateDeckMutationVariables = Exact<{
   roomId: string;
@@ -77,7 +77,7 @@ export type UpdateDeckMutationVariables = Exact<{
 }>;
 
 
-export type UpdateDeckMutation = { updateDeck: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
+export type UpdateDeckMutation = { updateDeck: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, showVoteChanges: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
 
 export type RenameRoomMutationVariables = Exact<{
   roomId: string;
@@ -85,7 +85,7 @@ export type RenameRoomMutationVariables = Exact<{
 }>;
 
 
-export type RenameRoomMutation = { renameRoom: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
+export type RenameRoomMutation = { renameRoom: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, showVoteChanges: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
 
 export type ToggleCountdownOptionMutationVariables = Exact<{
   roomId: string;
@@ -93,7 +93,7 @@ export type ToggleCountdownOptionMutationVariables = Exact<{
 }>;
 
 
-export type ToggleCountdownOptionMutation = { toggleCountdownOption: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
+export type ToggleCountdownOptionMutation = { toggleCountdownOption: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, showVoteChanges: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
 
 export type StartRevealCountdownMutationVariables = Exact<{
   roomId: string;
@@ -101,7 +101,7 @@ export type StartRevealCountdownMutationVariables = Exact<{
 }>;
 
 
-export type StartRevealCountdownMutation = { startRevealCountdown: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
+export type StartRevealCountdownMutation = { startRevealCountdown: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, showVoteChanges: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
 
 export type CancelRevealCountdownMutationVariables = Exact<{
   roomId: string;
@@ -109,7 +109,7 @@ export type CancelRevealCountdownMutationVariables = Exact<{
 }>;
 
 
-export type CancelRevealCountdownMutation = { cancelRevealCountdown: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
+export type CancelRevealCountdownMutation = { cancelRevealCountdown: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, showVoteChanges: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
 
 export type SetRoomOwnerMutationVariables = Exact<{
   roomId: string;
@@ -117,7 +117,7 @@ export type SetRoomOwnerMutationVariables = Exact<{
 }>;
 
 
-export type SetRoomOwnerMutation = { setRoomOwner: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
+export type SetRoomOwnerMutation = { setRoomOwner: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, showVoteChanges: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
 
 export type EditUserMutationVariables = Exact<{
   userId: string;
@@ -125,7 +125,7 @@ export type EditUserMutationVariables = Exact<{
 }>;
 
 
-export type EditUserMutation = { editUser: { id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean } };
+export type EditUserMutation = { editUser: { id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean } };
 
 export type LogoutMutationVariables = Exact<{
   userId: string;
@@ -141,21 +141,21 @@ export type PickCardMutationVariables = Exact<{
 }>;
 
 
-export type PickCardMutation = { pickCard: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
+export type PickCardMutation = { pickCard: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, showVoteChanges: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
 
 export type ShowCardsMutationVariables = Exact<{
   roomId: string;
 }>;
 
 
-export type ShowCardsMutation = { showCards: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
+export type ShowCardsMutation = { showCards: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, showVoteChanges: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
 
 export type ResetGameMutationVariables = Exact<{
   roomId: string;
 }>;
 
 
-export type ResetGameMutation = { resetGame: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
+export type ResetGameMutation = { resetGame: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, showVoteChanges: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
 
 export type KickUserMutationVariables = Exact<{
   roomId: string;
@@ -163,7 +163,7 @@ export type KickUserMutationVariables = Exact<{
 }>;
 
 
-export type KickUserMutation = { kickUser: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
+export type KickUserMutation = { kickUser: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, showVoteChanges: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
 
 export type BanUserMutationVariables = Exact<{
   roomId: string;
@@ -171,7 +171,7 @@ export type BanUserMutationVariables = Exact<{
 }>;
 
 
-export type BanUserMutation = { banUser: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
+export type BanUserMutation = { banUser: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, showVoteChanges: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
 
 export type UnbanUserMutationVariables = Exact<{
   roomId: string;
@@ -179,7 +179,7 @@ export type UnbanUserMutationVariables = Exact<{
 }>;
 
 
-export type UnbanUserMutation = { unbanUser: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
+export type UnbanUserMutation = { unbanUser: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, showVoteChanges: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
 
 export type ToggleConfirmNewGameMutationVariables = Exact<{
   roomId: string;
@@ -187,7 +187,15 @@ export type ToggleConfirmNewGameMutationVariables = Exact<{
 }>;
 
 
-export type ToggleConfirmNewGameMutation = { toggleConfirmNewGame: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
+export type ToggleConfirmNewGameMutation = { toggleConfirmNewGame: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, showVoteChanges: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
+
+export type ToggleShowVoteChangesMutationVariables = Exact<{
+  roomId: string;
+  enabled: boolean;
+}>;
+
+
+export type ToggleShowVoteChangesMutation = { toggleShowVoteChanges: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, showVoteChanges: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
 
 export type SendChatMessageMutationVariables = Exact<{
   roomId: string;
@@ -224,7 +232,7 @@ export type RoomSubscriptionVariables = Exact<{
 }>;
 
 
-export type RoomSubscription = { room: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
+export type RoomSubscription = { room: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, showVoteChanges: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
 
 export type RoomChatSubscriptionVariables = Exact<{
   roomId: string;
@@ -238,7 +246,7 @@ export type RoomEventsSubscriptionVariables = Exact<{
 }>;
 
 
-export type RoomEventsSubscription = { roomEvents: { roomId: string, eventType: string, targetUserId: string | null, room: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } } };
+export type RoomEventsSubscription = { roomEvents: { roomId: string, eventType: string, targetUserId: string | null, room: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, showVoteChanges: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } } };
 
 export type RoomReactionsSubscriptionVariables = Exact<{
   roomId: string;
@@ -260,7 +268,7 @@ export type GetRoomQueryVariables = Exact<{
 }>;
 
 
-export type GetRoomQuery = { roomById: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } | null };
+export type GetRoomQuery = { roomById: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, showVoteChanges: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } | null };
 
 export type GetRoomUnreadQueryVariables = Exact<{
   roomId: string;
@@ -276,6 +284,8 @@ export const UserFragmentFragmentDoc = gql`
   username
   lastCardPicked
   lastCardValue
+  previousCardPicked
+  previousCardValue
   lastSeenChatMessageId
   handRaised
 }
@@ -343,6 +353,7 @@ export const RoomFragmentFragmentDoc = gql`
   revealStage
   countdownValue
   confirmNewGame
+  showVoteChanges
   chatHistory {
     ...ChatMessageFragment
   }
@@ -978,6 +989,40 @@ export function useToggleConfirmNewGameMutation(baseOptions?: Apollo.MutationHoo
 export type ToggleConfirmNewGameMutationHookResult = ReturnType<typeof useToggleConfirmNewGameMutation>;
 export type ToggleConfirmNewGameMutationResult = Apollo.MutationResult<ToggleConfirmNewGameMutation>;
 export type ToggleConfirmNewGameMutationOptions = Apollo.BaseMutationOptions<ToggleConfirmNewGameMutation, ToggleConfirmNewGameMutationVariables>;
+export const ToggleShowVoteChangesDocument = gql`
+    mutation ToggleShowVoteChanges($roomId: UUID!, $enabled: Boolean!) {
+  toggleShowVoteChanges(roomId: $roomId, enabled: $enabled) {
+    ...RoomFragment
+  }
+}
+    ${RoomFragmentFragmentDoc}`;
+export type ToggleShowVoteChangesMutationFn = Apollo.MutationFunction<ToggleShowVoteChangesMutation, ToggleShowVoteChangesMutationVariables>;
+
+/**
+ * __useToggleShowVoteChangesMutation__
+ *
+ * To run a mutation, you first call `useToggleShowVoteChangesMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useToggleShowVoteChangesMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [toggleShowVoteChangesMutation, { data, loading, error }] = useToggleShowVoteChangesMutation({
+ *   variables: {
+ *      roomId: // value for 'roomId'
+ *      enabled: // value for 'enabled'
+ *   },
+ * });
+ */
+export function useToggleShowVoteChangesMutation(baseOptions?: Apollo.MutationHookOptions<ToggleShowVoteChangesMutation, ToggleShowVoteChangesMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ToggleShowVoteChangesMutation, ToggleShowVoteChangesMutationVariables>(ToggleShowVoteChangesDocument, options);
+      }
+export type ToggleShowVoteChangesMutationHookResult = ReturnType<typeof useToggleShowVoteChangesMutation>;
+export type ToggleShowVoteChangesMutationResult = Apollo.MutationResult<ToggleShowVoteChangesMutation>;
+export type ToggleShowVoteChangesMutationOptions = Apollo.BaseMutationOptions<ToggleShowVoteChangesMutation, ToggleShowVoteChangesMutationVariables>;
 export const SendChatMessageDocument = gql`
     mutation SendChatMessage($roomId: UUID!, $userId: UUID!, $username: String!, $content: String!, $formattedContent: String, $contentType: String!, $position: ChatPositionInput) {
   sendChatMessage(

@@ -1,10 +1,9 @@
 import { userEvent } from "@testing-library/user-event";
 import { vi } from "vitest";
 
-import { render, screen } from "@/test";
-
-import ModalDialog from "./ConfirmationDialog";
-import { ModalOptions } from "./types";
+import ModalDialog from "@/components/ConfirmationDialog/ConfirmationDialog";
+import { ModalOptions } from "@/components/ConfirmationDialog/types";
+import { render, screen } from "@test";
 
 const mockDefaultOptions: ModalOptions = {
   title: "Are you sure?",

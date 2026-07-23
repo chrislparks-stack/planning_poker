@@ -26,6 +26,7 @@ import {
   PlayerReactionBurst,
   QuickReactionPicker
 } from "@/components/ui/player-reaction.tsx";
+import { VoteAdjustment } from "@/components/ui/vote-adjustment.tsx";
 import { useBackgroundConfig } from "@/contexts/BackgroundContext.tsx";
 import { useToast } from "@/hooks/use-toast";
 import { ReactionKind, Room, User } from "@/types";
@@ -735,12 +736,20 @@ export function Player({
                 pointer-events-none
               "
               >
-                {/* Avatar */}
+                {/* Avatar / revealed vote */}
                 <div className="flex items-center justify-center">
                   {cardIcon}
                 </div>
               </div>
               <div className={isStarry ? "starry" : undefined}>
+                {isGameOver && room.showVoteChanges && (
+                  <VoteAdjustment
+                    currentCard={user.lastCardPicked}
+                    currentValue={user.lastCardValue}
+                    previousCard={user.previousCardPicked}
+                    previousValue={user.previousCardValue}
+                  />
+                )}
                 <div
                   className="
                   absolute bottom-[4px] w-full text-center text-[14px]

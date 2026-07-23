@@ -1,3 +1,4 @@
+// Playwright end-to-end coverage.
 import { test, expect, type Browser, type Page } from "@playwright/test";
 
 import {

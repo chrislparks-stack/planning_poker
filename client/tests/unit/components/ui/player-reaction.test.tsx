@@ -1,7 +1,9 @@
-import { render, screen, userEvent } from "@/test";
+import {
+  PlayerReactionBurst,
+  QuickReactionPicker
+} from "@/components/ui/player-reaction";
 import { ReactionKind } from "@/types";
-
-import { PlayerReactionBurst, QuickReactionPicker } from "./player-reaction";
+import { render, screen, userEvent } from "@test";
 
 const sendReaction = vi.fn().mockResolvedValue({});
 

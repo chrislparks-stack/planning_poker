@@ -76,6 +76,7 @@ export type MutationRoot = {
   startRevealCountdown: Room;
   toggleConfirmNewGame: Room;
   toggleCountdownOption: Room;
+  toggleShowVoteChanges: Room;
   unbanUser: Room;
   updateDeck: Room;
 };
@@ -194,6 +195,12 @@ export type MutationRootToggleCountdownOptionArgs = {
 };
 
 
+export type MutationRootToggleShowVoteChangesArgs = {
+  enabled: Scalars['Boolean']['input'];
+  roomId: Scalars['UUID']['input'];
+};
+
+
 export type MutationRootUnbanUserArgs = {
   roomId: Scalars['UUID']['input'];
   targetUserId: Scalars['UUID']['input'];
@@ -244,6 +251,7 @@ export type Room = {
   name?: Maybe<Scalars['String']['output']>;
   revealStage?: Maybe<Scalars['String']['output']>;
   roomOwnerId?: Maybe<Scalars['UUID']['output']>;
+  showVoteChanges: Scalars['Boolean']['output'];
   users: Array<User>;
 };
 
@@ -318,6 +326,8 @@ export type User = {
   lastCardPicked?: Maybe<Scalars['String']['output']>;
   lastCardValue?: Maybe<Scalars['Float']['output']>;
   lastSeenChatMessageId?: Maybe<Scalars['UUID']['output']>;
+  previousCardPicked?: Maybe<Scalars['String']['output']>;
+  previousCardValue?: Maybe<Scalars['Float']['output']>;
   username: Scalars['String']['output'];
 };
 

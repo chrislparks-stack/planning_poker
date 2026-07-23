@@ -83,6 +83,7 @@ fn operation_action(name: &str) -> &'static str {
         "BanUser" => "ban a user",
         "UnbanUser" => "unban a user",
         "ToggleConfirmNewGame" => "change new-game confirmation",
+        "ToggleShowVoteChanges" => "change vote-change visibility",
         "SendChatMessage" => "add a chat message",
         "MarkChatSeen" => "mark chat as seen",
         "GetRoom" => "read the current room",

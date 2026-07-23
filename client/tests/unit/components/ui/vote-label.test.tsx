@@ -1,6 +1,5 @@
-import { render } from "@/test";
-
-import { VoteLabel } from "./vote-label";
+import { VoteLabel } from "@/components/ui/vote-label";
+import { render } from "@test";
 
 describe("VoteLabel voter icons", () => {
   test("keeps a single voter legible in a narrow result bar", () => {
