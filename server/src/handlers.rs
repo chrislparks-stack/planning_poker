@@ -1,9 +1,9 @@
 use std::time::Instant;
 
-use actix_web::{web, HttpRequest, HttpResponse, Result};
+use actix_web::{HttpRequest, HttpResponse, Result, web};
 use async_graphql::{
-    http::{playground_source, GraphQLPlaygroundConfig},
     Request, Schema, Value, Variables,
+    http::{GraphQLPlaygroundConfig, playground_source},
 };
 use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse, GraphQLSubscription};
 use log::{info, warn};
@@ -24,10 +24,7 @@ impl StateSnapshot {
         Self {
             rooms: rooms.len(),
             users: rooms.values().map(|room| room.users.len()).sum(),
-            chat_messages: rooms
-                .values()
-                .map(|room| room.chat_history.len())
-                .sum(),
+            chat_messages: rooms.values().map(|room| room.chat_history.len()).sum(),
         }
     }
 
@@ -253,7 +250,7 @@ mod tests {
     use async_graphql::{Request, Variables};
     use serde_json::json;
 
-    use super::{operation_action, operation_kind, safe_request_context, StateSnapshot};
+    use super::{StateSnapshot, operation_action, operation_kind, safe_request_context};
 
     #[test]
     fn identifies_named_mutations_and_safe_context() {

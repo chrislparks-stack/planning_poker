@@ -1,10 +1,5 @@
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
-export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
-export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
-export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
-export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> = { [_ in K]?: never };
-export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
   ID: { input: string; output: string; }
@@ -75,6 +70,7 @@ export type MutationRoot = {
   renameRoom: Room;
   resetGame: Room;
   sendChatMessage: ChatMessage;
+  sendReaction: RoomReaction;
   setRoomOwner: Room;
   showCards: Room;
   startRevealCountdown: Room;
@@ -162,6 +158,13 @@ export type MutationRootSendChatMessageArgs = {
 };
 
 
+export type MutationRootSendReactionArgs = {
+  reaction: ReactionKind;
+  roomId: Scalars['UUID']['input'];
+  userId: Scalars['UUID']['input'];
+};
+
+
 export type MutationRootSetRoomOwnerArgs = {
   roomId: Scalars['UUID']['input'];
   userId?: InputMaybe<Scalars['UUID']['input']>;
@@ -218,6 +221,14 @@ export type QueryRootUserRoomsArgs = {
   userId: Scalars['UUID']['input'];
 };
 
+export enum ReactionKind {
+  Celebrate = 'CELEBRATE',
+  Confused = 'CONFUSED',
+  Heart = 'HEART',
+  Laugh = 'LAUGH',
+  RaiseHand = 'RAISE_HAND'
+}
+
 export type Room = {
   __typename?: 'Room';
   bannedUsers: Array<Scalars['UUID']['output']>;
@@ -249,6 +260,14 @@ export type RoomEvent = {
   targetUserId?: Maybe<Scalars['UUID']['output']>;
 };
 
+export type RoomReaction = {
+  __typename?: 'RoomReaction';
+  id: Scalars['UUID']['output'];
+  reaction: ReactionKind;
+  roomId: Scalars['UUID']['output'];
+  userId: Scalars['UUID']['output'];
+};
+
 export type SendChatInput = {
   content: Scalars['String']['input'];
   contentType: Scalars['String']['input'];
@@ -264,6 +283,7 @@ export type SubscriptionRoot = {
   room: Room;
   roomChat: ChatMessage;
   roomEvents: RoomEvent;
+  roomReactions: RoomReaction;
 };
 
 
@@ -281,6 +301,11 @@ export type SubscriptionRootRoomEventsArgs = {
   roomId: Scalars['UUID']['input'];
 };
 
+
+export type SubscriptionRootRoomReactionsArgs = {
+  roomId: Scalars['UUID']['input'];
+};
+
 export type UpdateDeckInput = {
   cards: Array<Scalars['String']['input']>;
   roomId: Scalars['UUID']['input'];
@@ -288,6 +313,7 @@ export type UpdateDeckInput = {
 
 export type User = {
   __typename?: 'User';
+  handRaised: Scalars['Boolean']['output'];
   id: Scalars['UUID']['output'];
   lastCardPicked?: Maybe<Scalars['String']['output']>;
   lastCardValue?: Maybe<Scalars['Float']['output']>;

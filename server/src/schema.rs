@@ -1,12 +1,12 @@
 use std::collections::HashMap;
-use tokio::time::{sleep, Duration};
+use tokio::time::{Duration, sleep};
 
 use crate::{
     domain::{
+        chat::{ChatMessage, ChatPosition, ChatPositionInput},
         game::{Game, UserCard},
         room::Room,
         user::{User, UserInput},
-        chat::{ChatMessage, ChatPosition, ChatPositionInput}
     },
     simple_broker::SimpleBroker,
     types::{Card, EntityId, Storage},
@@ -23,6 +23,23 @@ pub struct RoomEvent {
     pub event_type: String,
     pub target_user_id: Option<Uuid>,
     pub room: Room,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Enum)]
+pub enum ReactionKind {
+    Celebrate,
+    Heart,
+    Laugh,
+    Confused,
+    RaiseHand,
+}
+
+#[derive(Clone, Debug, SimpleObject)]
+pub struct RoomReaction {
+    pub id: Uuid,
+    pub room_id: Uuid,
+    pub user_id: Uuid,
+    pub reaction: ReactionKind,
 }
 
 async fn get_storage<'a>(ctx: &'a Context<'_>) -> MutexGuard<'a, HashMap<Uuid, Room>> {
@@ -70,7 +87,7 @@ impl QueryRoot {
 #[derive(InputObject)]
 pub struct UpdateDeckInput {
     pub room_id: Uuid,
-    pub cards: Vec<String>
+    pub cards: Vec<String>,
 }
 
 #[derive(InputObject)]
@@ -81,7 +98,7 @@ pub struct SendChatInput {
     pub content: String,
     pub formatted_content: Option<String>,
     pub content_type: String,
-    pub position: Option<ChatPositionInput>
+    pub position: Option<ChatPositionInput>,
 }
 
 pub struct MutationRoot;
@@ -217,7 +234,7 @@ impl MutationRoot {
         &self,
         ctx: &Context<'_>,
         room_id: Uuid,
-        enabled: bool
+        enabled: bool,
     ) -> Result<Room> {
         let mut storage = get_storage(ctx).await;
 
@@ -243,7 +260,9 @@ impl MutationRoot {
         {
             let mut storage = get_storage(ctx).await;
 
-            let room = storage.get_mut(&room_id).ok_or(Error::new("Room not found"))?;
+            let room = storage
+                .get_mut(&room_id)
+                .ok_or(Error::new("Room not found"))?;
 
             if let Some(uid) = user_id {
                 if Some(uid) != room.room_owner_id {
@@ -326,7 +345,7 @@ impl MutationRoot {
         &self,
         ctx: &Context<'_>,
         room_id: Uuid,
-        user_id: Option<Uuid>
+        user_id: Option<Uuid>,
     ) -> Result<Room> {
         let mut storage = get_storage(ctx).await;
 
@@ -365,26 +384,27 @@ impl MutationRoot {
             })
             .collect();
 
-        let (last_card_picked, last_card_value, last_seen_chat_message_id) = storage
+        let (last_card_picked, last_card_value, last_seen_chat_message_id, hand_raised) = storage
             .values()
             .find_map(|room| {
-                room.users
-                    .iter()
-                    .find(|u| u.id == user_id)
-                    .map(|u| (
+                room.users.iter().find(|u| u.id == user_id).map(|u| {
+                    (
                         u.last_card_picked.clone(),
                         u.last_card_value,
-                        u.last_seen_chat_message_id
-                    ))
+                        u.last_seen_chat_message_id,
+                        u.hand_raised,
+                    )
+                })
             })
-            .unwrap_or((None, None, None));
+            .unwrap_or((None, None, None, false));
 
         Ok(User {
             id: user_id,
             username,
             last_card_picked,
             last_card_value,
-            last_seen_chat_message_id
+            last_seen_chat_message_id,
+            hand_raised,
         })
     }
 
@@ -462,6 +482,63 @@ impl MutationRoot {
         }
     }
 
+    async fn send_reaction(
+        &self,
+        ctx: &Context<'_>,
+        room_id: EntityId,
+        user_id: EntityId,
+        reaction: ReactionKind,
+    ) -> Result<RoomReaction> {
+        let mut storage = get_storage(ctx).await;
+        let room = storage
+            .get_mut(&room_id)
+            .ok_or_else(|| Error::new("Room not found"))?;
+
+        if !room.is_user_exist(user_id) {
+            return Err(Error::new("User is not in this room"));
+        }
+
+        if !room.is_game_over {
+            return Err(Error::new(
+                "Quick reactions are only available after votes are revealed",
+            ));
+        }
+
+        let hand_raised = if reaction == ReactionKind::RaiseHand {
+            let user = room
+                .users
+                .iter_mut()
+                .find(|user| user.id == user_id)
+                .expect("user existence was checked above");
+            user.hand_raised = !user.hand_raised;
+            Some(user.hand_raised)
+        } else {
+            None
+        };
+
+        room.touch();
+
+        let event = RoomReaction {
+            id: Uuid::new_v4(),
+            room_id,
+            user_id,
+            reaction,
+        };
+
+        if hand_raised != Some(false) {
+            SimpleBroker::publish(event.clone());
+        }
+        if hand_raised.is_some() {
+            SimpleBroker::publish(room.get_room());
+        }
+        info!(
+            "[reaction] sent room_id={} user_id={} reaction={:?} hand_raised={:?} event_id={}",
+            room_id, user_id, reaction, hand_raised, event.id
+        );
+
+        Ok(event)
+    }
+
     async fn reset_game(&self, ctx: &Context<'_>, room_id: EntityId) -> Result<Room> {
         let mut storage = get_storage(ctx).await;
 
@@ -473,6 +550,7 @@ impl MutationRoot {
                 for u in room.users.iter_mut() {
                     u.last_card_picked = None;
                     u.last_card_value = None;
+                    u.hand_raised = false;
                 }
 
                 room.touch();
@@ -524,27 +602,27 @@ impl MutationRoot {
     ) -> Result<Room> {
         let mut storage = get_storage(ctx).await;
 
-            match storage.get_mut(&room_id) {
-                Some(room) => {
-                    room.ban_user(target_user_id);
+        match storage.get_mut(&room_id) {
+            Some(room) => {
+                room.ban_user(target_user_id);
 
-                    room.touch();
+                room.touch();
 
-                    SimpleBroker::publish(room.get_room());
+                SimpleBroker::publish(room.get_room());
 
-                    let event = RoomEvent {
-                        room_id,
-                        event_type: "USER_BANNED".to_string(),
-                        target_user_id: Some(target_user_id),
-                        room: room.get_room(),
-                    };
+                let event = RoomEvent {
+                    room_id,
+                    event_type: "USER_BANNED".to_string(),
+                    target_user_id: Some(target_user_id),
+                    room: room.get_room(),
+                };
 
-                    SimpleBroker::publish(event);
+                SimpleBroker::publish(event);
 
-                    Ok(room.get_room())
-                }
-                None => Err(Error::new("Room not found")),
+                Ok(room.get_room())
             }
+            None => Err(Error::new("Room not found")),
+        }
     }
 
     async fn unban_user(
@@ -589,11 +667,11 @@ impl MutationRoot {
         }
     }
 
-     async fn send_chat_message(
+    async fn send_chat_message(
         &self,
         ctx: &Context<'_>,
         input: SendChatInput,
-     ) -> Result<ChatMessage> {
+    ) -> Result<ChatMessage> {
         let mut storage = get_storage(ctx).await;
         let room = storage
             .get_mut(&input.room_id)
@@ -664,10 +742,153 @@ impl SubscriptionRoot {
     }
 
     async fn room_chat(&self, room_id: Uuid) -> impl Stream<Item = ChatMessage> {
-        SimpleBroker::<ChatMessage>::subscribe()
-            .filter(move |msg| {
-                let same_room = msg.room_id == room_id;
-                async move { same_room }
-            })
+        SimpleBroker::<ChatMessage>::subscribe().filter(move |msg| {
+            let same_room = msg.room_id == room_id;
+            async move { same_room }
+        })
+    }
+
+    async fn room_reactions(&self, room_id: Uuid) -> impl Stream<Item = RoomReaction> {
+        SimpleBroker::<RoomReaction>::subscribe().filter(move |event| {
+            let same_room = event.room_id == room_id;
+            async move { same_room }
+        })
+    }
+}
+
+#[cfg(test)]
+mod reaction_tests {
+    use std::{collections::HashMap, sync::Arc};
+
+    use async_graphql::{Request, Schema};
+    use tokio::sync::Mutex;
+
+    use super::{MutationRoot, QueryRoot, SubscriptionRoot};
+    use crate::{
+        domain::{room::Room, user::User},
+        types::Storage,
+    };
+
+    fn schema_with_room(
+        is_game_over: bool,
+    ) -> (
+        Schema<QueryRoot, MutationRoot, SubscriptionRoot>,
+        uuid::Uuid,
+        uuid::Uuid,
+    ) {
+        let mut room = Room::new(None, vec!["1".to_string(), "2".to_string()]);
+        let user = User::new("Reaction Tester".to_string());
+        let room_id = room.id;
+        let user_id = user.id;
+        room.users.push(user);
+        room.is_game_over = is_game_over;
+
+        let storage: Storage = Arc::new(Mutex::new(HashMap::from([(room_id, room)])));
+        let schema = Schema::build(QueryRoot, MutationRoot, SubscriptionRoot)
+            .data(storage)
+            .finish();
+
+        (schema, room_id, user_id)
+    }
+
+    #[tokio::test]
+    async fn reactions_require_a_revealed_round() {
+        let (schema, room_id, user_id) = schema_with_room(false);
+        let response = schema
+            .execute(Request::new(format!(
+                "mutation {{ sendReaction(roomId: \"{room_id}\", userId: \"{user_id}\", reaction: CELEBRATE) {{ id }} }}"
+            )))
+            .await;
+
+        assert_eq!(response.errors.len(), 1);
+        assert!(
+            response.errors[0]
+                .message
+                .contains("only available after votes are revealed")
+        );
+    }
+
+    #[tokio::test]
+    async fn revealed_round_reactions_return_a_room_scoped_event() {
+        let (schema, room_id, user_id) = schema_with_room(true);
+        let response = schema
+            .execute(Request::new(format!(
+                "mutation {{ sendReaction(roomId: \"{room_id}\", userId: \"{user_id}\", reaction: CONFUSED) {{ roomId userId reaction }} }}"
+            )))
+            .await;
+
+        assert!(response.errors.is_empty(), "{:?}", response.errors);
+        let data = response
+            .data
+            .into_json()
+            .expect("reaction data should be JSON");
+        assert_eq!(data["sendReaction"]["roomId"], room_id.to_string());
+        assert_eq!(data["sendReaction"]["userId"], user_id.to_string());
+        assert_eq!(data["sendReaction"]["reaction"], "CONFUSED");
+    }
+
+    #[tokio::test]
+    async fn raised_hand_toggles_and_reset_game_clears_it() {
+        let (schema, room_id, user_id) = schema_with_room(true);
+
+        let raise_response = schema
+            .execute(Request::new(format!(
+                "mutation {{ sendReaction(roomId: \"{room_id}\", userId: \"{user_id}\", reaction: RAISE_HAND) {{ reaction }} }}"
+            )))
+            .await;
+        assert!(
+            raise_response.errors.is_empty(),
+            "{:?}",
+            raise_response.errors
+        );
+
+        let raised_room = schema
+            .execute(Request::new(format!(
+                "query {{ roomById(roomId: \"{room_id}\") {{ users {{ id handRaised }} }} }}"
+            )))
+            .await;
+        let raised_data = raised_room
+            .data
+            .into_json()
+            .expect("raised room data should be JSON");
+        assert_eq!(raised_data["roomById"]["users"][0]["handRaised"], true);
+
+        let lower_response = schema
+            .execute(Request::new(format!(
+                "mutation {{ sendReaction(roomId: \"{room_id}\", userId: \"{user_id}\", reaction: RAISE_HAND) {{ reaction }} }}"
+            )))
+            .await;
+        assert!(
+            lower_response.errors.is_empty(),
+            "{:?}",
+            lower_response.errors
+        );
+
+        let lowered_room = schema
+            .execute(Request::new(format!(
+                "query {{ roomById(roomId: \"{room_id}\") {{ users {{ handRaised }} }} }}"
+            )))
+            .await;
+        let lowered_data = lowered_room
+            .data
+            .into_json()
+            .expect("lowered room data should be JSON");
+        assert_eq!(lowered_data["roomById"]["users"][0]["handRaised"], false);
+
+        let _ = schema
+            .execute(Request::new(format!(
+                "mutation {{ sendReaction(roomId: \"{room_id}\", userId: \"{user_id}\", reaction: RAISE_HAND) {{ reaction }} }}"
+            )))
+            .await;
+        let reset_response = schema
+            .execute(Request::new(format!(
+                "mutation {{ resetGame(roomId: \"{room_id}\") {{ users {{ handRaised }} }} }}"
+            )))
+            .await;
+        let reset_data = reset_response
+            .data
+            .into_json()
+            .expect("reset room data should be JSON");
+        assert_eq!(reset_data["resetGame"]["users"][0]["handRaised"], false);
     }
 }

@@ -3,9 +3,14 @@ import { Vote } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-export const ResultsTag = () => {
+export const ResultsTag = ({
+  hasBackground = false
+}: {
+  hasBackground?: boolean;
+}) => {
   return (
     <motion.div
+      data-background={hasBackground || undefined}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4, ease: "easeOut" }}

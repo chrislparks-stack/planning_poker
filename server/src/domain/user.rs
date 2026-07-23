@@ -17,7 +17,8 @@ pub struct User {
     pub username: String,
     pub last_card_picked: Option<String>,
     pub last_card_value: Option<f32>,
-    pub last_seen_chat_message_id: Option<Uuid>
+    pub last_seen_chat_message_id: Option<Uuid>,
+    pub hand_raised: bool,
 }
 
 impl User {
@@ -27,7 +28,8 @@ impl User {
             username,
             last_card_picked: None,
             last_card_value: None,
-            last_seen_chat_message_id: None
+            last_seen_chat_message_id: None,
+            hand_raised: false,
         }
     }
 }
@@ -44,7 +46,8 @@ impl From<UserInput> for User {
             username: input.username,
             last_card_picked: input.last_card_picked,
             last_card_value,
-            last_seen_chat_message_id: None
+            last_seen_chat_message_id: None,
+            hand_raised: false,
         }
     }
 }

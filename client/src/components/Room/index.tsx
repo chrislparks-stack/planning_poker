@@ -1,6 +1,11 @@
 import { useRef, useEffect, useState, useMemo, RefObject } from "react";
 
-import { useSetRoomOwnerMutation, useRoomChatSubscription } from "@/api";
+import {
+  RoomReactionFragmentFragment,
+  useRoomChatSubscription,
+  useRoomReactionsSubscription,
+  useSetRoomOwnerMutation
+} from "@/api";
 import { Player } from "@/components/Player";
 import { Table } from "@/components/Table";
 import { ChatBubble } from "@/components/ui/chat-bubble";
@@ -29,6 +34,12 @@ export function Room({ room, onShowInChat, roomRef, chatVisible }: RoomProps) {
   const [tableRect, setTableRect] = useState<DOMRect | null>(null);
   const [senderName, setSenderName] = useState<string | null>(null);
   const [lastChats, setLastChats] = useState<Record<string, string | null>>({});
+  const [activeReactions, setActiveReactions] = useState<
+    Record<string, RoomReactionFragmentFragment>
+  >({});
+  const reactionTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>(
+    {}
+  );
   const getPlayerAnchorRect = (playerId: string) => {
     const el = playerRefs.current[playerId];
     if (!el) return null;
@@ -81,6 +92,42 @@ export function Room({ room, onShowInChat, roomRef, chatVisible }: RoomProps) {
       setLastChats((prev) => ({ ...prev, [userId]: message }));
     }
   });
+
+  useRoomReactionsSubscription({
+    variables: { roomId: room?.id ?? "" },
+    skip: !room?.id,
+    onData: ({ data }) => {
+      const reaction = data.data?.roomReactions;
+      if (!reaction) return;
+
+      setActiveReactions((current) => ({
+        ...current,
+        [reaction.userId]: reaction
+      }));
+
+      clearTimeout(reactionTimers.current[reaction.userId]);
+      reactionTimers.current[reaction.userId] = setTimeout(() => {
+        setActiveReactions((current) => {
+          if (current[reaction.userId]?.id !== reaction.id) return current;
+          const next = { ...current };
+          delete next[reaction.userId];
+          return next;
+        });
+        delete reactionTimers.current[reaction.userId];
+      }, 1800);
+    }
+  });
+
+  useEffect(
+    () => () => {
+      Object.values(reactionTimers.current).forEach(clearTimeout);
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!room?.isGameOver) setActiveReactions({});
+  }, [room?.isGameOver]);
 
   useEffect(() => {
     const updateTableRect = () => {
@@ -438,11 +485,10 @@ export function Room({ room, onShowInChat, roomRef, chatVisible }: RoomProps) {
                 playerRefs.current[user.id] = el;
               }}
               data-player-id={user.id}
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 pt-[max(2vh,8px)] pb-[max(2vh,8px)]"
+              className="absolute z-10 transform -translate-x-1/2 -translate-y-1/2 pt-[max(2vh,8px)] pb-[max(2vh,8px)] hover:z-[100] focus-within:z-[100]"
               style={{
                 left: `${position.x}px`,
-                top: `${position.y}px`,
-                zIndex: 10
+                top: `${position.y}px`
               }}
             >
               <Player
@@ -456,6 +502,7 @@ export function Room({ room, onShowInChat, roomRef, chatVisible }: RoomProps) {
                 playerPositionMap={playerPositionMap}
                 tableRect={tableRect}
                 chatVisible={chatVisible}
+                reaction={activeReactions[user.id]}
               />
             </div>
           );
