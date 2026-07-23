@@ -9,7 +9,8 @@ const apiMocks = vi.hoisted(() => ({
   updateDeck: vi.fn().mockResolvedValue({}),
   toggleCountdown: vi.fn().mockResolvedValue({}),
   toggleConfirm: vi.fn().mockResolvedValue({}),
-  toggleVoteChanges: vi.fn().mockResolvedValue({})
+  toggleVoteChanges: vi.fn().mockResolvedValue({}),
+  toggleCensorVotes: vi.fn().mockResolvedValue({})
 }));
 
 vi.mock("@/api", () => ({
@@ -25,6 +26,10 @@ vi.mock("@/api", () => ({
   ],
   useToggleShowVoteChangesMutation: () => [
     apiMocks.toggleVoteChanges,
+    { loading: false }
+  ],
+  useToggleCensorVotesMutation: () => [
+    apiMocks.toggleCensorVotes,
     { loading: false }
   ]
 }));
@@ -49,6 +54,7 @@ const room: Room = {
   bannedUsers: [],
   chatHistory: [],
   confirmNewGame: true,
+  censorVotes: false,
   countdownEnabled: false,
   countdownValue: null,
   deck: {
@@ -84,7 +90,7 @@ describe("RoomOptionsDialog", () => {
       screen.getByRole("heading", { name: "Voting deck" })
     ).toBeInTheDocument();
     expect(screen.getByText("Round behavior")).toBeInTheDocument();
-    expect(screen.getAllByRole("switch")).toHaveLength(3);
+    expect(screen.getAllByRole("switch")).toHaveLength(4);
     expect(screen.getByDisplayValue("Design review")).toBeInTheDocument();
     expect(screen.getByTestId("room-options-dialog")).toHaveClass(
       "top-[calc(50%+1.75rem)]",
@@ -110,6 +116,26 @@ describe("RoomOptionsDialog", () => {
       }
     });
     expect(showVoteChanges).toHaveAttribute("aria-checked", "false");
+  });
+
+  test("defaults vote censorship off and can enable it immediately", async () => {
+    const user = userEvent.setup();
+    render(<RoomOptionsDialog open setOpen={vi.fn()} room={room} />);
+
+    const censorVotes = screen.getByRole("switch", {
+      name: "Censor individual votes"
+    });
+    expect(censorVotes).toHaveAttribute("aria-checked", "false");
+
+    await user.click(censorVotes);
+
+    expect(apiMocks.toggleCensorVotes).toHaveBeenCalledWith({
+      variables: {
+        roomId: "room-1",
+        enabled: true
+      }
+    });
+    expect(censorVotes).toHaveAttribute("aria-checked", "true");
   });
 
   test("preserves name drafts when a setting publishes a new room snapshot", async () => {

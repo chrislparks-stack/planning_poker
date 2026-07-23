@@ -72,8 +72,10 @@ export type MutationRoot = {
   sendChatMessage: ChatMessage;
   sendReaction: RoomReaction;
   setRoomOwner: Room;
+  setVoteUncensored: Room;
   showCards: Room;
   startRevealCountdown: Room;
+  toggleCensorVotes: Room;
   toggleConfirmNewGame: Room;
   toggleCountdownOption: Room;
   toggleShowVoteChanges: Room;
@@ -172,6 +174,13 @@ export type MutationRootSetRoomOwnerArgs = {
 };
 
 
+export type MutationRootSetVoteUncensoredArgs = {
+  roomId: Scalars['UUID']['input'];
+  uncensored: Scalars['Boolean']['input'];
+  userId: Scalars['UUID']['input'];
+};
+
+
 export type MutationRootShowCardsArgs = {
   roomId: Scalars['UUID']['input'];
 };
@@ -180,6 +189,12 @@ export type MutationRootShowCardsArgs = {
 export type MutationRootStartRevealCountdownArgs = {
   roomId: Scalars['UUID']['input'];
   userId?: InputMaybe<Scalars['UUID']['input']>;
+};
+
+
+export type MutationRootToggleCensorVotesArgs = {
+  enabled: Scalars['Boolean']['input'];
+  roomId: Scalars['UUID']['input'];
 };
 
 
@@ -239,6 +254,7 @@ export enum ReactionKind {
 export type Room = {
   __typename?: 'Room';
   bannedUsers: Array<Scalars['UUID']['output']>;
+  censorVotes: Scalars['Boolean']['output'];
   chatHistory: Array<ChatMessage>;
   confirmNewGame: Scalars['Boolean']['output'];
   countdownEnabled: Scalars['Boolean']['output'];
@@ -329,6 +345,7 @@ export type User = {
   previousCardPicked?: Maybe<Scalars['String']['output']>;
   previousCardValue?: Maybe<Scalars['Float']['output']>;
   username: Scalars['String']['output'];
+  voteUncensored: Scalars['Boolean']['output'];
 };
 
 export type UserCard = {

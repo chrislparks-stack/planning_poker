@@ -21,6 +21,7 @@ import lightModeDiscussion from "@/assets/light-mode-discussion.gif";
 import noVoteGif from "@/assets/no-vote.gif";
 import { useTheme } from "@/components";
 import { CardPickedIcon } from "@/components/ui/card-picked-icon.tsx";
+import { CensoredVote } from "@/components/ui/censored-vote.tsx";
 import { ChatInputWrapper } from "@/components/ui/chat-input-wrapper.tsx";
 import {
   PlayerReactionBurst,
@@ -88,6 +89,7 @@ export function Player({
   const { background } = useBackgroundConfig();
 
   const isStarry = background.enabled && background.id === "starry";
+  const isVoteCensored = room.censorVotes && !user.voteUncensored;
 
   const { registerCardRef } = useCardPosition();
   const cardRef = useRef<HTMLDivElement>(null);
@@ -237,7 +239,7 @@ export function Player({
               isStarry ? "text-gray-300" : "text-gray-900 dark:text-gray-300"
             ].join(" ")}
           >
-            {card}
+            {isVoteCensored ? <CensoredVote value={card ?? ""} /> : card}
           </div>
         );
       } else {
@@ -287,7 +289,15 @@ export function Player({
         fallback={<Hourglass className="text-glass w-6 h-6" />}
       />
     );
-  }, [isCardPicked, isGameOver, theme, systemPrefersDark, card, isStarry]);
+  }, [
+    isCardPicked,
+    isGameOver,
+    theme,
+    systemPrefersDark,
+    card,
+    isStarry,
+    isVoteCensored
+  ]);
 
   // --- Context menu logic ---
   const closeMenu = () => setMenuPos(null);
@@ -578,9 +588,9 @@ export function Player({
         : `${name} has voted`;
     }
 
-    return user.lastCardPicked == null
-      ? `${name} did not vote`
-      : `${name} voted ${user.lastCardValue}`;
+    if (user.lastCardPicked == null) return `${name} did not vote`;
+    if (isVoteCensored) return `${name}'s vote is censored`;
+    return `${name} voted ${user.lastCardValue}`;
   }, [
     user.username,
     user.lastCardPicked,
@@ -588,7 +598,8 @@ export function Player({
     isGameOver,
     hasUnreadFromUser,
     chatVisible,
-    isTargetSelf
+    isTargetSelf,
+    isVoteCensored
   ]);
 
   return (
@@ -742,7 +753,7 @@ export function Player({
                 </div>
               </div>
               <div className={isStarry ? "starry" : undefined}>
-                {isGameOver && room.showVoteChanges && (
+                {isGameOver && room.showVoteChanges && !isVoteCensored && (
                   <VoteAdjustment
                     currentCard={user.lastCardPicked}
                     currentValue={user.lastCardValue}

@@ -1,6 +1,7 @@
 import {
   Clock3,
   Eye,
+  EyeOff,
   Layers3,
   PencilLine,
   RotateCcw,
@@ -11,6 +12,7 @@ import { FC, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   useRenameRoomMutation,
+  useToggleCensorVotesMutation,
   useToggleConfirmNewGameMutation,
   useToggleCountdownOptionMutation,
   useToggleShowVoteChangesMutation,
@@ -120,6 +122,8 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
     useToggleConfirmNewGameMutation();
   const [toggleShowVoteChanges, { loading: voteChangesLoading }] =
     useToggleShowVoteChangesMutation();
+  const [toggleCensorVotes, { loading: censorVotesLoading }] =
+    useToggleCensorVotesMutation();
 
   const [roomId, setRoomId] = useState("");
   const [roomName, setRoomName] = useState("");
@@ -137,6 +141,7 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
   const [showVoteChanges, setShowVoteChanges] = useState(
     room?.showVoteChanges ?? true
   );
+  const [censorVotes, setCensorVotes] = useState(room?.censorVotes ?? false);
   const initializedRoomRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -154,6 +159,7 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
     setCountdownEnabled(room.countdownEnabled ?? false);
     setConfirmNewGame(room.confirmNewGame ?? true);
     setShowVoteChanges(room.showVoteChanges ?? true);
+    setCensorVotes(room.censorVotes ?? false);
     initializedRoomRef.current = room.id;
   }, [room, open]);
 
@@ -319,6 +325,24 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
           enabledTitle: "Vote changes visible",
           disabledTitle: "Vote changes hidden",
           errorTitle: "Error updating vote-change visibility"
+        })
+    },
+    {
+      id: "censor-votes",
+      title: "Censor individual votes",
+      description:
+        "Blur each revealed card and hide its vote-change label while keeping totals and group results visible.",
+      checked: censorVotes,
+      disabled: censorVotesLoading,
+      icon: EyeOff,
+      onCheckedChange: (enabled) =>
+        void updateBooleanSetting({
+          enabled,
+          setValue: setCensorVotes,
+          mutate: () => toggleCensorVotes({ variables: { roomId, enabled } }),
+          enabledTitle: "Individual votes censored",
+          disabledTitle: "Individual votes visible",
+          errorTitle: "Error updating vote censorship"
         })
     }
   ];

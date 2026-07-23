@@ -28,7 +28,7 @@ export type GameFieldPolicy = {
 	id?: FieldPolicy<any> | FieldReadFunction<any>,
 	table?: FieldPolicy<any> | FieldReadFunction<any>
 };
-export type MutationRootKeySpecifier = ('banUser' | 'cancelRevealCountdown' | 'createRoom' | 'createUser' | 'editUser' | 'joinRoom' | 'kickUser' | 'logout' | 'markChatSeen' | 'pickCard' | 'renameRoom' | 'resetGame' | 'sendChatMessage' | 'sendReaction' | 'setRoomOwner' | 'showCards' | 'startRevealCountdown' | 'toggleConfirmNewGame' | 'toggleCountdownOption' | 'toggleShowVoteChanges' | 'unbanUser' | 'updateDeck' | MutationRootKeySpecifier)[];
+export type MutationRootKeySpecifier = ('banUser' | 'cancelRevealCountdown' | 'createRoom' | 'createUser' | 'editUser' | 'joinRoom' | 'kickUser' | 'logout' | 'markChatSeen' | 'pickCard' | 'renameRoom' | 'resetGame' | 'sendChatMessage' | 'sendReaction' | 'setRoomOwner' | 'setVoteUncensored' | 'showCards' | 'startRevealCountdown' | 'toggleCensorVotes' | 'toggleConfirmNewGame' | 'toggleCountdownOption' | 'toggleShowVoteChanges' | 'unbanUser' | 'updateDeck' | MutationRootKeySpecifier)[];
 export type MutationRootFieldPolicy = {
 	banUser?: FieldPolicy<any> | FieldReadFunction<any>,
 	cancelRevealCountdown?: FieldPolicy<any> | FieldReadFunction<any>,
@@ -45,8 +45,10 @@ export type MutationRootFieldPolicy = {
 	sendChatMessage?: FieldPolicy<any> | FieldReadFunction<any>,
 	sendReaction?: FieldPolicy<any> | FieldReadFunction<any>,
 	setRoomOwner?: FieldPolicy<any> | FieldReadFunction<any>,
+	setVoteUncensored?: FieldPolicy<any> | FieldReadFunction<any>,
 	showCards?: FieldPolicy<any> | FieldReadFunction<any>,
 	startRevealCountdown?: FieldPolicy<any> | FieldReadFunction<any>,
+	toggleCensorVotes?: FieldPolicy<any> | FieldReadFunction<any>,
 	toggleConfirmNewGame?: FieldPolicy<any> | FieldReadFunction<any>,
 	toggleCountdownOption?: FieldPolicy<any> | FieldReadFunction<any>,
 	toggleShowVoteChanges?: FieldPolicy<any> | FieldReadFunction<any>,
@@ -59,9 +61,10 @@ export type QueryRootFieldPolicy = {
 	rooms?: FieldPolicy<any> | FieldReadFunction<any>,
 	userRooms?: FieldPolicy<any> | FieldReadFunction<any>
 };
-export type RoomKeySpecifier = ('bannedUsers' | 'chatHistory' | 'confirmNewGame' | 'countdownEnabled' | 'countdownValue' | 'deck' | 'game' | 'hasUnreadChat' | 'id' | 'isGameOver' | 'name' | 'revealStage' | 'roomOwnerId' | 'showVoteChanges' | 'users' | RoomKeySpecifier)[];
+export type RoomKeySpecifier = ('bannedUsers' | 'censorVotes' | 'chatHistory' | 'confirmNewGame' | 'countdownEnabled' | 'countdownValue' | 'deck' | 'game' | 'hasUnreadChat' | 'id' | 'isGameOver' | 'name' | 'revealStage' | 'roomOwnerId' | 'showVoteChanges' | 'users' | RoomKeySpecifier)[];
 export type RoomFieldPolicy = {
 	bannedUsers?: FieldPolicy<any> | FieldReadFunction<any>,
+	censorVotes?: FieldPolicy<any> | FieldReadFunction<any>,
 	chatHistory?: FieldPolicy<any> | FieldReadFunction<any>,
 	confirmNewGame?: FieldPolicy<any> | FieldReadFunction<any>,
 	countdownEnabled?: FieldPolicy<any> | FieldReadFunction<any>,
@@ -98,7 +101,7 @@ export type SubscriptionRootFieldPolicy = {
 	roomEvents?: FieldPolicy<any> | FieldReadFunction<any>,
 	roomReactions?: FieldPolicy<any> | FieldReadFunction<any>
 };
-export type UserKeySpecifier = ('handRaised' | 'id' | 'lastCardPicked' | 'lastCardValue' | 'lastSeenChatMessageId' | 'previousCardPicked' | 'previousCardValue' | 'username' | UserKeySpecifier)[];
+export type UserKeySpecifier = ('handRaised' | 'id' | 'lastCardPicked' | 'lastCardValue' | 'lastSeenChatMessageId' | 'previousCardPicked' | 'previousCardValue' | 'username' | 'voteUncensored' | UserKeySpecifier)[];
 export type UserFieldPolicy = {
 	handRaised?: FieldPolicy<any> | FieldReadFunction<any>,
 	id?: FieldPolicy<any> | FieldReadFunction<any>,
@@ -107,7 +110,8 @@ export type UserFieldPolicy = {
 	lastSeenChatMessageId?: FieldPolicy<any> | FieldReadFunction<any>,
 	previousCardPicked?: FieldPolicy<any> | FieldReadFunction<any>,
 	previousCardValue?: FieldPolicy<any> | FieldReadFunction<any>,
-	username?: FieldPolicy<any> | FieldReadFunction<any>
+	username?: FieldPolicy<any> | FieldReadFunction<any>,
+	voteUncensored?: FieldPolicy<any> | FieldReadFunction<any>
 };
 export type UserCardKeySpecifier = ('card' | 'userId' | UserCardKeySpecifier)[];
 export type UserCardFieldPolicy = {

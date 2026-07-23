@@ -1,10 +1,12 @@
 import { ReloadIcon } from "@radix-ui/react-icons";
+import { Eye, EyeOff } from "lucide-react";
 import { FC, RefObject, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import {
   useCancelRevealCountdownMutation,
   useResetGameMutation,
+  useSetVoteUncensoredMutation,
   useShowCardsMutation,
   useStartRevealCountdownMutation
 } from "@/api";
@@ -58,6 +60,17 @@ export const Table: FC<TableProps> = ({
       }
     });
 
+  const [setVoteUncensored, { loading: voteVisibilityLoading }] =
+    useSetVoteUncensoredMutation({
+      onError: (error) => {
+        toast({
+          title: "Error",
+          description: `Vote visibility: ${error.message}`,
+          variant: "destructive"
+        });
+      }
+    });
+
   const [startRevealCountdown, { loading: countdownLoading }] =
     useStartRevealCountdownMutation({
       onError: (error) => {
@@ -105,11 +118,15 @@ export const Table: FC<TableProps> = ({
   const currentEntry = currentUserId
     ? table.find((t) => (t.userId ?? t.user?.id ?? null) === currentUserId)
     : undefined;
+  const currentUser = currentUserId
+    ? room.users.find((user) => user.id === currentUserId)
+    : undefined;
 
   const totalPlayers = room.users?.length ?? 0;
   const voteCount = table.length;
   const userHasSubmitted = currentEntry !== undefined;
   const selectedCardLabel = currentEntry?.card ?? "";
+  const currentVoteUncensored = currentUser?.voteUncensored ?? false;
   const votePercentage =
     totalPlayers > 0 ? Math.round((voteCount / totalPlayers) * 100) : 0;
 
@@ -198,6 +215,22 @@ export const Table: FC<TableProps> = ({
     }
   }
 
+  async function handleVoteVisibility() {
+    if (!currentUserId) return;
+
+    try {
+      await setVoteUncensored({
+        variables: {
+          roomId: room.id,
+          userId: currentUserId,
+          uncensored: !currentVoteUncensored
+        }
+      });
+    } catch {
+      return;
+    }
+  }
+
   function handleResetGame() {
     if (!currentIsRoomOwner) {
       toast({
@@ -245,6 +278,25 @@ export const Table: FC<TableProps> = ({
 
     return () => cancelAnimationFrame(frame);
   }, [votePercentage]);
+
+  const voteVisibilityButton =
+    room.censorVotes && userHasSubmitted ? (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={voteVisibilityLoading}
+        onClick={() => void handleVoteVisibility()}
+        className="h-8 min-w-[64%] gap-1.5 border-accent/55 bg-accent/15 px-3 text-[clamp(10px,0.9vw,12px)] font-semibold text-foreground shadow-[0_0_12px_hsl(var(--accent)/0.2)] hover:bg-accent/25 hover:text-foreground"
+      >
+        {currentVoteUncensored ? (
+          <EyeOff aria-hidden="true" className="size-3.5" />
+        ) : (
+          <Eye aria-hidden="true" className="size-3.5" />
+        )}
+        {currentVoteUncensored ? "Hide my vote" : "Show my vote"}
+      </Button>
+    ) : null;
 
   // ===== Render =====
   return (
@@ -304,31 +356,37 @@ export const Table: FC<TableProps> = ({
           if (isGameOver) {
             if (currentIsRoomOwner) {
               return (
-                <Button
-                  onClick={() =>
-                    room.confirmNewGame
-                      ? setOpenNewGameDialog(true)
-                      : handleResetGame()
-                  }
-                  disabled={resetGameLoading}
-                  className="w-[60%] h-[35%]"
-                >
-                  {resetGameLoading && (
-                    <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Start New Game
-                </Button>
+                <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-4">
+                  <Button
+                    onClick={() =>
+                      room.confirmNewGame
+                        ? setOpenNewGameDialog(true)
+                        : handleResetGame()
+                    }
+                    disabled={resetGameLoading}
+                    className={
+                      voteVisibilityButton ? "h-10 w-[68%]" : "h-[35%] w-[60%]"
+                    }
+                  >
+                    {resetGameLoading && (
+                      <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Start New Game
+                  </Button>
+                  {voteVisibilityButton}
+                </div>
               );
             } else if (userHasSubmitted) {
               return (
-                <div className="flex flex-col items-center text-center">
+                <div className="flex flex-col items-center gap-1.5 text-center">
                   <span className="text-[clamp(10px,1.5vw,16px)]font-semibold">
                     You voted:{" "}
                     <span className="ml-1 font-mono tabular-nums">
                       {selectedCardLabel}
                     </span>
                   </span>
-                  <span className="text-[clamp(9px,1vw,12px)] text-accent mt-1">
+                  {voteVisibilityButton}
+                  <span className="text-[clamp(9px,1vw,12px)] text-accent">
                     Waiting to start new game...
                   </span>
                 </div>

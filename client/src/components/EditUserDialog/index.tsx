@@ -54,7 +54,8 @@ export const EditUserDialog: FC<EditUserDialogProps> = ({ open, setOpen }) => {
       login?.({
         id: data.editUser.id,
         username: data.editUser.username,
-        handRaised: data.editUser.handRaised
+        handRaised: data.editUser.handRaised,
+        voteUncensored: data.editUser.voteUncensored
       });
       setOpen(false);
 

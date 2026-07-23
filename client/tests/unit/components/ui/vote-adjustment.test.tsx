@@ -167,6 +167,28 @@ describe("VoteAdjustment", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  test("animates later changes when no vote existed at reveal", () => {
+    const { container, rerender } = render(<VoteAdjustment />);
+
+    rerender(<VoteAdjustment currentCard="3" currentValue={3} />);
+    expect(
+      container.querySelector("[data-vote-adjustment-burst]")
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+
+    rerender(<VoteAdjustment currentCard="8" currentValue={8} />);
+    expect(
+      container.querySelector('[data-vote-adjustment-burst="up"]')
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+
+    rerender(<VoteAdjustment currentCard="5" currentValue={5} />);
+    expect(
+      container.querySelector('[data-vote-adjustment-burst="down"]')
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
   test("disappears when the vote returns to its revealed value", () => {
     const { container } = render(
       <VoteAdjustment

@@ -391,6 +391,7 @@ impl MutationRoot {
             previous_card_value,
             last_seen_chat_message_id,
             hand_raised,
+            vote_uncensored,
         ) = storage
             .values()
             .find_map(|room| {
@@ -402,10 +403,11 @@ impl MutationRoot {
                         u.previous_card_value,
                         u.last_seen_chat_message_id,
                         u.hand_raised,
+                        u.vote_uncensored,
                     )
                 })
             })
-            .unwrap_or((None, None, None, None, None, false));
+            .unwrap_or((None, None, None, None, None, false, false));
 
         Ok(User {
             id: user_id,
@@ -416,6 +418,7 @@ impl MutationRoot {
             previous_card_value,
             last_seen_chat_message_id,
             hand_raised,
+            vote_uncensored,
         })
     }
 
@@ -550,6 +553,43 @@ impl MutationRoot {
         Ok(event)
     }
 
+    async fn set_vote_uncensored(
+        &self,
+        ctx: &Context<'_>,
+        room_id: EntityId,
+        user_id: EntityId,
+        uncensored: bool,
+    ) -> Result<Room> {
+        let mut storage = get_storage(ctx).await;
+        let room = storage
+            .get_mut(&room_id)
+            .ok_or_else(|| Error::new("Room not found"))?;
+
+        if !room.censor_votes {
+            return Err(Error::new("Vote censorship is not enabled"));
+        }
+        if !room.is_game_over {
+            return Err(Error::new(
+                "Votes can only be uncensored after they are revealed",
+            ));
+        }
+
+        let user = room
+            .users
+            .iter_mut()
+            .find(|user| user.id == user_id)
+            .ok_or_else(|| Error::new("User is not in this room"))?;
+        if user.last_card_picked.is_none() {
+            return Err(Error::new("User did not vote in this round"));
+        }
+
+        user.vote_uncensored = uncensored;
+        room.touch();
+
+        SimpleBroker::publish(room.get_room());
+        Ok(room.get_room())
+    }
+
     async fn reset_game(&self, ctx: &Context<'_>, room_id: EntityId) -> Result<Room> {
         let mut storage = get_storage(ctx).await;
 
@@ -564,6 +604,7 @@ impl MutationRoot {
                     u.previous_card_picked = None;
                     u.previous_card_value = None;
                     u.hand_raised = false;
+                    u.vote_uncensored = false;
                 }
 
                 room.touch();
@@ -691,6 +732,27 @@ impl MutationRoot {
         match storage.get_mut(&room_id) {
             Some(room) => {
                 room.toggle_show_vote_changes(enabled);
+
+                room.touch();
+
+                SimpleBroker::publish(room.get_room());
+                Ok(room.get_room())
+            }
+            None => Err(Error::new("Room not found")),
+        }
+    }
+
+    async fn toggle_censor_votes(
+        &self,
+        ctx: &Context<'_>,
+        room_id: Uuid,
+        enabled: bool,
+    ) -> Result<Room> {
+        let mut storage = get_storage(ctx).await;
+
+        match storage.get_mut(&room_id) {
+            Some(room) => {
+                room.toggle_censor_votes(enabled);
 
                 room.touch();
 
@@ -891,6 +953,80 @@ mod reaction_tests {
             updated_data["toggleShowVoteChanges"]["showVoteChanges"],
             false
         );
+    }
+
+    #[tokio::test]
+    async fn vote_censorship_defaults_off_and_can_be_enabled() {
+        let (schema, room_id, _) = schema_with_room(false);
+
+        let initial = schema
+            .execute(Request::new(format!(
+                "query {{ roomById(roomId: \"{room_id}\") {{ censorVotes }} }}"
+            )))
+            .await;
+        assert!(initial.errors.is_empty(), "{:?}", initial.errors);
+        let initial_data = initial
+            .data
+            .into_json()
+            .expect("initial room data should be JSON");
+        assert_eq!(initial_data["roomById"]["censorVotes"], false);
+
+        let updated = schema
+            .execute(Request::new(format!(
+                "mutation {{ toggleCensorVotes(roomId: \"{room_id}\", enabled: true) {{ censorVotes }} }}"
+            )))
+            .await;
+        assert!(updated.errors.is_empty(), "{:?}", updated.errors);
+        let updated_data = updated
+            .data
+            .into_json()
+            .expect("updated room data should be JSON");
+        assert_eq!(updated_data["toggleCensorVotes"]["censorVotes"], true);
+    }
+
+    #[tokio::test]
+    async fn players_can_uncensor_their_vote_until_the_round_resets() {
+        let (schema, room_id, user_id) = schema_with_room(false);
+
+        for mutation in [
+            format!(
+                "mutation {{ toggleCensorVotes(roomId: \"{room_id}\", enabled: true) {{ censorVotes }} }}"
+            ),
+            format!(
+                "mutation {{ pickCard(roomId: \"{room_id}\", userId: \"{user_id}\", card: \"5\") {{ id }} }}"
+            ),
+            format!("mutation {{ showCards(roomId: \"{room_id}\") {{ isGameOver }} }}"),
+        ] {
+            let response = schema.execute(Request::new(mutation)).await;
+            assert!(response.errors.is_empty(), "{:?}", response.errors);
+        }
+
+        let uncensored = schema
+            .execute(Request::new(format!(
+                "mutation {{ setVoteUncensored(roomId: \"{room_id}\", userId: \"{user_id}\", uncensored: true) {{ users {{ id voteUncensored }} }} }}"
+            )))
+            .await;
+        assert!(uncensored.errors.is_empty(), "{:?}", uncensored.errors);
+        let uncensored_data = uncensored
+            .data
+            .into_json()
+            .expect("uncensored room data should be JSON");
+        assert_eq!(
+            uncensored_data["setVoteUncensored"]["users"][0]["voteUncensored"],
+            true
+        );
+
+        let reset = schema
+            .execute(Request::new(format!(
+                "mutation {{ resetGame(roomId: \"{room_id}\") {{ users {{ voteUncensored }} }} }}"
+            )))
+            .await;
+        assert!(reset.errors.is_empty(), "{:?}", reset.errors);
+        let reset_data = reset
+            .data
+            .into_json()
+            .expect("reset room data should be JSON");
+        assert_eq!(reset_data["resetGame"]["users"][0]["voteUncensored"], false);
     }
 
     #[tokio::test]

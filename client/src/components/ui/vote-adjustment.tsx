@@ -133,7 +133,6 @@ export function VoteAdjustment({
     priorSelectionRef.current = { card: currentCard, value: currentValue };
 
     if (
-      !previousCard ||
       !currentCard ||
       !priorSelection.card ||
       priorSelection.card === currentCard
@@ -152,7 +151,7 @@ export function VoteAdjustment({
       direction,
       eventId: `${priorSelection.card}-${currentCard}-${burstSequenceRef.current}`
     });
-  }, [currentCard, currentValue, previousCard]);
+  }, [currentCard, currentValue]);
 
   const direction = getVoteDirection(currentValue, previousValue);
   const accessibleDirection =

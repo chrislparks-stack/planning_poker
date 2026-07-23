@@ -27,6 +27,7 @@ pub struct Room {
     pub countdown_value: Option<i32>,
     pub confirm_new_game: bool,
     pub show_vote_changes: bool,
+    pub censor_votes: bool,
     pub chat_history: Vec<crate::domain::chat::ChatMessage>,
 
     #[graphql(skip)]
@@ -52,6 +53,7 @@ impl Room {
             countdown_value: None,
             confirm_new_game: true,
             show_vote_changes: true,
+            censor_votes: false,
             last_active: Utc::now(),
             last_active_instant: Instant::now(),
             chat_history: Vec::new(),
@@ -188,6 +190,15 @@ impl Room {
 
     pub fn toggle_show_vote_changes(&mut self, enabled: bool) {
         self.show_vote_changes = enabled;
+    }
+
+    pub fn toggle_censor_votes(&mut self, enabled: bool) {
+        self.censor_votes = enabled;
+        if enabled {
+            for user in &mut self.users {
+                user.vote_uncensored = false;
+            }
+        }
     }
 
     // === Activity / cleanup helpers ===

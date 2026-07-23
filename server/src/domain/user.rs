@@ -21,6 +21,7 @@ pub struct User {
     pub previous_card_value: Option<f32>,
     pub last_seen_chat_message_id: Option<Uuid>,
     pub hand_raised: bool,
+    pub vote_uncensored: bool,
 }
 
 impl User {
@@ -34,6 +35,7 @@ impl User {
             previous_card_value: None,
             last_seen_chat_message_id: None,
             hand_raised: false,
+            vote_uncensored: false,
         }
     }
 }
@@ -54,6 +56,7 @@ impl From<UserInput> for User {
             previous_card_value: None,
             last_seen_chat_message_id: None,
             hand_raised: false,
+            vote_uncensored: false,
         }
     }
 }

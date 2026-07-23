@@ -7,6 +7,7 @@ fragment UserFragment on User {
   previousCardValue
   lastSeenChatMessageId
   handRaised
+  voteUncensored
 }
 
 fragment DeckFragment on Deck {
@@ -67,6 +68,7 @@ fragment RoomFragment on Room {
   countdownValue
   confirmNewGame
   showVoteChanges
+  censorVotes
   chatHistory {
     ...ChatMessageFragment
   }
@@ -196,6 +198,22 @@ mutation ToggleConfirmNewGame($roomId: UUID!, $enabled: Boolean!) {
 
 mutation ToggleShowVoteChanges($roomId: UUID!, $enabled: Boolean!) {
   toggleShowVoteChanges(roomId: $roomId, enabled: $enabled) {
+    ...RoomFragment
+  }
+}
+
+mutation ToggleCensorVotes($roomId: UUID!, $enabled: Boolean!) {
+  toggleCensorVotes(roomId: $roomId, enabled: $enabled) {
+    ...RoomFragment
+  }
+}
+
+mutation SetVoteUncensored(
+  $roomId: UUID!
+  $userId: UUID!
+  $uncensored: Boolean!
+) {
+  setVoteUncensored(roomId: $roomId, userId: $userId, uncensored: $uncensored) {
     ...RoomFragment
   }
 }
