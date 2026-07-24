@@ -67,6 +67,184 @@ async function setupSharedUserInTwoRooms(
 }
 
 test.describe("multi-tab multi-room isolation", () => {
+  test("offers a valid previous room when the most recent room is stale", async ({
+    context
+  }) => {
+    const roomPage = await context.newPage();
+    const validRoomUrl = await createRoom(roomPage);
+    await joinRoom(roomPage, "Returning User");
+    const validRoomId = new URL(validRoomUrl).pathname.split("/").at(-1)!;
+
+    const staleRoomId = await roomPage.evaluate(() => {
+      const roomId = crypto.randomUUID();
+      localStorage.setItem(
+        `Room:${roomId}`,
+        JSON.stringify({
+          RoomID: roomId,
+          Cards: ["1", "2", "3"],
+          RoomName: "Missing room",
+          RoomOwner: null,
+          Username: "Returning User",
+          LastActiveAt: Date.now() + 60_000
+        })
+      );
+      localStorage.setItem("LastRoomId", roomId);
+      return roomId;
+    });
+
+    await roomPage.goto("http://localhost:5173");
+    const joinExistingButton = roomPage.getByRole("button", {
+      name: "Join Existing Game"
+    });
+    await expect(joinExistingButton).toBeVisible();
+    await joinExistingButton.click();
+    await expect(roomPage).toHaveURL(validRoomUrl);
+    await expect(
+      roomPage.getByTestId("player").filter({ hasText: "Returning User" })
+    ).toBeVisible();
+
+    const storedRooms = await roomPage.evaluate(
+      ({ missingRoomId, previousRoomId }) => ({
+        missingRoom: localStorage.getItem(`Room:${missingRoomId}`),
+        lastRoomId: localStorage.getItem("LastRoomId"),
+        previousRoom: localStorage.getItem(`Room:${previousRoomId}`)
+      }),
+      { missingRoomId: staleRoomId, previousRoomId: validRoomId }
+    );
+    expect(storedRooms.missingRoom).toBeNull();
+    expect(storedRooms.lastRoomId).toBe(validRoomId);
+    expect(storedRooms.previousRoom).not.toBeNull();
+  });
+
+  test("returns to the most recently active room instead of the last joined room", async ({
+    context
+  }) => {
+    const firstRoomPage = await context.newPage();
+    const firstRoomUrl = await createRoom(firstRoomPage);
+    await firstRoomPage
+      .getByPlaceholder("Enter room name")
+      .fill("First active room");
+    await joinRoom(firstRoomPage, "First Room User");
+
+    const secondRoomPage = await context.newPage();
+    await createRoom(secondRoomPage);
+    await secondRoomPage
+      .getByPlaceholder("Enter room name")
+      .fill("Second joined room");
+    await joinRoom(secondRoomPage, "Second Room User");
+
+    const homePage = await context.newPage();
+    await homePage.goto("http://localhost:5173");
+    const joinExistingButton = homePage.getByRole("button", {
+      name: "Join Existing Game"
+    });
+    await expect(joinExistingButton).toBeVisible();
+    await joinExistingButton.hover();
+    await expect(
+      homePage.getByRole("tooltip").getByText("Room: Second joined room")
+    ).toBeVisible();
+
+    await firstRoomPage.getByRole("button", { name: "1", exact: true }).click();
+
+    await joinExistingButton.hover();
+    await expect(
+      homePage.getByRole("tooltip").getByText("Room: First active room")
+    ).toBeVisible();
+    await joinExistingButton.click();
+
+    await expect(homePage).toHaveURL(firstRoomUrl);
+    await expect(
+      homePage.getByTestId("player").filter({ hasText: "First Room User" })
+    ).toBeVisible();
+  });
+
+  test("starting another game opens setup with defaults and reuses the identity", async ({
+    context
+  }) => {
+    const firstRoomPage = await context.newPage();
+    await createRoom(firstRoomPage);
+    await joinRoom(firstRoomPage, "Shared User");
+    const originalUserId = await firstRoomPage.evaluate(() => {
+      const storedUser = localStorage.getItem("user");
+      if (!storedUser) throw new Error("Expected a stored user");
+      return JSON.parse(storedUser).id as string;
+    });
+
+    const newRoomPage = await context.newPage();
+    await newRoomPage.goto("http://localhost:5173");
+    await newRoomPage.getByRole("button", { name: "Start New Game" }).click();
+
+    const setupDialog = newRoomPage.getByRole("dialog");
+    await expect(
+      setupDialog.getByRole("heading", { name: "Setup Room" })
+    ).toBeVisible();
+    await expect(
+      setupDialog.getByRole("heading", { name: "Room options" })
+    ).toHaveCount(0);
+    await expect(setupDialog.getByPlaceholder("Enter username")).toHaveValue(
+      "Shared User"
+    );
+    await expect(setupDialog.getByPlaceholder("Enter room name")).toHaveValue(
+      ""
+    );
+    await expect(
+      setupDialog.getByRole("button", { pressed: true })
+    ).toHaveCount(11);
+
+    await setupDialog.getByPlaceholder("Enter room name").fill("Second Room");
+    await setupDialog
+      .getByPlaceholder("Enter username")
+      .fill("Second Room Alias");
+    await setupDialog.getByRole("button", { name: "Create Room" }).click();
+
+    await expect(
+      newRoomPage.getByTestId("player").filter({ hasText: "Second Room Alias" })
+    ).toBeVisible();
+    const persistedIdentity = await newRoomPage.evaluate(() => {
+      const storedUser = localStorage.getItem("user");
+      if (!storedUser) throw new Error("Expected a stored user");
+      return JSON.parse(storedUser) as { id: string; username: string };
+    });
+    expect(persistedIdentity).toMatchObject({
+      id: originalUserId,
+      username: "Shared User"
+    });
+  });
+
+  test("applies appearance changes in another open room without reopening the dialog", async ({
+    context
+  }) => {
+    const { pageA, pageB } = await setupSharedUserInTwoRooms(context);
+
+    await pageA.evaluate(() => {
+      localStorage.setItem("vite-ui-theme", "light");
+      localStorage.setItem("accent", "emerald");
+      localStorage.setItem(
+        "background",
+        JSON.stringify({
+          enabled: true,
+          id: "starry",
+          options: {
+            gradient: true,
+            "shooting-stars": false,
+            mountains: false
+          }
+        })
+      );
+    });
+
+    await expect
+      .poll(() =>
+        pageB.evaluate(() => ({
+          accent: document.documentElement.dataset.accent,
+          isLight: document.documentElement.classList.contains("light")
+        }))
+      )
+      .toEqual({ accent: "emerald", isLight: true });
+    await expect(pageB.locator(".sky")).toBeVisible();
+    await expect(pageB.locator(".shooting-stars")).toHaveCount(0);
+  });
+
   test("keeps usernames, votes, and persisted room metadata room-scoped", async ({
     context
   }) => {

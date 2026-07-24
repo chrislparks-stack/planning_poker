@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
+import { applyAccent } from "@/lib/theme-accent";
+
 type Theme = "dark" | "light" | "system";
 
 type ThemeProviderProps = {
@@ -19,6 +21,10 @@ const initialState: ThemeProviderState = {
 };
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
+
+function isTheme(value: string | null): value is Theme {
+  return value === "dark" || value === "light" || value === "system";
+}
 
 export function ThemeProvider({
   children,
@@ -47,6 +53,21 @@ export function ThemeProvider({
 
     root.classList.add(theme);
   }, [theme]);
+
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === storageKey || event.key === null) {
+        setTheme(isTheme(event.newValue) ? event.newValue : defaultTheme);
+      }
+
+      if (event.key === "accent" || event.key === null) {
+        applyAccent(event.newValue || "lilac", { persist: false });
+      }
+    };
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [defaultTheme, storageKey]);
 
   const value = {
     theme,

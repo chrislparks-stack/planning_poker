@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {
+  getAllStoredRooms,
   getLastStoredRoom,
   getRoomStorageKey,
   getStoredRoom,
   removeStoredRoom,
   setStoredRoom,
+  touchStoredRoom,
   updateStoredRoom
 } from "@/utils/roomStorage";
 
@@ -36,23 +38,53 @@ describe("roomStorage", () => {
       Username: "Renamed in A"
     });
 
-    expect(getStoredRoom("room-a")).toEqual({
+    expect(getStoredRoom("room-a")).toMatchObject({
       RoomID: "room-a",
       Cards: ["8"],
       RoomName: "Renamed A",
       RoomOwner: "user-a",
-      Username: "Renamed in A"
+      Username: "Renamed in A",
+      LastActiveAt: expect.any(Number)
     });
-    expect(getStoredRoom("room-b")).toEqual({
+    expect(getStoredRoom("room-b")).toMatchObject({
       RoomID: "room-b",
       Cards: ["3", "5"],
       RoomName: "Room B",
       RoomOwner: "user-b",
-      Username: "Name in B"
+      Username: "Name in B",
+      LastActiveAt: expect.any(Number)
     });
     expect(localStorage.getItem(getRoomStorageKey("room-a"))).not.toEqual(
       localStorage.getItem(getRoomStorageKey("room-b"))
     );
+  });
+
+  it("orders rooms by activity instead of join order", () => {
+    setStoredRoom({
+      RoomID: "room-a",
+      Cards: [],
+      RoomName: "Joined first",
+      LastActiveAt: 100
+    });
+    setStoredRoom({
+      RoomID: "room-b",
+      Cards: [],
+      RoomName: "Joined second",
+      LastActiveAt: 200
+    });
+
+    expect(getAllStoredRooms().map((room) => room.RoomID)).toEqual([
+      "room-b",
+      "room-a"
+    ]);
+
+    touchStoredRoom("room-a", 300);
+
+    expect(getAllStoredRooms().map((room) => room.RoomID)).toEqual([
+      "room-a",
+      "room-b"
+    ]);
+    expect(getLastStoredRoom()?.RoomID).toBe("room-a");
   });
 
   it("removes only the selected room and retains another return target", () => {

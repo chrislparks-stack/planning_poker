@@ -10,11 +10,11 @@ export const DEFAULT_BACKGROUND_CONFIG: BackgroundConfig = {
   options: {}
 };
 
-const STORAGE_KEY = "background";
+export const BACKGROUND_STORAGE_KEY = "background";
 
 export function loadBackgroundConfig(): BackgroundConfig {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(BACKGROUND_STORAGE_KEY);
     if (!raw) return DEFAULT_BACKGROUND_CONFIG;
     return { ...DEFAULT_BACKGROUND_CONFIG, ...JSON.parse(raw) };
   } catch {
@@ -23,5 +23,5 @@ export function loadBackgroundConfig(): BackgroundConfig {
 }
 
 export function saveBackgroundConfig(config: BackgroundConfig) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+  localStorage.setItem(BACKGROUND_STORAGE_KEY, JSON.stringify(config));
 }

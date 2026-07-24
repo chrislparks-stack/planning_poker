@@ -8,6 +8,7 @@ export interface StoredRoom {
   RoomName: string | null;
   RoomOwner?: string | null;
   Username?: string;
+  LastActiveAt?: number;
 }
 
 function isStoredRoom(value: unknown): value is StoredRoom {
@@ -41,14 +42,24 @@ export function getStoredRoom(roomId: string): StoredRoom | null {
   const legacyRoom = parseStoredRoom(localStorage.getItem(LEGACY_ROOM_KEY));
   if (legacyRoom?.RoomID !== roomId) return null;
 
-  setStoredRoom(legacyRoom);
+  setStoredRoom(legacyRoom, false);
   localStorage.removeItem(LEGACY_ROOM_KEY);
   return legacyRoom;
 }
 
-export function setStoredRoom(room: StoredRoom): void {
-  localStorage.setItem(getRoomStorageKey(room.RoomID), JSON.stringify(room));
-  localStorage.setItem(LAST_ROOM_ID_KEY, room.RoomID);
+export function setStoredRoom(room: StoredRoom, markActive = true): void {
+  const storedRoom = {
+    ...room,
+    LastActiveAt: room.LastActiveAt ?? (markActive ? Date.now() : undefined)
+  };
+
+  localStorage.setItem(
+    getRoomStorageKey(storedRoom.RoomID),
+    JSON.stringify(storedRoom)
+  );
+  if (markActive) {
+    localStorage.setItem(LAST_ROOM_ID_KEY, storedRoom.RoomID);
+  }
 }
 
 export function updateStoredRoom(
@@ -59,7 +70,7 @@ export function updateStoredRoom(
   if (!room) return null;
 
   const updatedRoom = { ...room, ...update };
-  setStoredRoom(updatedRoom);
+  setStoredRoom(updatedRoom, false);
   return updatedRoom;
 }
 
@@ -82,24 +93,48 @@ export function getAllStoredRooms(): StoredRoom[] {
     rooms.push(legacyRoom);
   }
 
-  return rooms;
+  const lastRoomId = localStorage.getItem(LAST_ROOM_ID_KEY);
+  return rooms.sort((left, right) => {
+    const activityDifference =
+      (right.LastActiveAt ?? 0) - (left.LastActiveAt ?? 0);
+    if (activityDifference !== 0) return activityDifference;
+
+    if (left.RoomID === lastRoomId) return -1;
+    if (right.RoomID === lastRoomId) return 1;
+    return left.RoomID.localeCompare(right.RoomID);
+  });
 }
 
 export function getLastStoredRoom(): StoredRoom | null {
-  const lastRoomId = localStorage.getItem(LAST_ROOM_ID_KEY);
-  if (lastRoomId) {
-    const room = getStoredRoom(lastRoomId);
-    if (room) return room;
-  }
-
   const legacyRoom = parseStoredRoom(localStorage.getItem(LEGACY_ROOM_KEY));
   if (legacyRoom) {
-    setStoredRoom(legacyRoom);
+    setStoredRoom(legacyRoom, false);
     localStorage.removeItem(LEGACY_ROOM_KEY);
-    return legacyRoom;
   }
 
   return getAllStoredRooms()[0] ?? null;
+}
+
+export function touchStoredRoom(
+  roomId: string,
+  lastActiveAt = Date.now()
+): StoredRoom | null {
+  const room = getStoredRoom(roomId);
+  if (!room) return null;
+
+  const updatedRoom = { ...room, LastActiveAt: lastActiveAt };
+  setStoredRoom(updatedRoom, false);
+  localStorage.setItem(LAST_ROOM_ID_KEY, roomId);
+  return updatedRoom;
+}
+
+export function isRoomStorageKey(key: string | null): boolean {
+  return (
+    key === null ||
+    key === LEGACY_ROOM_KEY ||
+    key === LAST_ROOM_ID_KEY ||
+    key.startsWith(ROOM_KEY_PREFIX)
+  );
 }
 
 export function removeStoredRoom(roomId: string): void {

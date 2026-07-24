@@ -26,6 +26,7 @@ import {
   getStoredRoom,
   removeStoredRoom,
   setStoredRoom,
+  touchStoredRoom,
   updateStoredRoom
 } from "@/utils";
 
@@ -39,6 +40,7 @@ export function RoomPage() {
   const joinedRoomSessionKey = `HAS_JOINED_ROOM:${roomId}`;
 
   const isJoinRoomCalledRef = useRef(false);
+  const isNewRoomSetupRef = useRef(false);
   const [updateDeck] = useUpdateDeckMutation();
   const [setRoomOwner] = useSetRoomOwnerMutation();
   const [openCreateUserDialog, setOpenCreateUserDialog] = useState(false);
@@ -176,10 +178,9 @@ export function RoomPage() {
     const isNewRoom = sessionStorage.getItem("NEW_ROOM_CREATED") === "true";
     if (isNewRoom) {
       sessionStorage.removeItem("NEW_ROOM_CREATED");
-      if (!user) {
-        setOpenCreateUserDialog(true);
-        return;
-      }
+      isNewRoomSetupRef.current = true;
+      setOpenCreateUserDialog(true);
+      return;
     }
 
     if (!user && roomData.roomById && roomData.roomById.users.length >= 0) {
@@ -187,7 +188,7 @@ export function RoomPage() {
       return;
     }
 
-    if (user && !isJoinRoomCalledRef.current) {
+    if (user && !isJoinRoomCalledRef.current && !isNewRoomSetupRef.current) {
       const roomStorage = getStoredRoom(roomId);
 
       let roomName = "";
@@ -261,6 +262,8 @@ export function RoomPage() {
     roomName?: string | null
   ) {
     try {
+      isJoinRoomCalledRef.current = true;
+      isNewRoomSetupRef.current = false;
       const storedRoom = getStoredRoom(roomId);
       if (!storedRoom) {
         const roomData = {
@@ -316,6 +319,33 @@ export function RoomPage() {
 
   const room =
     subscriptionData?.room ?? roomData?.roomById ?? joinRoomData?.joinRoom;
+  const hasLoadedRoom = Boolean(room);
+
+  useEffect(() => {
+    if (!hasLoadedRoom) return;
+
+    const markRoomActive = () => {
+      touchStoredRoom(roomId);
+    };
+    const markVisibleRoomActive = () => {
+      if (document.visibilityState === "visible") {
+        markRoomActive();
+      }
+    };
+
+    markRoomActive();
+    document.addEventListener("pointerdown", markRoomActive, true);
+    document.addEventListener("keydown", markRoomActive, true);
+    document.addEventListener("visibilitychange", markVisibleRoomActive);
+    window.addEventListener("focus", markRoomActive);
+
+    return () => {
+      document.removeEventListener("pointerdown", markRoomActive, true);
+      document.removeEventListener("keydown", markRoomActive, true);
+      document.removeEventListener("visibilitychange", markVisibleRoomActive);
+      window.removeEventListener("focus", markRoomActive);
+    };
+  }, [hasLoadedRoom, roomId]);
 
   const APP_NAME = "Summit Planning Poker";
   const prevTitleRef = useRef<string>(
@@ -500,6 +530,7 @@ export function RoomPage() {
 
           <CreateUserDialog
             roomData={room}
+            existingUser={user}
             open={openCreateUserDialog}
             setOpen={setOpenCreateUserDialog}
             onJoin={(user, selectedCards, roomOwner?, roomName?) =>
