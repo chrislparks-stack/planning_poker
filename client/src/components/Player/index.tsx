@@ -4,6 +4,7 @@ import {
   Crown,
   DoorOpen,
   Hand,
+  History,
   Hourglass,
   MessageSquareText,
   MessagesSquare
@@ -21,11 +22,13 @@ import lightModeDiscussion from "@/assets/light-mode-discussion.gif";
 import noVoteGif from "@/assets/no-vote.gif";
 import { useTheme } from "@/components";
 import { CardPickedIcon } from "@/components/ui/card-picked-icon.tsx";
+import { CensoredVote } from "@/components/ui/censored-vote.tsx";
 import { ChatInputWrapper } from "@/components/ui/chat-input-wrapper.tsx";
 import {
   PlayerReactionBurst,
   QuickReactionPicker
 } from "@/components/ui/player-reaction.tsx";
+import { VoteAdjustment } from "@/components/ui/vote-adjustment.tsx";
 import { useBackgroundConfig } from "@/contexts/BackgroundContext.tsx";
 import { useToast } from "@/hooks/use-toast";
 import { ReactionKind, Room, User } from "@/types";
@@ -69,6 +72,30 @@ interface PlayerProps {
 
 type MenuPos = { x: number; y: number } | null;
 
+export function PreviousRoundVoteBadge({
+  username,
+  card,
+  censored
+}: {
+  username: string;
+  card?: string | null;
+  censored: boolean;
+}) {
+  if (!card || censored) return null;
+
+  return (
+    <div
+      role="status"
+      aria-label={`${username}'s previous vote was ${card}`}
+      className="pointer-events-none absolute inset-x-0 top-[22px] z-10 flex items-center justify-center gap-0.5 whitespace-nowrap text-[8px] font-bold uppercase leading-none tracking-[0.06em] text-accent drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]"
+      data-previous-round-vote={card}
+    >
+      <History aria-hidden="true" className="size-2.5" strokeWidth={2.5} />
+      <span>prev {card}</span>
+    </div>
+  );
+}
+
 export function Player({
   user,
   room,
@@ -87,6 +114,10 @@ export function Player({
   const { background } = useBackgroundConfig();
 
   const isStarry = background.enabled && background.id === "starry";
+  const isVoteCensored = room.censorVotes && !user.voteUncensored;
+  const previousRoundVote = room.previousRound?.votes.find(
+    (vote) => vote.userId === user.id
+  );
 
   const { registerCardRef } = useCardPosition();
   const cardRef = useRef<HTMLDivElement>(null);
@@ -236,7 +267,7 @@ export function Player({
               isStarry ? "text-gray-300" : "text-gray-900 dark:text-gray-300"
             ].join(" ")}
           >
-            {card}
+            {isVoteCensored ? <CensoredVote value={card ?? ""} /> : card}
           </div>
         );
       } else {
@@ -286,7 +317,15 @@ export function Player({
         fallback={<Hourglass className="text-glass w-6 h-6" />}
       />
     );
-  }, [isCardPicked, isGameOver, theme, systemPrefersDark, card, isStarry]);
+  }, [
+    isCardPicked,
+    isGameOver,
+    theme,
+    systemPrefersDark,
+    card,
+    isStarry,
+    isVoteCensored
+  ]);
 
   // --- Context menu logic ---
   const closeMenu = () => setMenuPos(null);
@@ -566,6 +605,7 @@ export function Player({
     }
 
     const name = truncateUsername(user.username);
+    const isRevote = room.previousRound != null;
 
     if (hasUnreadFromUser) {
       return `${name} has a new message...`;
@@ -573,13 +613,17 @@ export function Player({
 
     if (!isGameOver) {
       return user.lastCardPicked == null
-        ? `${name} is thinking...`
-        : `${name} has voted`;
+        ? `${name} is ${isRevote ? "considering their revote" : "thinking"}...`
+        : `${name} has ${isRevote ? "revoted" : "voted"}`;
     }
 
-    return user.lastCardPicked == null
-      ? `${name} did not vote`
-      : `${name} voted ${user.lastCardValue}`;
+    if (user.lastCardPicked == null) {
+      return `${name} did not ${isRevote ? "revote" : "vote"}`;
+    }
+    if (isVoteCensored) {
+      return `${name}'s ${isRevote ? "revote" : "vote"} is censored`;
+    }
+    return `${name} ${isRevote ? "revoted" : "voted"} ${user.lastCardValue}`;
   }, [
     user.username,
     user.lastCardPicked,
@@ -587,7 +631,9 @@ export function Player({
     isGameOver,
     hasUnreadFromUser,
     chatVisible,
-    isTargetSelf
+    isTargetSelf,
+    isVoteCensored,
+    room.previousRound
   ]);
 
   return (
@@ -735,12 +781,28 @@ export function Player({
                 pointer-events-none
               "
               >
-                {/* Avatar */}
+                {/* Avatar / revealed vote */}
                 <div className="flex items-center justify-center">
                   {cardIcon}
                 </div>
               </div>
               <div className={isStarry ? "starry" : undefined}>
+                {isGameOver && room.showVoteChanges && !isVoteCensored && (
+                  <VoteAdjustment
+                    currentCard={user.lastCardPicked}
+                    currentValue={user.lastCardValue}
+                    previousCard={user.previousCardPicked}
+                    previousValue={user.previousCardValue}
+                    showOriginalLabel={room.previousRound == null}
+                  />
+                )}
+                {isGameOver && (
+                  <PreviousRoundVoteBadge
+                    username={user.username}
+                    card={previousRoundVote?.card}
+                    censored={isVoteCensored}
+                  />
+                )}
                 <div
                   className="
                   absolute bottom-[4px] w-full text-center text-[14px]

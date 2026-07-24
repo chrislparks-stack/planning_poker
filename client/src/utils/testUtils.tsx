@@ -10,7 +10,8 @@ export function withTestUsers(testUserCount: number, users?: User[]): User[] {
     ...Array.from({ length: testUserCount }, (_, i) => ({
       id: `test-user-${i}`,
       username: `Test User ${i + 1}`,
-      handRaised: false
+      handRaised: false,
+      voteUncensored: false
     }))
   ];
 }

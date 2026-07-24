@@ -1,16 +1,18 @@
+import { UserRound } from "lucide-react";
 import { FC, FormEvent, useEffect, useState } from "react";
 
 import { useEditUserMutation } from "@/api";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { OptionDialogContent } from "@/components/ui/option-dialog-content";
 import { useAuth } from "@/contexts";
 import { useToast } from "@/hooks/use-toast";
 import { MAX_LEN } from "@/utils/enums.ts";
@@ -52,7 +54,8 @@ export const EditUserDialog: FC<EditUserDialogProps> = ({ open, setOpen }) => {
       login?.({
         id: data.editUser.id,
         username: data.editUser.username,
-        handRaised: data.editUser.handRaised
+        handRaised: data.editUser.handRaised,
+        voteUncensored: data.editUser.voteUncensored
       });
       setOpen(false);
 
@@ -111,37 +114,37 @@ export const EditUserDialog: FC<EditUserDialogProps> = ({ open, setOpen }) => {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent
-        className="
-          sm:max-w-[420px]
-          rounded-2xl
-          backdrop-blur-md
-          bg-background/80
-          border border-border/50
-          shadow-[0_8px_32px_rgb(0_0_0_/_0.4)]
-          p-0 overflow-hidden
-          animate-in fade-in-0 zoom-in-95
-        "
+      <OptionDialogContent
+        data-testid="edit-user-dialog"
+        className="max-w-[480px]"
       >
-        {/* Accent bar */}
-        <div className="h-1.5 w-full bg-gradient-to-r from-accent to-accent/60" />
+        <div className="h-1.5 w-full shrink-0 bg-gradient-to-r from-accent via-accent/85 to-accent/35" />
 
-        <form onSubmit={handleSubmit}>
-          {/* Inner content */}
-          <div className="px-6 py-5 space-y-4">
+        <DialogHeader className="shrink-0 border-b border-border/60 bg-card/30 px-5 py-4 text-left sm:px-6 sm:py-5">
+          <div className="flex items-start gap-3.5 pr-8">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-accent/25 bg-accent/10 text-accent shadow-sm">
+              <UserRound aria-hidden="true" className="size-5" />
+            </div>
             <div>
-              <DialogTitle className="text-lg font-semibold tracking-tight">
-                Update Your Username
+              <DialogTitle className="text-xl font-semibold tracking-tight">
+                Change username
               </DialogTitle>
-              <DialogDescription className="mt-1.5 text-sm text-muted-foreground">
-                This name will appear to others in your current room
+              <DialogDescription className="mt-1 text-sm leading-relaxed">
+                Update the name everyone sees in the current room.
               </DialogDescription>
             </div>
+          </div>
+        </DialogHeader>
 
-            <div className="flex flex-col gap-2 pt-2">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="flex-1 overflow-y-auto p-5 sm:p-6">
+            <section className="rounded-xl border border-border/55 bg-card/45 p-4">
               <Label htmlFor="username" className="text-sm font-medium">
                 Username
               </Label>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                Use letters, numbers, and spaces.
+              </p>
               <Input
                 id="username"
                 value={username}
@@ -177,7 +180,7 @@ export const EditUserDialog: FC<EditUserDialogProps> = ({ open, setOpen }) => {
                 aria-invalid={!!usernameError}
                 placeholder="Enter your new username"
                 className={`
-                  transition-all
+                  mt-3 h-10 bg-background/65 transition-all
                   focus:ring-2 focus:ring-accent focus:ring-offset-1
                   ${
                     usernameError
@@ -187,35 +190,25 @@ export const EditUserDialog: FC<EditUserDialogProps> = ({ open, setOpen }) => {
                 `}
               />
               {usernameError && (
-                <p className="mt-1 text-sm text-destructive">{usernameError}</p>
+                <p className="mt-2 text-xs text-destructive">{usernameError}</p>
               )}
-            </div>
-
-            <DialogFooter className="flex justify-end gap-2 pt-3">
-              <Button
-                type="button"
-                variant="ghost"
-                className="text-sm font-medium px-3 py-1.5"
-                onClick={() => setOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isSaveDisabled}
-                className="
-                  text-sm font-semibold px-4 py-1.5
-                  transition-all duration-200
-                  hover:shadow-[0_0_10px_var(--accent)]
-                  hover:-translate-y-[1px]
-                "
-              >
-                {loading ? "Saving..." : "Save"}
-              </Button>
-            </DialogFooter>
+            </section>
           </div>
+
+          <DialogFooter className="shrink-0 flex-row justify-end gap-2 border-t border-border/60 bg-card/45 px-5 py-3.5 sm:px-6">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSaveDisabled}>
+              {loading ? "Saving…" : "Save username"}
+            </Button>
+          </DialogFooter>
         </form>
-      </DialogContent>
+      </OptionDialogContent>
     </Dialog>
   );
 };

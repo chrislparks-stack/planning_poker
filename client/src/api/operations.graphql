@@ -3,8 +3,11 @@ fragment UserFragment on User {
   username
   lastCardPicked
   lastCardValue
+  previousCardPicked
+  previousCardValue
   lastSeenChatMessageId
   handRaised
+  voteUncensored
 }
 
 fragment DeckFragment on Deck {
@@ -21,6 +24,22 @@ fragment GameFragment on Game {
   id
   table {
     ...UserCardFragment
+  }
+}
+
+fragment ArchivedPlayerVoteFragment on ArchivedPlayerVote {
+  userId
+  username
+  card
+  value
+}
+
+fragment RoundVoteHistoryFragment on RoundVoteHistory {
+  id
+  roundNumber
+  completedAt
+  votes {
+    ...ArchivedPlayerVoteFragment
   }
 }
 
@@ -64,6 +83,12 @@ fragment RoomFragment on Room {
   revealStage
   countdownValue
   confirmNewGame
+  showVoteChanges
+  censorVotes
+  lockVotes
+  previousRound {
+    ...RoundVoteHistoryFragment
+  }
   chatHistory {
     ...ChatMessageFragment
   }
@@ -167,6 +192,12 @@ mutation ResetGame($roomId: UUID!) {
   }
 }
 
+mutation StartRevote($roomId: UUID!, $userId: UUID!) {
+  startRevote(roomId: $roomId, userId: $userId) {
+    ...RoomFragment
+  }
+}
+
 mutation KickUser($roomId: UUID!, $targetUserId: UUID!) {
   kickUser(roomId: $roomId, targetUserId: $targetUserId) {
     ...RoomFragment
@@ -187,6 +218,34 @@ mutation UnbanUser($roomId: UUID!, $targetUserId: UUID!) {
 
 mutation ToggleConfirmNewGame($roomId: UUID!, $enabled: Boolean!) {
   toggleConfirmNewGame(roomId: $roomId, enabled: $enabled) {
+    ...RoomFragment
+  }
+}
+
+mutation ToggleShowVoteChanges($roomId: UUID!, $enabled: Boolean!) {
+  toggleShowVoteChanges(roomId: $roomId, enabled: $enabled) {
+    ...RoomFragment
+  }
+}
+
+mutation ToggleCensorVotes($roomId: UUID!, $enabled: Boolean!) {
+  toggleCensorVotes(roomId: $roomId, enabled: $enabled) {
+    ...RoomFragment
+  }
+}
+
+mutation ToggleLockVotes($roomId: UUID!, $enabled: Boolean!) {
+  toggleLockVotes(roomId: $roomId, enabled: $enabled) {
+    ...RoomFragment
+  }
+}
+
+mutation SetVoteUncensored(
+  $roomId: UUID!
+  $userId: UUID!
+  $uncensored: Boolean!
+) {
+  setVoteUncensored(roomId: $roomId, userId: $userId, uncensored: $uncensored) {
     ...RoomFragment
   }
 }

@@ -4,9 +4,11 @@ import { Vote } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const ResultsTag = ({
-  hasBackground = false
+  hasBackground = false,
+  isRevote = false
 }: {
   hasBackground?: boolean;
+  isRevote?: boolean;
 }) => {
   return (
     <motion.div
@@ -30,7 +32,7 @@ export const ResultsTag = ({
         style={{ writingMode: "horizontal-tb" }}
         aria-hidden="true"
       />
-      <span>VOTE DISTRIBUTION</span>
+      <span>{isRevote ? "REVOTE RESULTS" : "VOTE DISTRIBUTION"}</span>
     </motion.div>
   );
 };
