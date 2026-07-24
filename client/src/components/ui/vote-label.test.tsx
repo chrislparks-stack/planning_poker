@@ -1,4 +1,4 @@
-import { render } from "@/test";
+import { render } from "@test";
 
 import { VoteLabel } from "./vote-label";
 

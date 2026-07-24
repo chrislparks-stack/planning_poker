@@ -17,6 +17,7 @@ import {
   TooltipProvider
 } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { getLastStoredRoom } from "@/utils";
 import { useTouchInput } from "@/utils/mobileUtils.tsx";
 
 const beginClimbVariants: Variants = {
@@ -191,15 +192,7 @@ export const HomePage: FC = () => {
   });
 
   // ===== Local stored data =====
-  const storedRoom = useMemo(() => {
-    try {
-      const raw = localStorage.getItem("Room");
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (parsed?.RoomID && Array.isArray(parsed?.Cards)) return parsed;
-    } catch {}
-    return null;
-  }, []);
+  const storedRoom = useMemo(() => getLastStoredRoom(), []);
 
   const storedUser = useMemo(() => {
     try {
@@ -243,8 +236,6 @@ export const HomePage: FC = () => {
 
   // ===== Handlers =====
   function onCreateRoom() {
-    localStorage.removeItem("Room");
-    localStorage.removeItem("user");
     createRoomMutation({ variables: { cards: [] } });
   }
 
@@ -570,7 +561,9 @@ export const HomePage: FC = () => {
                         <div className="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400">
                           <span>Last joined as</span>
                           <span className="text-accent font-medium">
-                            {storedUser?.username || "Unknown User"}
+                            {storedRoom?.Username ||
+                              storedUser?.username ||
+                              "Unknown User"}
                           </span>
                           {storedRoom?.RoomOwner === storedUser?.id && (
                             <span className="text-[0.65rem] px-2 py-0.5 rounded-md bg-accent text-white font-medium">

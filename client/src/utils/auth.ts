@@ -1,13 +1,12 @@
 import { USER_KEY } from "@/settings";
 import { User } from "@/types";
+import { removeAllStoredRooms } from "@/utils/roomStorage";
 
 export function getUserFromLocalStorage(): User | null {
   const maybeUser = localStorage.getItem(USER_KEY);
 
   if (maybeUser) {
-    const user: User = JSON.parse(maybeUser);
-
-    return user;
+    return JSON.parse(maybeUser) as User;
   }
 
   return null;
@@ -22,5 +21,5 @@ export function removeUserFromLocalStorage(): void {
 }
 
 export function removeRoomFromLocalStorage(): void {
-  localStorage.removeItem("Room");
+  removeAllStoredRooms();
 }

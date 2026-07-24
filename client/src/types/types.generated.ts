@@ -72,6 +72,7 @@ export type MutationRoot = {
   editUser: User;
   joinRoom: Room;
   kickUser: Room;
+  leaveRoom: Room;
   logout: Scalars['Boolean']['output'];
   markChatSeen: Room;
   pickCard: Room;
@@ -119,6 +120,7 @@ export type MutationRootCreateUserArgs = {
 
 
 export type MutationRootEditUserArgs = {
+  roomId: Scalars['UUID']['input'];
   userId: Scalars['UUID']['input'];
   username: Scalars['String']['input'];
 };
@@ -134,6 +136,12 @@ export type MutationRootJoinRoomArgs = {
 export type MutationRootKickUserArgs = {
   roomId: Scalars['UUID']['input'];
   targetUserId: Scalars['UUID']['input'];
+};
+
+
+export type MutationRootLeaveRoomArgs = {
+  roomId: Scalars['UUID']['input'];
+  userId: Scalars['UUID']['input'];
 };
 
 

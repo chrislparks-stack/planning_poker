@@ -365,62 +365,44 @@ impl MutationRoot {
     async fn edit_user(
         &self,
         ctx: &Context<'_>,
+        room_id: EntityId,
         user_id: EntityId,
         username: String,
     ) -> Result<User> {
         let mut storage = get_storage(ctx).await;
+        let room = storage
+            .get_mut(&room_id)
+            .ok_or_else(|| Error::new("Room not found"))?;
+        let user = room
+            .users
+            .iter_mut()
+            .find(|user| user.id == user_id)
+            .ok_or_else(|| Error::new("User not found in room"))?;
 
-        *storage = storage
-            .clone()
-            .into_iter()
-            .map(|(key, mut room)| {
-                if room.is_user_exist(user_id) {
-                    room.edit_user(user_id, username.clone());
+        user.username = username;
+        let updated_user = user.clone();
+        room.touch();
+        SimpleBroker::publish(room.get_room());
 
-                    room.touch();
+        Ok(updated_user)
+    }
 
-                    SimpleBroker::publish(room.get_room());
-                }
-                (key, room)
-            })
-            .collect();
+    async fn leave_room(
+        &self,
+        ctx: &Context<'_>,
+        room_id: EntityId,
+        user_id: EntityId,
+    ) -> Result<Room> {
+        let mut storage = get_storage(ctx).await;
+        let room = storage
+            .get_mut(&room_id)
+            .ok_or_else(|| Error::new("Room not found"))?;
 
-        let (
-            last_card_picked,
-            last_card_value,
-            previous_card_picked,
-            previous_card_value,
-            last_seen_chat_message_id,
-            hand_raised,
-            vote_uncensored,
-        ) = storage
-            .values()
-            .find_map(|room| {
-                room.users.iter().find(|u| u.id == user_id).map(|u| {
-                    (
-                        u.last_card_picked.clone(),
-                        u.last_card_value,
-                        u.previous_card_picked.clone(),
-                        u.previous_card_value,
-                        u.last_seen_chat_message_id,
-                        u.hand_raised,
-                        u.vote_uncensored,
-                    )
-                })
-            })
-            .unwrap_or((None, None, None, None, None, false, false));
+        room.remove_user(user_id);
+        room.touch();
+        SimpleBroker::publish(room.get_room());
 
-        Ok(User {
-            id: user_id,
-            username,
-            last_card_picked,
-            last_card_value,
-            previous_card_picked,
-            previous_card_value,
-            last_seen_chat_message_id,
-            hand_raised,
-            vote_uncensored,
-        })
+        Ok(room.get_room())
     }
 
     async fn logout(&self, ctx: &Context<'_>, user_id: Option<EntityId>) -> Result<bool> {
@@ -816,11 +798,17 @@ impl MutationRoot {
         let room = storage
             .get_mut(&input.room_id)
             .ok_or(Error::new("Room not found"))?;
+        let username = room
+            .users
+            .iter()
+            .find(|user| user.id == input.user_id)
+            .map(|user| user.username.clone())
+            .ok_or_else(|| Error::new("User not found in room"))?;
 
         let msg = ChatMessage::new(
             input.room_id,
             input.user_id,
-            input.username.clone(),
+            username,
             input.content.clone(),
             input.formatted_content.clone(),
             input.content_type.clone(),
@@ -929,6 +917,201 @@ mod schema_tests {
             .finish();
 
         (schema, room_id, user_id)
+    }
+
+    #[tokio::test]
+    async fn room_scoped_user_changes_do_not_affect_another_room() {
+        let shared_user = User::new("Shared Name".to_string());
+        let shared_user_id = shared_user.id;
+        let room_a_successor = User::new("Room A Successor".to_string());
+        let room_a_successor_id = room_a_successor.id;
+        let room_b_successor = User::new("Room B Successor".to_string());
+
+        let mut room_a = Room::new(Some("Room A".to_string()), vec!["1".to_string()]);
+        room_a.users = vec![shared_user.clone(), room_a_successor];
+        room_a.room_owner_id = Some(shared_user_id);
+        let room_a_id = room_a.id;
+
+        let mut room_b = Room::new(Some("Room B".to_string()), vec!["2".to_string()]);
+        room_b.users = vec![shared_user, room_b_successor];
+        room_b.room_owner_id = Some(shared_user_id);
+        let room_b_id = room_b.id;
+
+        let storage: Storage = Arc::new(Mutex::new(HashMap::from([
+            (room_a_id, room_a),
+            (room_b_id, room_b),
+        ])));
+        let schema = Schema::build(QueryRoot, MutationRoot, SubscriptionRoot)
+            .data(storage)
+            .finish();
+
+        let edit_response = schema
+            .execute(Request::new(format!(
+                "mutation {{ editUser(roomId: \"{room_a_id}\", userId: \"{shared_user_id}\", username: \"Room A Name\") {{ username }} }}"
+            )))
+            .await;
+        assert!(
+            edit_response.errors.is_empty(),
+            "{:?}",
+            edit_response.errors
+        );
+
+        let vote_response = schema
+            .execute(Request::new(format!(
+                "mutation {{ pickCard(roomId: \"{room_a_id}\", userId: \"{shared_user_id}\", card: \"1\") {{ id }} }}"
+            )))
+            .await;
+        assert!(
+            vote_response.errors.is_empty(),
+            "{:?}",
+            vote_response.errors
+        );
+
+        let rooms_response = schema
+            .execute(Request::new(format!(
+                "query {{
+                    roomA: roomById(roomId: \"{room_a_id}\") {{
+                        users {{ id username lastCardPicked }}
+                    }}
+                    roomB: roomById(roomId: \"{room_b_id}\") {{
+                        users {{ id username lastCardPicked }}
+                        game {{ table {{ userId }} }}
+                    }}
+                }}"
+            )))
+            .await;
+        assert!(
+            rooms_response.errors.is_empty(),
+            "{:?}",
+            rooms_response.errors
+        );
+        let rooms_data = rooms_response
+            .data
+            .into_json()
+            .expect("room data should be JSON");
+
+        assert_eq!(rooms_data["roomA"]["users"][0]["username"], "Room A Name");
+        assert_eq!(rooms_data["roomA"]["users"][0]["lastCardPicked"], "1");
+        assert_eq!(rooms_data["roomB"]["users"][0]["username"], "Shared Name");
+        assert!(rooms_data["roomB"]["users"][0]["lastCardPicked"].is_null());
+        assert_eq!(
+            rooms_data["roomB"]["game"]["table"]
+                .as_array()
+                .expect("room B table should be an array")
+                .len(),
+            0
+        );
+
+        let leave_response = schema
+            .execute(Request::new(format!(
+                "mutation {{ leaveRoom(roomId: \"{room_a_id}\", userId: \"{shared_user_id}\") {{ roomOwnerId users {{ id }} }} }}"
+            )))
+            .await;
+        assert!(
+            leave_response.errors.is_empty(),
+            "{:?}",
+            leave_response.errors
+        );
+        let leave_data = leave_response
+            .data
+            .into_json()
+            .expect("leave data should be JSON");
+        assert_eq!(
+            leave_data["leaveRoom"]["roomOwnerId"],
+            room_a_successor_id.to_string()
+        );
+        assert!(
+            leave_data["leaveRoom"]["users"]
+                .as_array()
+                .expect("room A users should be an array")
+                .iter()
+                .all(|user| user["id"] != shared_user_id.to_string())
+        );
+
+        let room_b_response = schema
+            .execute(Request::new(format!(
+                "query {{ roomById(roomId: \"{room_b_id}\") {{ roomOwnerId users {{ id username }} }} }}"
+            )))
+            .await;
+        let room_b_data = room_b_response
+            .data
+            .into_json()
+            .expect("room B data should be JSON");
+        assert_eq!(
+            room_b_data["roomById"]["roomOwnerId"],
+            shared_user_id.to_string()
+        );
+        assert_eq!(
+            room_b_data["roomById"]["users"][0]["id"],
+            shared_user_id.to_string()
+        );
+        assert_eq!(
+            room_b_data["roomById"]["users"][0]["username"],
+            "Shared Name"
+        );
+    }
+
+    #[tokio::test]
+    async fn kicking_a_user_and_reassigning_ownership_is_room_scoped() {
+        let shared_user = User::new("Shared User".to_string());
+        let shared_user_id = shared_user.id;
+        let successor = User::new("Successor".to_string());
+        let successor_id = successor.id;
+
+        let mut room_a = Room::new(None, vec!["1".to_string()]);
+        room_a.users = vec![shared_user.clone(), successor];
+        room_a.room_owner_id = Some(shared_user_id);
+        let room_a_id = room_a.id;
+
+        let mut room_b = Room::new(None, vec!["2".to_string()]);
+        room_b.users = vec![shared_user];
+        room_b.room_owner_id = Some(shared_user_id);
+        let room_b_id = room_b.id;
+
+        let storage: Storage = Arc::new(Mutex::new(HashMap::from([
+            (room_a_id, room_a),
+            (room_b_id, room_b),
+        ])));
+        let schema = Schema::build(QueryRoot, MutationRoot, SubscriptionRoot)
+            .data(storage)
+            .finish();
+
+        let kick_response = schema
+            .execute(Request::new(format!(
+                "mutation {{ kickUser(roomId: \"{room_a_id}\", targetUserId: \"{shared_user_id}\") {{ roomOwnerId users {{ id }} }} }}"
+            )))
+            .await;
+        assert!(
+            kick_response.errors.is_empty(),
+            "{:?}",
+            kick_response.errors
+        );
+        let kick_data = kick_response
+            .data
+            .into_json()
+            .expect("kick data should be JSON");
+        assert_eq!(
+            kick_data["kickUser"]["roomOwnerId"],
+            successor_id.to_string()
+        );
+
+        let room_b_response = schema
+            .execute(Request::new(format!(
+                "query {{ roomById(roomId: \"{room_b_id}\") {{ roomOwnerId users {{ id }} }} }}"
+            )))
+            .await;
+        let room_b_data = room_b_response
+            .data
+            .into_json()
+            .expect("room B data should be JSON");
+        assert_eq!(
+            room_b_data["roomById"]["roomOwnerId"],
+            shared_user_id.to_string()
+        );
+        assert_eq!(
+            room_b_data["roomById"]["users"][0]["id"],
+            shared_user_id.to_string()
+        );
     }
 
     #[tokio::test]

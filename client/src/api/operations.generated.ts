@@ -125,12 +125,21 @@ export type SetRoomOwnerMutationVariables = Exact<{
 export type SetRoomOwnerMutation = { setRoomOwner: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, showVoteChanges: boolean, censorVotes: boolean, lockVotes: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean, voteUncensored: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, previousRound: { id: string, roundNumber: number, completedAt: string, votes: Array<{ userId: string, username: string, card: string | null, value: number | null }> } | null, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
 
 export type EditUserMutationVariables = Exact<{
+  roomId: string;
   userId: string;
   username: string;
 }>;
 
 
 export type EditUserMutation = { editUser: { id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean, voteUncensored: boolean } };
+
+export type LeaveRoomMutationVariables = Exact<{
+  roomId: string;
+  userId: string;
+}>;
+
+
+export type LeaveRoomMutation = { leaveRoom: { id: string, name: string | null, isGameOver: boolean, roomOwnerId: string | null, bannedUsers: Array<string>, countdownEnabled: boolean, revealStage: string | null, countdownValue: number | null, confirmNewGame: boolean, showVoteChanges: boolean, censorVotes: boolean, lockVotes: boolean, users: Array<{ id: string, username: string, lastCardPicked: string | null, lastCardValue: number | null, previousCardPicked: string | null, previousCardValue: number | null, lastSeenChatMessageId: string | null, handRaised: boolean, voteUncensored: boolean }>, deck: { id: string, cards: Array<string> }, game: { id: string, table: Array<{ userId: string, card: string | null }> }, previousRound: { id: string, roundNumber: number, completedAt: string, votes: Array<{ userId: string, username: string, card: string | null, value: number | null }> } | null, chatHistory: Array<{ id: string, roomId: string, userId: string, username: string, content: string, formattedContent: string | null, contentType: string, timestamp: string, position: { x: number, y: number, width: number, height: number } | null }> } };
 
 export type LogoutMutationVariables = Exact<{
   userId: string;
@@ -751,8 +760,8 @@ export type SetRoomOwnerMutationHookResult = ReturnType<typeof useSetRoomOwnerMu
 export type SetRoomOwnerMutationResult = Apollo.MutationResult<SetRoomOwnerMutation>;
 export type SetRoomOwnerMutationOptions = Apollo.BaseMutationOptions<SetRoomOwnerMutation, SetRoomOwnerMutationVariables>;
 export const EditUserDocument = gql`
-    mutation EditUser($userId: UUID!, $username: String!) {
-  editUser(userId: $userId, username: $username) {
+    mutation EditUser($roomId: UUID!, $userId: UUID!, $username: String!) {
+  editUser(roomId: $roomId, userId: $userId, username: $username) {
     ...UserFragment
   }
 }
@@ -772,6 +781,7 @@ export type EditUserMutationFn = Apollo.MutationFunction<EditUserMutation, EditU
  * @example
  * const [editUserMutation, { data, loading, error }] = useEditUserMutation({
  *   variables: {
+ *      roomId: // value for 'roomId'
  *      userId: // value for 'userId'
  *      username: // value for 'username'
  *   },
@@ -784,6 +794,40 @@ export function useEditUserMutation(baseOptions?: Apollo.MutationHookOptions<Edi
 export type EditUserMutationHookResult = ReturnType<typeof useEditUserMutation>;
 export type EditUserMutationResult = Apollo.MutationResult<EditUserMutation>;
 export type EditUserMutationOptions = Apollo.BaseMutationOptions<EditUserMutation, EditUserMutationVariables>;
+export const LeaveRoomDocument = gql`
+    mutation LeaveRoom($roomId: UUID!, $userId: UUID!) {
+  leaveRoom(roomId: $roomId, userId: $userId) {
+    ...RoomFragment
+  }
+}
+    ${RoomFragmentFragmentDoc}`;
+export type LeaveRoomMutationFn = Apollo.MutationFunction<LeaveRoomMutation, LeaveRoomMutationVariables>;
+
+/**
+ * __useLeaveRoomMutation__
+ *
+ * To run a mutation, you first call `useLeaveRoomMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useLeaveRoomMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [leaveRoomMutation, { data, loading, error }] = useLeaveRoomMutation({
+ *   variables: {
+ *      roomId: // value for 'roomId'
+ *      userId: // value for 'userId'
+ *   },
+ * });
+ */
+export function useLeaveRoomMutation(baseOptions?: Apollo.MutationHookOptions<LeaveRoomMutation, LeaveRoomMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<LeaveRoomMutation, LeaveRoomMutationVariables>(LeaveRoomDocument, options);
+      }
+export type LeaveRoomMutationHookResult = ReturnType<typeof useLeaveRoomMutation>;
+export type LeaveRoomMutationResult = Apollo.MutationResult<LeaveRoomMutation>;
+export type LeaveRoomMutationOptions = Apollo.BaseMutationOptions<LeaveRoomMutation, LeaveRoomMutationVariables>;
 export const LogoutDocument = gql`
     mutation Logout($userId: UUID!) {
   logout(userId: $userId)

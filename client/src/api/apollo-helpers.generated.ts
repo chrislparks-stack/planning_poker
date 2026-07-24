@@ -35,7 +35,7 @@ export type GameFieldPolicy = {
 	id?: FieldPolicy<any> | FieldReadFunction<any>,
 	table?: FieldPolicy<any> | FieldReadFunction<any>
 };
-export type MutationRootKeySpecifier = ('banUser' | 'cancelRevealCountdown' | 'createRoom' | 'createUser' | 'editUser' | 'joinRoom' | 'kickUser' | 'logout' | 'markChatSeen' | 'pickCard' | 'renameRoom' | 'resetGame' | 'sendChatMessage' | 'sendReaction' | 'setRoomOwner' | 'setVoteUncensored' | 'showCards' | 'startRevealCountdown' | 'startRevote' | 'toggleCensorVotes' | 'toggleConfirmNewGame' | 'toggleCountdownOption' | 'toggleLockVotes' | 'toggleShowVoteChanges' | 'unbanUser' | 'updateDeck' | MutationRootKeySpecifier)[];
+export type MutationRootKeySpecifier = ('banUser' | 'cancelRevealCountdown' | 'createRoom' | 'createUser' | 'editUser' | 'joinRoom' | 'kickUser' | 'leaveRoom' | 'logout' | 'markChatSeen' | 'pickCard' | 'renameRoom' | 'resetGame' | 'sendChatMessage' | 'sendReaction' | 'setRoomOwner' | 'setVoteUncensored' | 'showCards' | 'startRevealCountdown' | 'startRevote' | 'toggleCensorVotes' | 'toggleConfirmNewGame' | 'toggleCountdownOption' | 'toggleLockVotes' | 'toggleShowVoteChanges' | 'unbanUser' | 'updateDeck' | MutationRootKeySpecifier)[];
 export type MutationRootFieldPolicy = {
 	banUser?: FieldPolicy<any> | FieldReadFunction<any>,
 	cancelRevealCountdown?: FieldPolicy<any> | FieldReadFunction<any>,
@@ -44,6 +44,7 @@ export type MutationRootFieldPolicy = {
 	editUser?: FieldPolicy<any> | FieldReadFunction<any>,
 	joinRoom?: FieldPolicy<any> | FieldReadFunction<any>,
 	kickUser?: FieldPolicy<any> | FieldReadFunction<any>,
+	leaveRoom?: FieldPolicy<any> | FieldReadFunction<any>,
 	logout?: FieldPolicy<any> | FieldReadFunction<any>,
 	markChatSeen?: FieldPolicy<any> | FieldReadFunction<any>,
 	pickCard?: FieldPolicy<any> | FieldReadFunction<any>,

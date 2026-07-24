@@ -5,7 +5,6 @@ import { validate as validateUUID } from "uuid";
 import {
   useGetRoomQuery,
   useJoinRoomMutation,
-  useLogoutMutation,
   useRoomEventsSubscription,
   useRoomSubscription,
   useSetRoomOwnerMutation,
@@ -23,15 +22,21 @@ import { useAuth } from "@/contexts";
 import { useBackgroundConfig } from "@/contexts/BackgroundContext.tsx";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "@/types";
+import {
+  getStoredRoom,
+  removeStoredRoom,
+  setStoredRoom,
+  updateStoredRoom
+} from "@/utils";
 
 export function RoomPage() {
   const { roomId } = useParams({ from: "/room/$roomId" });
   const roomRef = useRef<HTMLDivElement | null>(null);
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const redirectingRef = useRef(false);
   const navigate = useNavigate();
-  const [logoutMutation] = useLogoutMutation();
+  const joinedRoomSessionKey = `HAS_JOINED_ROOM:${roomId}`;
 
   const isJoinRoomCalledRef = useRef(false);
   const [updateDeck] = useUpdateDeckMutation();
@@ -66,6 +71,14 @@ export function RoomPage() {
     onCompleted: (data) => {
       const room = data?.joinRoom;
       if (!room || !user) return;
+      const roomUser = room.users.find((candidate) => candidate.id === user.id);
+
+      updateStoredRoom(room.id, {
+        Cards: room.deck.cards,
+        RoomName: room.name ?? null,
+        RoomOwner: room.roomOwnerId,
+        Username: roomUser?.username
+      });
 
       const prefix = `kickban-${room.id}-`;
       Object.keys(localStorage).forEach((key) => {
@@ -76,14 +89,14 @@ export function RoomPage() {
 
       // Only show toast on first join, not on refresh
       const hasJoinedBefore =
-        sessionStorage.getItem("HAS_JOINED_ROOM") === "true";
+        sessionStorage.getItem(joinedRoomSessionKey) === "true";
       if (!hasJoinedBefore) {
         toast({
           title: "Joined room",
           description: `You joined ${room.name ?? "the room"} successfully.`,
           duration: 2500
         });
-        sessionStorage.setItem("HAS_JOINED_ROOM", "true");
+        sessionStorage.setItem(joinedRoomSessionKey, "true");
       }
     },
     onError: (error) => {
@@ -103,7 +116,7 @@ export function RoomPage() {
 
       if (msg.includes("banned")) {
         localStorage.setItem(memoryKey, "banned");
-        localStorage.removeItem("Room");
+        removeStoredRoom(roomId);
         toast({
           title: "You are banned",
           description: `You are banned from ${roomName}`,
@@ -139,22 +152,9 @@ export function RoomPage() {
           variant: "destructive"
         });
       }
-      localStorage.removeItem("Room");
-      sessionStorage.removeItem("HAS_JOINED_ROOM");
-      // Force full auth logout: backend + local
-      try {
-        if (user?.id) {
-          logoutMutation({
-            variables: { userId: user.id }
-          }).then(() => {
-            logout?.();
-
-            setOpenCreateUserDialog(true);
-          });
-        }
-      } catch (err) {
-        console.warn("Failed to run logoutMutation after kick:", err);
-      }
+      removeStoredRoom(roomId);
+      sessionStorage.removeItem(joinedRoomSessionKey);
+      navigate({ to: "/" });
     }
 
     if (event.eventType === "USER_BANNED") {
@@ -163,11 +163,11 @@ export function RoomPage() {
         description: "You have been banned from the room.",
         variant: "destructive"
       });
-      localStorage.removeItem("Room");
-      sessionStorage.removeItem("HAS_JOINED_ROOM");
+      removeStoredRoom(roomId);
+      sessionStorage.removeItem(joinedRoomSessionKey);
       navigate({ to: "/" });
     }
-  }, [roomEventsData, user, toast, navigate, logout, logoutMutation]);
+  }, [roomEventsData, user, toast, navigate, roomId, joinedRoomSessionKey]);
 
   // --- Initial join logic ---
   useEffect(() => {
@@ -176,8 +176,10 @@ export function RoomPage() {
     const isNewRoom = sessionStorage.getItem("NEW_ROOM_CREATED") === "true";
     if (isNewRoom) {
       sessionStorage.removeItem("NEW_ROOM_CREATED");
-      setOpenCreateUserDialog(true);
-      return;
+      if (!user) {
+        setOpenCreateUserDialog(true);
+        return;
+      }
     }
 
     if (!user && roomData.roomById && roomData.roomById.users.length >= 0) {
@@ -186,38 +188,31 @@ export function RoomPage() {
     }
 
     if (user && !isJoinRoomCalledRef.current) {
-      const roomStorageRaw = localStorage.getItem("Room");
-      let roomStorage = null;
-
-      if (roomStorageRaw) {
-        try {
-          roomStorage = JSON.parse(roomStorageRaw);
-        } catch {
-          localStorage.removeItem("Room");
-        }
-      }
-
-      if (roomStorage && roomStorage.RoomID !== roomId) {
-        localStorage.removeItem("Room");
-        roomStorage = null;
-      }
+      const roomStorage = getStoredRoom(roomId);
 
       let roomName = "";
       let roomOwner = "";
+      let roomUsername = user.username;
 
       if (roomStorage) {
-        roomName = roomStorage.RoomName;
-        roomOwner = roomStorage.RoomOwner;
+        roomName = roomStorage.RoomName ?? "";
+        roomOwner = roomStorage.RoomOwner ?? "";
+        roomUsername = roomStorage.Username ?? user.username;
       }
 
       if (!roomStorage && roomData.roomById) {
+        const existingMembership = roomData.roomById.users.find(
+          (candidate) => candidate.id === user.id
+        );
+        roomUsername = existingMembership?.username ?? user.username;
         const storageData = {
           RoomID: roomData.roomById.id,
           Cards: roomData.roomById.deck.cards,
           RoomName: roomData.roomById.name ?? null,
-          RoomOwner: roomData.roomById.roomOwnerId ?? user.id
+          RoomOwner: roomData.roomById.roomOwnerId ?? user.id,
+          Username: roomUsername
         };
-        localStorage.setItem("Room", JSON.stringify(storageData));
+        setStoredRoom(storageData);
       }
 
       joinRoomMutation({
@@ -225,7 +220,7 @@ export function RoomPage() {
           roomId,
           user: {
             id: user.id,
-            username: user.username,
+            username: roomUsername,
             roomName:
               roomName && roomName.trim().length > 0 ? roomName : undefined
           },
@@ -266,26 +261,19 @@ export function RoomPage() {
     roomName?: string | null
   ) {
     try {
-      if (!localStorage.getItem("Room")) {
+      const storedRoom = getStoredRoom(roomId);
+      if (!storedRoom) {
         const roomData = {
           RoomID: roomId,
-          Cards: selectedCards,
+          Cards: selectedCards ?? [],
           RoomName: roomName ?? null,
-          RoomOwner: roomOwnerId
+          RoomOwner: roomOwnerId,
+          Username: user.username
         };
-        localStorage.setItem("Room", JSON.stringify(roomData));
+        setStoredRoom(roomData);
       } else {
-        const stored = localStorage.getItem("Room");
-        let roomData;
-        try {
-          roomData = stored ? JSON.parse(stored) : null;
-        } catch {
-          console.error("Failed to parse Room from localStorage");
-          roomData = null;
-        }
-        if (roomData && selectedCards) {
-          roomData.Cards = selectedCards;
-          localStorage.setItem("Room", JSON.stringify(roomData));
+        if (selectedCards) {
+          updateStoredRoom(roomId, { Cards: selectedCards });
         }
       }
 
@@ -303,7 +291,7 @@ export function RoomPage() {
           roomId: roomId,
           user: {
             id: user.id,
-            username: user.username,
+            username: getStoredRoom(roomId)?.Username ?? user.username,
             roomName: roomName ?? undefined
           }
         }
@@ -368,8 +356,7 @@ export function RoomPage() {
   useEffect(() => {
     if (!room || !user) return;
 
-    const storedRoom = localStorage.getItem("Room");
-    const storedCards = storedRoom ? JSON.parse(storedRoom).Cards : null;
+    const storedCards = getStoredRoom(roomId)?.Cards ?? null;
 
     const hasEverConfiguredDeck =
       Array.isArray(storedCards) && storedCards.length > 0;
@@ -385,7 +372,7 @@ export function RoomPage() {
     ) {
       setOpenRoomOptionsDialog(true);
     }
-  }, [room, user]);
+  }, [room, user, roomId]);
 
   const isMissingRoom =
     roomData &&

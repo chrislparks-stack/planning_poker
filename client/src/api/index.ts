@@ -36,6 +36,12 @@ const typePolicies: TypedTypePolicies = {
       users: { merge: false },
       chatHistory: { merge: false }
     }
+  },
+  User: {
+    // A user has independent vote, chat, reaction, and display-name state in
+    // each room. Keeping users embedded prevents Apollo from merging two room
+    // memberships that happen to share the same user UUID.
+    keyFields: false
   }
 };
 

@@ -123,17 +123,13 @@ impl Room {
         self.users.iter().any(|user| user.id == user_id)
     }
 
-    pub fn edit_user(&mut self, user_id: EntityId, username: String) {
-        for user in &mut self.users {
-            if user.id == user_id {
-                user.username = username.clone();
-            }
-        }
-    }
-
     pub fn remove_user(&mut self, user_id: EntityId) {
         self.users.retain(|user| user.id != user_id);
         self.game.table.retain(|uc| uc.user_id != user_id);
+
+        if self.room_owner_id == Some(user_id) {
+            self.room_owner_id = self.users.first().map(|user| user.id);
+        }
     }
 
     pub fn set_room_owner(&mut self, user_id: Option<EntityId>) -> Result<(), String> {

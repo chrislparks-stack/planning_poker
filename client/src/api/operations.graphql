@@ -164,9 +164,15 @@ mutation SetRoomOwner($roomId: UUID!, $userId: UUID) {
   }
 }
 
-mutation EditUser($userId: UUID!, $username: String!) {
-  editUser(userId: $userId, username: $username) {
+mutation EditUser($roomId: UUID!, $userId: UUID!, $username: String!) {
+  editUser(roomId: $roomId, userId: $userId, username: $username) {
     ...UserFragment
+  }
+}
+
+mutation LeaveRoom($roomId: UUID!, $userId: UUID!) {
+  leaveRoom(roomId: $roomId, userId: $userId) {
+    ...RoomFragment
   }
 }
 

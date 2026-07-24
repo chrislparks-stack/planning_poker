@@ -5,6 +5,7 @@ import { Header } from "@/components/Header";
 import { ChatPanel } from "@/components/ui/chat-panel.tsx";
 import { ChatRevealPrompt } from "@/components/ui/chat-reveal";
 import { ThemeHint } from "@/components/ui/theme-hint.tsx";
+import { useAuth } from "@/contexts";
 import { Room, User } from "@/types";
 import { CardPositionProvider } from "@/utils/cardPositionContext.tsx";
 import { getCookie, setCookie } from "@/utils/cookies.ts";
@@ -22,6 +23,7 @@ export function PageLayout({
   showChat?: boolean;
   setShowChat?: (value: boolean) => void;
 }) {
+  const { user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showThemeHint, setShowThemeHint] = useState(false);
   const [highlightAppearance, setHighlightAppearance] = useState(false);
@@ -104,15 +106,7 @@ export function PageLayout({
           {children}
           <ChatPanel
             room={room}
-            user={(() => {
-              try {
-                const raw = localStorage.getItem("user");
-                if (!raw) return undefined;
-                return JSON.parse(raw);
-              } catch {
-                return users?.[0];
-              }
-            })()}
+            user={room?.users.find((roomUser) => roomUser.id === user?.id)}
             visible={showChat ?? false}
             onClose={() => setShowChat?.(false)}
           />

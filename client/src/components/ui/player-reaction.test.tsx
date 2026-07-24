@@ -1,5 +1,5 @@
-import { render, screen, userEvent } from "@/test";
 import { ReactionKind } from "@/types";
+import { render, screen, userEvent } from "@test";
 
 import { PlayerReactionBurst, QuickReactionPicker } from "./player-reaction";
 

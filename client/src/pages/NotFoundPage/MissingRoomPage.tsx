@@ -1,6 +1,7 @@
 import { useParams, useRouter } from "@tanstack/react-router";
 
 import { useCreateRoomMutation } from "@/api";
+import { removeStoredRoom } from "@/utils";
 
 export function MissingRoomPage() {
   const router = useRouter();
@@ -29,8 +30,7 @@ export function MissingRoomPage() {
       <button
         disabled={loading}
         onClick={() => {
-          localStorage.removeItem("Room");
-          localStorage.removeItem("user");
+          removeStoredRoom(roomId);
           sessionStorage.setItem("NEW_ROOM_CREATED", "true");
 
           createRoomMutation({
