@@ -4,7 +4,7 @@ use tokio::time::{Duration, sleep};
 use crate::{
     domain::{
         chat::{ChatMessage, ChatPosition, ChatPositionInput},
-        game::{Game, UserCard},
+        game::UserCard,
         room::Room,
         user::{User, UserInput},
     },
@@ -29,6 +29,7 @@ pub struct RoomEvent {
 pub enum ReactionKind {
     Celebrate,
     Heart,
+    ThumbsUp,
     Laugh,
     Confused,
     RaiseHand,
@@ -384,27 +385,41 @@ impl MutationRoot {
             })
             .collect();
 
-        let (last_card_picked, last_card_value, last_seen_chat_message_id, hand_raised) = storage
+        let (
+            last_card_picked,
+            last_card_value,
+            previous_card_picked,
+            previous_card_value,
+            last_seen_chat_message_id,
+            hand_raised,
+            vote_uncensored,
+        ) = storage
             .values()
             .find_map(|room| {
                 room.users.iter().find(|u| u.id == user_id).map(|u| {
                     (
                         u.last_card_picked.clone(),
                         u.last_card_value,
+                        u.previous_card_picked.clone(),
+                        u.previous_card_value,
                         u.last_seen_chat_message_id,
                         u.hand_raised,
+                        u.vote_uncensored,
                     )
                 })
             })
-            .unwrap_or((None, None, None, false));
+            .unwrap_or((None, None, None, None, None, false, false));
 
         Ok(User {
             id: user_id,
             username,
             last_card_picked,
             last_card_value,
+            previous_card_picked,
+            previous_card_value,
             last_seen_chat_message_id,
             hand_raised,
+            vote_uncensored,
         })
     }
 
@@ -440,6 +455,10 @@ impl MutationRoot {
 
         match storage.get_mut(&room_id) {
             Some(room) => {
+                if room.lock_votes && room.is_game_over {
+                    return Err(Error::new("Votes are locked after they have been revealed"));
+                }
+
                 room.game.table.retain(|u| u.user_id != user_id);
 
                 if let Some(user) = room.users.iter_mut().find(|u| u.id == user_id) {
@@ -470,7 +489,7 @@ impl MutationRoot {
 
         match storage.get_mut(&room_id) {
             Some(room) => {
-                room.is_game_over = true;
+                room.reveal_cards();
 
                 room.touch();
 
@@ -539,19 +558,49 @@ impl MutationRoot {
         Ok(event)
     }
 
+    async fn set_vote_uncensored(
+        &self,
+        ctx: &Context<'_>,
+        room_id: EntityId,
+        user_id: EntityId,
+        uncensored: bool,
+    ) -> Result<Room> {
+        let mut storage = get_storage(ctx).await;
+        let room = storage
+            .get_mut(&room_id)
+            .ok_or_else(|| Error::new("Room not found"))?;
+
+        if !room.censor_votes {
+            return Err(Error::new("Vote censorship is not enabled"));
+        }
+        if !room.is_game_over {
+            return Err(Error::new(
+                "Votes can only be uncensored after they are revealed",
+            ));
+        }
+
+        let user = room
+            .users
+            .iter_mut()
+            .find(|user| user.id == user_id)
+            .ok_or_else(|| Error::new("User is not in this room"))?;
+        if user.last_card_picked.is_none() {
+            return Err(Error::new("User did not vote in this round"));
+        }
+
+        user.vote_uncensored = uncensored;
+        room.touch();
+
+        SimpleBroker::publish(room.get_room());
+        Ok(room.get_room())
+    }
+
     async fn reset_game(&self, ctx: &Context<'_>, room_id: EntityId) -> Result<Room> {
         let mut storage = get_storage(ctx).await;
 
         match storage.get_mut(&room_id) {
             Some(room) => {
-                room.is_game_over = false;
-                room.game = Game::new();
-
-                for u in room.users.iter_mut() {
-                    u.last_card_picked = None;
-                    u.last_card_value = None;
-                    u.hand_raised = false;
-                }
+                room.start_new_round();
 
                 room.touch();
 
@@ -561,6 +610,34 @@ impl MutationRoot {
             }
             None => Err(Error::new("Room not found")),
         }
+    }
+
+    async fn start_revote(
+        &self,
+        ctx: &Context<'_>,
+        room_id: EntityId,
+        user_id: EntityId,
+    ) -> Result<Room> {
+        let mut storage = get_storage(ctx).await;
+        let room = storage
+            .get_mut(&room_id)
+            .ok_or_else(|| Error::new("Room not found"))?;
+
+        if room.room_owner_id != Some(user_id) {
+            return Err(Error::new("Only the room owner can start a revote"));
+        }
+        if !room.lock_votes {
+            return Err(Error::new("Vote locking is not enabled"));
+        }
+        if !room.start_revote_round() {
+            return Err(Error::new(
+                "A revote can only start after votes are revealed",
+            ));
+        }
+
+        room.touch();
+        SimpleBroker::publish(room.get_room());
+        Ok(room.get_room())
     }
 
     async fn kick_user(
@@ -667,6 +744,69 @@ impl MutationRoot {
         }
     }
 
+    async fn toggle_show_vote_changes(
+        &self,
+        ctx: &Context<'_>,
+        room_id: Uuid,
+        enabled: bool,
+    ) -> Result<Room> {
+        let mut storage = get_storage(ctx).await;
+
+        match storage.get_mut(&room_id) {
+            Some(room) => {
+                room.toggle_show_vote_changes(enabled);
+
+                room.touch();
+
+                SimpleBroker::publish(room.get_room());
+                Ok(room.get_room())
+            }
+            None => Err(Error::new("Room not found")),
+        }
+    }
+
+    async fn toggle_censor_votes(
+        &self,
+        ctx: &Context<'_>,
+        room_id: Uuid,
+        enabled: bool,
+    ) -> Result<Room> {
+        let mut storage = get_storage(ctx).await;
+
+        match storage.get_mut(&room_id) {
+            Some(room) => {
+                room.toggle_censor_votes(enabled);
+
+                room.touch();
+
+                SimpleBroker::publish(room.get_room());
+                Ok(room.get_room())
+            }
+            None => Err(Error::new("Room not found")),
+        }
+    }
+
+    async fn toggle_lock_votes(
+        &self,
+        ctx: &Context<'_>,
+        room_id: Uuid,
+        enabled: bool,
+    ) -> Result<Room> {
+        let mut storage = get_storage(ctx).await;
+
+        match storage.get_mut(&room_id) {
+            Some(room) => {
+                room.toggle_lock_votes(enabled);
+
+                room.touch();
+
+                SimpleBroker::publish(room.get_room());
+                Ok(room.get_room())
+            }
+            None => Err(Error::new("Room not found")),
+        }
+    }
+
     async fn send_chat_message(
         &self,
         ctx: &Context<'_>,
@@ -757,7 +897,7 @@ impl SubscriptionRoot {
 }
 
 #[cfg(test)]
-mod reaction_tests {
+mod schema_tests {
     use std::{collections::HashMap, sync::Arc};
 
     use async_graphql::{Request, Schema};
@@ -792,6 +932,243 @@ mod reaction_tests {
     }
 
     #[tokio::test]
+    async fn reset_game_archives_each_completed_round_once() {
+        let mut room = Room::new(
+            None,
+            vec!["3".to_string(), "5".to_string(), "8".to_string()],
+        );
+        let mut adjusted_voter = User::new("Adjusted Voter".to_string());
+        adjusted_voter.last_card_picked = Some("8".to_string());
+        adjusted_voter.last_card_value = Some(8.0);
+        adjusted_voter.previous_card_picked = Some("3".to_string());
+        adjusted_voter.previous_card_value = Some(3.0);
+        let adjusted_voter_id = adjusted_voter.id;
+
+        let non_voter = User::new("Non-voter".to_string());
+        let non_voter_id = non_voter.id;
+
+        let room_id = room.id;
+        room.users = vec![adjusted_voter, non_voter];
+        room.is_game_over = true;
+
+        let storage: Storage = Arc::new(Mutex::new(HashMap::from([(room_id, room)])));
+        let schema = Schema::build(QueryRoot, MutationRoot, SubscriptionRoot)
+            .data(storage.clone())
+            .finish();
+
+        let first_reset = schema
+            .execute(Request::new(format!(
+                "mutation {{ resetGame(roomId: \"{room_id}\") {{ isGameOver }} }}"
+            )))
+            .await;
+        assert!(first_reset.errors.is_empty(), "{:?}", first_reset.errors);
+
+        {
+            let stored_rooms = storage.lock().await;
+            let stored_room = stored_rooms
+                .get(&room_id)
+                .expect("room should remain in storage");
+            assert_eq!(stored_room.vote_history.len(), 1);
+
+            let first_round = &stored_room.vote_history[0];
+            assert_eq!(first_round.round_number, 1);
+            assert!(!first_round.id.is_nil());
+            assert_eq!(first_round.votes.len(), 2);
+
+            let adjusted_vote = first_round
+                .votes
+                .iter()
+                .find(|vote| vote.user_id == adjusted_voter_id)
+                .expect("adjusted voter should be archived");
+            assert_eq!(adjusted_vote.username, "Adjusted Voter");
+            assert_eq!(adjusted_vote.card.as_deref(), Some("8"));
+            assert_eq!(adjusted_vote.value, Some(8.0));
+
+            let missing_vote = first_round
+                .votes
+                .iter()
+                .find(|vote| vote.user_id == non_voter_id)
+                .expect("non-voter should be archived");
+            assert_eq!(missing_vote.username, "Non-voter");
+            assert_eq!(missing_vote.card, None);
+            assert_eq!(missing_vote.value, None);
+
+            let reset_user = stored_room
+                .users
+                .iter()
+                .find(|user| user.id == adjusted_voter_id)
+                .expect("adjusted voter should remain in the room");
+            assert_eq!(reset_user.last_card_picked, None);
+            assert_eq!(reset_user.last_card_value, None);
+        }
+
+        let repeated_reset = schema
+            .execute(Request::new(format!(
+                "mutation {{ resetGame(roomId: \"{room_id}\") {{ isGameOver }} }}"
+            )))
+            .await;
+        assert!(
+            repeated_reset.errors.is_empty(),
+            "{:?}",
+            repeated_reset.errors
+        );
+        assert_eq!(
+            storage
+                .lock()
+                .await
+                .get(&room_id)
+                .expect("room should remain in storage")
+                .vote_history
+                .len(),
+            1
+        );
+
+        for mutation in [
+            format!(
+                "mutation {{ pickCard(roomId: \"{room_id}\", userId: \"{adjusted_voter_id}\", card: \"5\") {{ id }} }}"
+            ),
+            format!("mutation {{ showCards(roomId: \"{room_id}\") {{ isGameOver }} }}"),
+            format!("mutation {{ resetGame(roomId: \"{room_id}\") {{ isGameOver }} }}"),
+        ] {
+            let response = schema.execute(Request::new(mutation)).await;
+            assert!(response.errors.is_empty(), "{:?}", response.errors);
+        }
+
+        let stored_rooms = storage.lock().await;
+        let stored_room = stored_rooms
+            .get(&room_id)
+            .expect("room should remain in storage");
+        assert_eq!(stored_room.vote_history.len(), 2);
+        assert_eq!(stored_room.vote_history[1].round_number, 2);
+        assert_ne!(
+            stored_room.vote_history[0].id,
+            stored_room.vote_history[1].id
+        );
+
+        let second_round_vote = stored_room.vote_history[1]
+            .votes
+            .iter()
+            .find(|vote| vote.user_id == adjusted_voter_id)
+            .expect("second-round vote should be archived");
+        assert_eq!(second_round_vote.card.as_deref(), Some("5"));
+        assert_eq!(second_round_vote.value, Some(5.0));
+    }
+
+    #[tokio::test]
+    async fn locked_rounds_reject_changes_and_revotes_expose_the_previous_round() {
+        let mut room = Room::new(
+            None,
+            vec!["3".to_string(), "5".to_string(), "8".to_string()],
+        );
+        let first_voter = User::new("First Voter".to_string());
+        let first_voter_id = first_voter.id;
+        let second_voter = User::new("Second Voter".to_string());
+        let second_voter_id = second_voter.id;
+        let room_id = room.id;
+        room.users = vec![first_voter, second_voter];
+        room.room_owner_id = Some(first_voter_id);
+
+        let storage: Storage = Arc::new(Mutex::new(HashMap::from([(room_id, room)])));
+        let schema = Schema::build(QueryRoot, MutationRoot, SubscriptionRoot)
+            .data(storage.clone())
+            .finish();
+
+        let initial = schema
+            .execute(Request::new(format!(
+                "query {{ roomById(roomId: \"{room_id}\") {{ lockVotes previousRound {{ id }} }} }}"
+            )))
+            .await;
+        assert!(initial.errors.is_empty(), "{:?}", initial.errors);
+        let initial_data = initial.data.into_json().expect("room data should be JSON");
+        assert_eq!(initial_data["roomById"]["lockVotes"], false);
+        assert!(initial_data["roomById"]["previousRound"].is_null());
+
+        for mutation in [
+            format!(
+                "mutation {{ toggleLockVotes(roomId: \"{room_id}\", enabled: true) {{ lockVotes }} }}"
+            ),
+            format!(
+                "mutation {{ pickCard(roomId: \"{room_id}\", userId: \"{first_voter_id}\", card: \"3\") {{ id }} }}"
+            ),
+            format!(
+                "mutation {{ pickCard(roomId: \"{room_id}\", userId: \"{second_voter_id}\", card: \"8\") {{ id }} }}"
+            ),
+            format!("mutation {{ showCards(roomId: \"{room_id}\") {{ isGameOver }} }}"),
+        ] {
+            let response = schema.execute(Request::new(mutation)).await;
+            assert!(response.errors.is_empty(), "{:?}", response.errors);
+        }
+
+        let locked_change = schema
+            .execute(Request::new(format!(
+                "mutation {{ pickCard(roomId: \"{room_id}\", userId: \"{first_voter_id}\", card: \"5\") {{ id }} }}"
+            )))
+            .await;
+        assert_eq!(locked_change.errors.len(), 1);
+        assert!(
+            locked_change.errors[0]
+                .message
+                .contains("locked after they have been revealed")
+        );
+
+        let revote = schema
+            .execute(Request::new(format!(
+                "mutation {{ startRevote(roomId: \"{room_id}\", userId: \"{first_voter_id}\") {{
+                    isGameOver
+                    previousRound {{
+                        roundNumber
+                        votes {{ userId username card value }}
+                    }}
+                }} }}"
+            )))
+            .await;
+        assert!(revote.errors.is_empty(), "{:?}", revote.errors);
+        let revote_data = revote
+            .data
+            .into_json()
+            .expect("revote room data should be JSON");
+        let revote_room = &revote_data["startRevote"];
+        assert_eq!(revote_room["isGameOver"], false);
+        assert_eq!(revote_room["previousRound"]["roundNumber"], 1);
+        assert_eq!(revote_room["previousRound"]["votes"][0]["card"], "3");
+        assert_eq!(revote_room["previousRound"]["votes"][1]["card"], "8");
+
+        for mutation in [
+            format!(
+                "mutation {{ pickCard(roomId: \"{room_id}\", userId: \"{first_voter_id}\", card: \"5\") {{ id }} }}"
+            ),
+            format!(
+                "mutation {{ pickCard(roomId: \"{room_id}\", userId: \"{second_voter_id}\", card: \"5\") {{ id }} }}"
+            ),
+            format!(
+                "mutation {{ showCards(roomId: \"{room_id}\") {{
+                    isGameOver
+                    game {{ table {{ userId card }} }}
+                    previousRound {{ votes {{ userId card }} }}
+                }} }}"
+            ),
+        ] {
+            let response = schema.execute(Request::new(mutation)).await;
+            assert!(response.errors.is_empty(), "{:?}", response.errors);
+            if let Ok(data) = response.data.clone().into_json()
+                && data.get("showCards").is_some()
+            {
+                assert_eq!(data["showCards"]["game"]["table"][0]["card"], "5");
+                assert_eq!(data["showCards"]["game"]["table"][1]["card"], "5");
+                assert_eq!(data["showCards"]["previousRound"]["votes"][0]["card"], "3");
+                assert_eq!(data["showCards"]["previousRound"]["votes"][1]["card"], "8");
+            }
+        }
+
+        let stored_rooms = storage.lock().await;
+        let stored_room = stored_rooms
+            .get(&room_id)
+            .expect("room should remain in storage");
+        assert_eq!(stored_room.vote_history.len(), 1);
+        assert!(stored_room.previous_round.is_some());
+    }
+
+    #[tokio::test]
     async fn reactions_require_a_revealed_round() {
         let (schema, room_id, user_id) = schema_with_room(false);
         let response = schema
@@ -809,11 +1186,11 @@ mod reaction_tests {
     }
 
     #[tokio::test]
-    async fn revealed_round_reactions_return_a_room_scoped_event() {
+    async fn revealed_round_thumbs_up_reactions_return_a_room_scoped_event() {
         let (schema, room_id, user_id) = schema_with_room(true);
         let response = schema
             .execute(Request::new(format!(
-                "mutation {{ sendReaction(roomId: \"{room_id}\", userId: \"{user_id}\", reaction: CONFUSED) {{ roomId userId reaction }} }}"
+                "mutation {{ sendReaction(roomId: \"{room_id}\", userId: \"{user_id}\", reaction: THUMBS_UP) {{ roomId userId reaction }} }}"
             )))
             .await;
 
@@ -824,7 +1201,113 @@ mod reaction_tests {
             .expect("reaction data should be JSON");
         assert_eq!(data["sendReaction"]["roomId"], room_id.to_string());
         assert_eq!(data["sendReaction"]["userId"], user_id.to_string());
-        assert_eq!(data["sendReaction"]["reaction"], "CONFUSED");
+        assert_eq!(data["sendReaction"]["reaction"], "THUMBS_UP");
+    }
+
+    #[tokio::test]
+    async fn vote_change_visibility_defaults_on_and_can_be_disabled() {
+        let (schema, room_id, _) = schema_with_room(false);
+
+        let initial = schema
+            .execute(Request::new(format!(
+                "query {{ roomById(roomId: \"{room_id}\") {{ showVoteChanges }} }}"
+            )))
+            .await;
+        assert!(initial.errors.is_empty(), "{:?}", initial.errors);
+        let initial_data = initial
+            .data
+            .into_json()
+            .expect("initial room data should be JSON");
+        assert_eq!(initial_data["roomById"]["showVoteChanges"], true);
+
+        let updated = schema
+            .execute(Request::new(format!(
+                "mutation {{ toggleShowVoteChanges(roomId: \"{room_id}\", enabled: false) {{ showVoteChanges }} }}"
+            )))
+            .await;
+        assert!(updated.errors.is_empty(), "{:?}", updated.errors);
+        let updated_data = updated
+            .data
+            .into_json()
+            .expect("updated room data should be JSON");
+        assert_eq!(
+            updated_data["toggleShowVoteChanges"]["showVoteChanges"],
+            false
+        );
+    }
+
+    #[tokio::test]
+    async fn vote_censorship_defaults_off_and_can_be_enabled() {
+        let (schema, room_id, _) = schema_with_room(false);
+
+        let initial = schema
+            .execute(Request::new(format!(
+                "query {{ roomById(roomId: \"{room_id}\") {{ censorVotes }} }}"
+            )))
+            .await;
+        assert!(initial.errors.is_empty(), "{:?}", initial.errors);
+        let initial_data = initial
+            .data
+            .into_json()
+            .expect("initial room data should be JSON");
+        assert_eq!(initial_data["roomById"]["censorVotes"], false);
+
+        let updated = schema
+            .execute(Request::new(format!(
+                "mutation {{ toggleCensorVotes(roomId: \"{room_id}\", enabled: true) {{ censorVotes }} }}"
+            )))
+            .await;
+        assert!(updated.errors.is_empty(), "{:?}", updated.errors);
+        let updated_data = updated
+            .data
+            .into_json()
+            .expect("updated room data should be JSON");
+        assert_eq!(updated_data["toggleCensorVotes"]["censorVotes"], true);
+    }
+
+    #[tokio::test]
+    async fn players_can_uncensor_their_vote_until_the_round_resets() {
+        let (schema, room_id, user_id) = schema_with_room(false);
+
+        for mutation in [
+            format!(
+                "mutation {{ toggleCensorVotes(roomId: \"{room_id}\", enabled: true) {{ censorVotes }} }}"
+            ),
+            format!(
+                "mutation {{ pickCard(roomId: \"{room_id}\", userId: \"{user_id}\", card: \"5\") {{ id }} }}"
+            ),
+            format!("mutation {{ showCards(roomId: \"{room_id}\") {{ isGameOver }} }}"),
+        ] {
+            let response = schema.execute(Request::new(mutation)).await;
+            assert!(response.errors.is_empty(), "{:?}", response.errors);
+        }
+
+        let uncensored = schema
+            .execute(Request::new(format!(
+                "mutation {{ setVoteUncensored(roomId: \"{room_id}\", userId: \"{user_id}\", uncensored: true) {{ users {{ id voteUncensored }} }} }}"
+            )))
+            .await;
+        assert!(uncensored.errors.is_empty(), "{:?}", uncensored.errors);
+        let uncensored_data = uncensored
+            .data
+            .into_json()
+            .expect("uncensored room data should be JSON");
+        assert_eq!(
+            uncensored_data["setVoteUncensored"]["users"][0]["voteUncensored"],
+            true
+        );
+
+        let reset = schema
+            .execute(Request::new(format!(
+                "mutation {{ resetGame(roomId: \"{room_id}\") {{ users {{ voteUncensored }} }} }}"
+            )))
+            .await;
+        assert!(reset.errors.is_empty(), "{:?}", reset.errors);
+        let reset_data = reset
+            .data
+            .into_json()
+            .expect("reset room data should be JSON");
+        assert_eq!(reset_data["resetGame"]["users"][0]["voteUncensored"], false);
     }
 
     #[tokio::test]
@@ -890,5 +1373,96 @@ mod reaction_tests {
             .into_json()
             .expect("reset room data should be JSON");
         assert_eq!(reset_data["resetGame"]["users"][0]["handRaised"], false);
+    }
+
+    #[tokio::test]
+    async fn post_reveal_vote_changes_keep_the_original_revealed_vote() {
+        let (schema, room_id, user_id) = schema_with_room(false);
+
+        let first_vote = schema
+            .execute(Request::new(format!(
+                "mutation {{ pickCard(roomId: \"{room_id}\", userId: \"{user_id}\", card: \"1\") {{ users {{ lastCardPicked previousCardPicked }} }} }}"
+            )))
+            .await;
+        assert!(first_vote.errors.is_empty(), "{:?}", first_vote.errors);
+
+        let reveal = schema
+            .execute(Request::new(format!(
+                "mutation {{ showCards(roomId: \"{room_id}\") {{ isGameOver users {{ previousCardPicked previousCardValue }} }} }}"
+            )))
+            .await;
+        assert!(reveal.errors.is_empty(), "{:?}", reveal.errors);
+        let reveal_data = reveal
+            .data
+            .into_json()
+            .expect("revealed vote data should be JSON");
+        let revealed_user = &reveal_data["showCards"]["users"][0];
+        assert_eq!(revealed_user["previousCardPicked"], "1");
+        assert_eq!(revealed_user["previousCardValue"].as_f64(), Some(1.0));
+
+        let changed_vote = schema
+            .execute(Request::new(format!(
+                "mutation {{ pickCard(roomId: \"{room_id}\", userId: \"{user_id}\", card: \"2\") {{ users {{ lastCardPicked lastCardValue previousCardPicked previousCardValue }} }} }}"
+            )))
+            .await;
+        assert!(changed_vote.errors.is_empty(), "{:?}", changed_vote.errors);
+        let changed_data = changed_vote
+            .data
+            .into_json()
+            .expect("changed vote data should be JSON");
+        let changed_user = &changed_data["pickCard"]["users"][0];
+        assert_eq!(changed_user["lastCardPicked"], "2");
+        assert_eq!(changed_user["lastCardValue"].as_f64(), Some(2.0));
+        assert_eq!(changed_user["previousCardPicked"], "1");
+        assert_eq!(changed_user["previousCardValue"].as_f64(), Some(1.0));
+
+        let changed_again = schema
+            .execute(Request::new(format!(
+                "mutation {{ pickCard(roomId: \"{room_id}\", userId: \"{user_id}\", card: \"8\") {{ users {{ lastCardPicked previousCardPicked }} }} }}"
+            )))
+            .await;
+        assert!(
+            changed_again.errors.is_empty(),
+            "{:?}",
+            changed_again.errors
+        );
+        let changed_again_data = changed_again
+            .data
+            .into_json()
+            .expect("second changed vote data should be JSON");
+        let changed_again_user = &changed_again_data["pickCard"]["users"][0];
+        assert_eq!(changed_again_user["lastCardPicked"], "8");
+        assert_eq!(changed_again_user["previousCardPicked"], "1");
+
+        let returned_to_original = schema
+            .execute(Request::new(format!(
+                "mutation {{ pickCard(roomId: \"{room_id}\", userId: \"{user_id}\", card: \"1\") {{ users {{ lastCardPicked previousCardPicked }} }} }}"
+            )))
+            .await;
+        assert!(
+            returned_to_original.errors.is_empty(),
+            "{:?}",
+            returned_to_original.errors
+        );
+        let returned_to_original_data = returned_to_original
+            .data
+            .into_json()
+            .expect("original vote data should be JSON");
+        let original_user = &returned_to_original_data["pickCard"]["users"][0];
+        assert_eq!(original_user["lastCardPicked"], "1");
+        assert_eq!(original_user["previousCardPicked"], "1");
+
+        let reset = schema
+            .execute(Request::new(format!(
+                "mutation {{ resetGame(roomId: \"{room_id}\") {{ users {{ previousCardPicked previousCardValue }} }} }}"
+            )))
+            .await;
+        assert!(reset.errors.is_empty(), "{:?}", reset.errors);
+        let reset_data = reset
+            .data
+            .into_json()
+            .expect("reset vote data should be JSON");
+        assert!(reset_data["resetGame"]["users"][0]["previousCardPicked"].is_null());
+        assert!(reset_data["resetGame"]["users"][0]["previousCardValue"].is_null());
     }
 }

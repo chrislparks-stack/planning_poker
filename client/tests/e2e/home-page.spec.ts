@@ -1,3 +1,4 @@
+// Playwright end-to-end coverage.
 import { test, expect } from "@playwright/test";
 
 test("home page has correct elements", async ({ page }) => {

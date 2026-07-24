@@ -15,6 +15,10 @@ const containsEmoji = (value: string) =>
 export interface VoteDatum {
   card: string;
   votes: number;
+  previousVotes?: number;
+  delta?: number;
+  comparisonMaxVotes?: number;
+  hasPreviousRound?: boolean;
 }
 
 interface VoteLabelProps {
@@ -28,20 +32,29 @@ interface VoteLabelProps {
   uniqueMajority: boolean;
 }
 
-export const VoteLabel: FC<VoteLabelProps> = ({
-  x,
-  y,
-  width,
-  height,
-  index,
-  payload,
-  max,
-  uniqueMajority
-}) => {
-  if (x == null || y == null || width == null || height == null) return null;
+export const VoteLabel: FC<VoteLabelProps> = (props) => {
+  const { x, width, index, payload, max, uniqueMajority } = props;
+  const rawY = props.y;
+  const rawHeight = props.height;
+  if (x == null || rawY == null || width == null || rawHeight == null) {
+    return null;
+  }
 
   const card = payload?.card ?? "";
   const count = payload?.votes ?? 0;
+  const previousCount = payload?.previousVotes ?? 0;
+  const delta = payload?.delta ?? count - previousCount;
+  const hasPreviousRound = payload?.hasPreviousRound ?? false;
+  const comparisonMax = Math.max(payload?.comparisonMaxVotes ?? max, 1);
+  const maxPairCount = Math.max(count, previousCount);
+  const maxPairVisualHeight = 0.56 + (maxPairCount / comparisonMax) * 0.44;
+  const currentVisualHeight = 0.56 + (count / comparisonMax) * 0.44;
+  const previousVisualHeight = 0.56 + (previousCount / comparisonMax) * 0.44;
+  const height = rawHeight * (currentVisualHeight / maxPairVisualHeight);
+  const y = rawY + rawHeight - height;
+  const previousHeight =
+    rawHeight * (previousVisualHeight / maxPairVisualHeight);
+  const previousY = rawY + rawHeight - previousHeight;
   const isMajority = uniqueMajority && count === max;
   const inset = 1.25;
   const cx = x + width / 2;
@@ -73,6 +86,8 @@ export const VoteLabel: FC<VoteLabelProps> = ({
   const compactFill = fillHeight < 52;
   const countFont = clamp(11, width * 0.28, 22);
   const labelFont = clamp(3.6, width * 0.095, 8.5);
+  const deltaFont = clamp(4.6, width * 0.105, 8);
+  const deltaGap = hasPreviousRound ? 2 : 0;
   const avatarCount = Math.min(Math.max(Math.floor(count), 0), 20);
   const maxAvatarsPerRow = 10;
   const avatarRows = Math.max(1, Math.ceil(avatarCount / maxAvatarsPerRow));
@@ -99,6 +114,7 @@ export const VoteLabel: FC<VoteLabelProps> = ({
       countFont -
       countLabelGap -
       labelFont -
+      (hasPreviousRound ? deltaGap + deltaFont : 0) -
       labelAvatarGap
   );
   const preferredAvatarSize = clamp(
@@ -119,16 +135,29 @@ export const VoteLabel: FC<VoteLabelProps> = ({
   const avatarWidthScale = avatarCount <= 3 ? 1.25 : 1;
   const avatarBlockHeight = avatarSize * avatarHeightFactor;
   const fillContentHeight =
-    countFont + countLabelGap + labelFont + labelAvatarGap + avatarBlockHeight;
+    countFont +
+    countLabelGap +
+    labelFont +
+    (hasPreviousRound ? deltaGap + deltaFont : 0) +
+    labelAvatarGap +
+    avatarBlockHeight;
   const fillContentTop =
     fillY + Math.max(fillTopPadding, (fillHeight - fillContentHeight) / 2);
   const countY = fillContentTop + countFont * 0.5;
   const voteY = fillContentTop + countFont + countLabelGap + labelFont * 0.5;
+  const deltaY =
+    fillContentTop +
+    countFont +
+    countLabelGap +
+    labelFont +
+    deltaGap +
+    deltaFont * 0.5;
   const firstAvatarY =
     fillContentTop +
     countFont +
     countLabelGap +
     labelFont +
+    (hasPreviousRound ? deltaGap + deltaFont : 0) +
     labelAvatarGap +
     avatarSize * 2;
   const crownSize = clamp(6, width * 0.13, 13);
@@ -146,10 +175,49 @@ export const VoteLabel: FC<VoteLabelProps> = ({
       data-vote-card={card}
       pointerEvents="none"
       role="img"
-      aria-label={`${card} story points: ${count} ${
-        count === 1 ? "vote" : "votes"
-      }${isMajority ? ", majority" : ""}`}
+      aria-label={
+        hasPreviousRound
+          ? `${card} story points: current ${count}, last round ${previousCount}, change ${
+              delta > 0 ? `plus ${delta}` : delta
+            }${isMajority ? ", majority" : ""}`
+          : `${card} story points: ${count} ${count === 1 ? "vote" : "votes"}${
+              isMajority ? ", majority" : ""
+            }`
+      }
     >
+      {hasPreviousRound && (
+        <g data-previous-vote-ghost={card} aria-hidden="true" opacity={0.72}>
+          <rect
+            x={x + 4}
+            y={previousY + 1}
+            width={Math.max(0, width - 1)}
+            height={Math.max(0, previousHeight - 2)}
+            rx={clamp(8, width * 0.12, 14)}
+            fill="var(--vote-card-bg)"
+            fillOpacity={0.28}
+            stroke="var(--vote-neon)"
+            strokeOpacity={0.62}
+            strokeWidth={1.25}
+            strokeDasharray="3 3"
+            style={{ filter: "var(--vote-card-shadow)" }}
+          />
+          <text
+            data-previous-vote-count="true"
+            x={x + width / 2 + 2}
+            y={rawY - 11}
+            textAnchor="middle"
+            fill="var(--vote-point-label)"
+            fontSize={clamp(4.8, width * 0.09, 7)}
+            fontWeight={800}
+            letterSpacing="0.08em"
+          >
+            <tspan x={x + width / 2 + 2}>LAST ROUND</tspan>
+            <tspan x={x + width / 2 + 2} dy={clamp(6.5, width * 0.12, 8)}>
+              {previousCount} {previousCount === 1 ? "VOTE" : "VOTES"}
+            </tspan>
+          </text>
+        </g>
+      )}
       <defs>
         <linearGradient
           id={`vote-card-${index ?? 0}`}
@@ -320,6 +388,31 @@ export const VoteLabel: FC<VoteLabelProps> = ({
       >
         {count === 1 ? "VOTE" : "VOTES"}
       </text>
+
+      {hasPreviousRound && (
+        <text
+          data-vote-delta="true"
+          x={cx}
+          y={deltaY}
+          textAnchor="middle"
+          dominantBaseline="central"
+          className="tabular-nums"
+          fill={
+            delta > 0
+              ? "hsl(142 71% 55%)"
+              : delta < 0
+              ? "hsl(350 80% 67%)"
+              : "var(--vote-on-fill)"
+          }
+          fillOpacity={delta === 0 ? 0.72 : 1}
+          fontSize={deltaFont}
+          fontWeight={850}
+          letterSpacing="0.06em"
+          style={{ filter: "var(--vote-count-shadow)" }}
+        >
+          CHANGE {delta > 0 ? `+${delta}` : delta}
+        </text>
+      )}
 
       {fillHeight >= 26 && (
         <g clipPath={`url(#vote-fill-clip-${index ?? 0})`}>

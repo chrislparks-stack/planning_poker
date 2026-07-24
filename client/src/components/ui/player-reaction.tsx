@@ -11,6 +11,7 @@ import { ReactionKind } from "@/types";
 const REACTIONS = [
   { kind: ReactionKind.Celebrate, emoji: "🎉", label: "Celebrate" },
   { kind: ReactionKind.Heart, emoji: "❤️", label: "Love it" },
+  { kind: ReactionKind.ThumbsUp, emoji: "👍", label: "Thumbs up" },
   { kind: ReactionKind.Laugh, emoji: "😂", label: "Laugh" },
   { kind: ReactionKind.Confused, emoji: "❓", label: "Question" },
   { kind: ReactionKind.RaiseHand, emoji: "✋", label: "Raise hand" }
@@ -41,6 +42,10 @@ const FLOATING_HEARTS = [
   { x: 22, drift: 9, delay: 0.14 },
   { x: -4, drift: 7, delay: 0.27 }
 ] as const;
+const FLOATING_THUMBS = [
+  { x: -24, drift: -7, delay: 0.08 },
+  { x: 20, drift: 8, delay: 0.22 }
+] as const;
 
 interface QuickReactionPickerProps {
   roomId: string;
@@ -60,7 +65,7 @@ interface PickerPosition {
   opensBelow: boolean;
 }
 
-const PICKER_WIDTH = 176;
+const PICKER_WIDTH = 208;
 const PICKER_HEIGHT = 57;
 const CARD_HEIGHT = 96;
 const PICKER_GAP = 8;
@@ -172,7 +177,7 @@ export function QuickReactionPicker({
           onMouseLeave={onMenuLeave}
           style={{ left: position.left, top: position.top, zIndex: 200 }}
           className={cn(
-            "reaction-picker fixed w-44 rounded-xl px-2 py-1.5 backdrop-blur-md",
+            "reaction-picker fixed w-52 rounded-xl px-2 py-1.5 backdrop-blur-md",
             position.opensBelow ? "origin-top" : "origin-bottom"
           )}
         >
@@ -388,6 +393,42 @@ function LaughAnimation({ eventId }: { eventId: string }) {
   );
 }
 
+function ThumbsUpAnimation({ eventId }: { eventId: string }) {
+  return (
+    <>
+      <motion.span
+        initial={{ opacity: 0, scale: 0.25, y: 10, rotate: -14 }}
+        animate={{
+          opacity: [0, 1, 1, 0],
+          scale: [0.25, 1.4, 1.05, 0.9],
+          y: [10, -8, -16, -28],
+          rotate: [-14, 8, -4, 0]
+        }}
+        transition={{ duration: 1.55, ease: "easeOut" }}
+        className="absolute -left-4 -top-4 text-3xl drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]"
+      >
+        👍
+      </motion.span>
+      {FLOATING_THUMBS.map(({ x, drift, delay }, index) => (
+        <motion.span
+          key={`${eventId}-thumb-${index}`}
+          initial={{ x, y: 3, opacity: 0, scale: 0.4 }}
+          animate={{
+            x: [x, x + drift, x - drift / 2],
+            y: -48 - index * 9,
+            opacity: [0, 0.95, 0.8, 0],
+            scale: [0.4, 0.85, 0.65]
+          }}
+          transition={{ duration: 1.35, delay, ease: "easeOut" }}
+          className="absolute -left-2 -top-2 text-base drop-shadow-[0_0_6px_rgba(250,204,21,0.7)]"
+        >
+          👍
+        </motion.span>
+      ))}
+    </>
+  );
+}
+
 function RaiseHandAnimation() {
   return (
     <>
@@ -428,6 +469,8 @@ export function PlayerReactionBurst({
       ? "floating-questions"
       : reaction === ReactionKind.Heart
       ? "floating-hearts"
+      : reaction === ReactionKind.ThumbsUp
+      ? "thumbs-up-pop"
       : reaction === ReactionKind.Laugh
       ? "laugh-bounce"
       : "raised-hand-wave";
@@ -447,6 +490,9 @@ export function PlayerReactionBurst({
         <ConfusedAnimation eventId={eventId} />
       )}
       {reaction === ReactionKind.Heart && <HeartAnimation eventId={eventId} />}
+      {reaction === ReactionKind.ThumbsUp && (
+        <ThumbsUpAnimation eventId={eventId} />
+      )}
       {reaction === ReactionKind.Laugh && <LaughAnimation eventId={eventId} />}
       {reaction === ReactionKind.RaiseHand && <RaiseHandAnimation />}
     </div>

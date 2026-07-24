@@ -1,6 +1,5 @@
-import { render } from "@/test";
-
-import { VoteLabel } from "./vote-label";
+import { VoteLabel } from "@/components/ui/vote-label";
+import { render, screen } from "@test";
 
 describe("VoteLabel voter icons", () => {
   test("keeps a single voter legible in a narrow result bar", () => {
@@ -77,5 +76,49 @@ describe("VoteLabel voter icons", () => {
 
     expect(voterIcons).toHaveLength(10);
     expect(Number(firstHead?.getAttribute("r"))).toBeLessThan(2);
+  });
+
+  test("renders the previous distribution behind the current bar with an in-bar delta", () => {
+    const { container } = render(
+      <svg>
+        <VoteLabel
+          x={0}
+          y={0}
+          width={64}
+          height={150}
+          index={0}
+          payload={{
+            card: "5",
+            votes: 1,
+            previousVotes: 3,
+            delta: -2,
+            comparisonMaxVotes: 3,
+            hasPreviousRound: true
+          }}
+          max={1}
+          uniqueMajority
+        />
+      </svg>
+    );
+
+    const card = container.querySelector('[data-vote-card="5"]');
+    const ghost = container.querySelector('[data-previous-vote-ghost="5"]');
+    const ghostRect = ghost?.querySelector("rect");
+    const currentRect = card?.querySelector(":scope > rect");
+
+    expect(ghost).toBeInTheDocument();
+    expect(screen.getByText("LAST ROUND")).toBeInTheDocument();
+    expect(screen.getByText("3 VOTES")).toBeInTheDocument();
+    expect(screen.getByText("CHANGE -2")).toHaveAttribute(
+      "data-vote-delta",
+      "true"
+    );
+    expect(Number(ghostRect?.getAttribute("height"))).toBeGreaterThan(
+      Number(currentRect?.getAttribute("height"))
+    );
+    expect(card).toHaveAttribute(
+      "aria-label",
+      "5 story points: current 1, last round 3, change -2, majority"
+    );
   });
 });

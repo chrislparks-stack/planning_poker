@@ -1,5 +1,4 @@
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { Sun, Moon, Laptop, Check, Settings } from "lucide-react";
+import { Sun, Moon, Laptop, Check, Settings, Palette } from "lucide-react";
 import { FC, useEffect, useRef, useState } from "react";
 
 import Mountain from "@/assets/silhouetted-mountain-range-at-dusk.jpg";
@@ -8,11 +7,12 @@ import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
+import { OptionDialogContent } from "@/components/ui/option-dialog-content";
 import {
   Popover,
   PopoverContent,
@@ -540,74 +540,65 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
         setOpen(next);
       }}
     >
-      <DialogContent
+      <OptionDialogContent
+        data-testid="appearance-dialog"
         className={[
-          "p-0 max-h-[90vh] overflow-hidden",
-          "rounded-2xl backdrop-blur-md bg-background/80",
-          "border border-border/50",
-          "shadow-[0_8px_32px_rgb(0_0_0_/_0.4)]",
           "transition-all duration-700 ease-out",
-          livePreviewEnabled
-            ? "max-w-[80vw] lg:max-w-[980px] min-w-[400px]"
-            : "max-w-[500px] min-w-[400px]"
+          livePreviewEnabled ? "max-w-[980px]" : "max-w-[560px]"
         ].join(" ")}
       >
-        <VisuallyHidden>
-          <DialogTitle>Theme and Color Settings</DialogTitle>
-          <DialogDescription>
-            Adjust your appearance mode and accent color preferences
-          </DialogDescription>
-        </VisuallyHidden>
+        <div className="h-1.5 w-full shrink-0 bg-gradient-to-r from-accent via-accent/85 to-accent/35" />
 
-        {/* Accent bar */}
-        <div className="h-1.5 w-full bg-gradient-to-r from-accent to-accent/60 mb-5" />
+        <DialogHeader className="shrink-0 border-b border-border/60 bg-card/30 px-5 py-4 text-left sm:px-7 sm:py-5">
+          <div className="flex items-start gap-3.5 pr-8">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-accent/25 bg-accent/10 text-accent shadow-sm">
+              <Palette aria-hidden="true" className="size-5" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl font-semibold tracking-tight">
+                Appearance settings
+              </DialogTitle>
+              <DialogDescription className="mt-1 text-sm leading-relaxed">
+                Choose a theme, accent color, and background for your voting
+                table.
+              </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
 
         <div
           className={[
-            "grid",
+            "grid min-h-0 flex-1 overflow-hidden",
             livePreviewEnabled
               ? "grid-cols-1 lg:grid-cols-[1fr_520px]"
               : "grid-cols-1"
           ].join(" ")}
         >
           {/* LEFT: Controls (scrolls) */}
-          <div className="max-h-[calc(90vh-6px)] min-w-[400px] w-full overflow-y-auto px-6 py-4 space-y-4">
-            {/* Header */}
-            <div className="flex items-start justify-between gap-1">
+          <div className="min-w-0 w-full overflow-y-auto p-5 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-border/55 bg-card/45 p-3.5">
               <div>
-                <h2 className="text-lg font-semibold tracking-tight">
-                  Appearance Settings
-                </h2>
-                <p className="mt-1.5 text-sm text-muted-foreground">
-                  Choose the appearance of your voting experience
-                </p>
-                <p className="mt-1.5 text-xs text-muted-foreground">
-                  *Changes apply when you save.
+                <p className="text-sm font-semibold">Live preview</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  Preview changes beside the controls on larger screens.
                 </p>
               </div>
 
-              <div className="flex flex-col items-center rounded-lg border border-border/60 bg-background/40 p-2 w-32">
-                <p className="text-sm tracking-tight mb-2">Live Preview</p>
-                <div className="hidden lg:flex">
-                  <Switch
-                    id="live-preview"
-                    checked={livePreviewEnabled}
-                    onCheckedChange={setLivePreviewEnabled}
-                    className="flex-shrink-0"
-                    size="sm"
-                  />
-                </div>
-
-                <div className="lg:hidden text-lg text-muted-foreground">
-                  N/A
-                </div>
+              <div className="hidden shrink-0 lg:block">
+                <Switch
+                  id="live-preview"
+                  checked={livePreviewEnabled}
+                  onCheckedChange={setLivePreviewEnabled}
+                  labels={["Off", "On"]}
+                  size="sm"
+                />
               </div>
             </div>
 
             {/* Mode + Accent */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
               {/* Mode picker */}
-              <div className="rounded-lg border border-border/60 bg-background/40 p-4">
+              <div className="rounded-xl border border-border/55 bg-card/45 p-4">
                 <p className="mb-2 text-sm font-medium">Mode</p>
 
                 <div className="grid grid-cols-3 gap-2">
@@ -652,7 +643,7 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
               </div>
 
               {/* Accent swatches */}
-              <div className="rounded-lg border border-border/60 bg-background/40 p-4">
+              <div className="rounded-xl border border-border/55 bg-card/45 p-4">
                 <p className="mb-4 text-sm font-medium">Accent color</p>
 
                 <div className="flex items-center justify-start gap-3 lg:gap-1">
@@ -704,7 +695,7 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
             </div>
 
             {/* Backgrounds */}
-            <div className="rounded-lg border border-border/60 bg-background/40 p-4 space-y-3">
+            <div className="space-y-3 rounded-xl border border-border/55 bg-card/45 p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-medium">Backgrounds</p>
@@ -890,33 +881,11 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
                 </div>
               </div>
             </div>
-
-            {/* Footer */}
-            <DialogFooter className="flex flex-row justify-end gap-2 pb-1">
-              <Button
-                variant="ghost"
-                className="text-sm font-medium px-3 py-1.5"
-                onClick={handleCancel}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSave}
-                className="
-                text-sm font-semibold px-4 py-1.5
-                transition-all duration-200
-                hover:shadow-[0_0_10px_var(--accent)]
-                hover:-translate-y-[1px]
-              "
-              >
-                Save
-              </Button>
-            </DialogFooter>
           </div>
 
           {/* RIGHT: Preview (sticky, no scroll) */}
           {livePreviewEnabled && (
-            <div className="hidden lg:flex flex-col border-l border-border/40 bg-background/20">
+            <div className="hidden lg:flex flex-col border-l border-border/60 bg-muted/10">
               <div className="flex flex-col h-full p-6 gap-4">
                 {/* Header */}
                 <div className="shrink-0">
@@ -1204,7 +1173,17 @@ export const ToggleModeDialog: FC<ToggleModeDialogProps> = ({
             </div>
           )}
         </div>
-      </DialogContent>
+
+        <DialogFooter className="shrink-0 flex-row items-center justify-end gap-2 border-t border-border/60 bg-card/45 px-5 py-3.5 sm:px-7">
+          <p className="mr-auto text-xs text-muted-foreground">
+            Changes apply when you save.
+          </p>
+          <Button variant="ghost" onClick={handleCancel}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave}>Save appearance</Button>
+        </DialogFooter>
+      </OptionDialogContent>
     </Dialog>
   );
 };

@@ -6,21 +6,34 @@ import { useAuth } from "@/contexts";
 import { useKeyboardControls } from "@/hooks";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { User } from "@/types";
+import { Room, User } from "@/types";
 
 interface DeckProps {
   roomId: string;
   isGameOver: boolean;
+  lockVotes: boolean;
   cards: string[];
   users: User[];
+  previousRound?: Room["previousRound"];
 }
 
-export function Deck({ roomId, isGameOver, cards, users }: DeckProps) {
+export function Deck({
+  roomId,
+  isGameOver,
+  lockVotes,
+  cards,
+  users,
+  previousRound
+}: DeckProps) {
   const { user: authUser } = useAuth();
   const { toast } = useToast();
   const { cardsContainerRef } = useKeyboardControls();
 
   const currentUser = users.find((u) => u.id === authUser?.id) ?? null;
+  const previousCard =
+    previousRound?.votes.find((vote) => vote.userId === authUser?.id)?.card ??
+    null;
+  const votesLocked = isGameOver && lockVotes;
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [windowWidth, setWindowWidth] = useState(() => window.innerWidth);
 
@@ -53,7 +66,7 @@ export function Deck({ roomId, isGameOver, cards, users }: DeckProps) {
   }, [authUser?.id, isGameOver, currentUser?.lastCardPicked]);
 
   const handleCardClick = (card: string) => async () => {
-    if (!authUser?.id) return;
+    if (!authUser?.id || votesLocked) return;
     const isSelected = selectedCard === card;
     const cardToSend = isSelected ? "" : card;
     setSelectedCard(isSelected ? null : card);
@@ -95,18 +108,36 @@ export function Deck({ roomId, isGameOver, cards, users }: DeckProps) {
       }
     >
       {cards.map((card) => {
+        const isPreviousVote = previousCard === card;
+        const isSelected = selectedCard === card;
         return (
           <div
             key={card}
             className="relative flex justify-center transition-transform duration-200"
             style={{
-              transform:
-                selectedCard === card ? "translateY(-15px)" : "translateY(0)"
+              transform: isSelected ? "translateY(-15px)" : "translateY(0)"
             }}
           >
+            {isPreviousVote && (
+              <span className="pointer-events-none absolute -top-5 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap text-[9px] font-bold uppercase tracking-[0.14em] text-accent/80">
+                Previous
+              </span>
+            )}
             <Card
               onClick={handleCardClick(card)}
-              variant={selectedCard === card ? "default" : "outline"}
+              disabled={votesLocked}
+              aria-pressed={isSelected}
+              aria-label={`${card}${isPreviousVote ? ", previous vote" : ""}`}
+              variant={isSelected ? "default" : "outline"}
+              className={cn(
+                isPreviousVote &&
+                  !isSelected &&
+                  "border-dashed border-accent/65 bg-accent/[0.08] text-foreground/55 shadow-[0_0_16px_hsl(var(--accent)/0.16)] after:pointer-events-none after:absolute after:inset-1 after:rounded-[inherit] after:border after:border-accent/20",
+                isPreviousVote &&
+                  isSelected &&
+                  "ring-2 ring-accent/45 ring-offset-2 ring-offset-background",
+                votesLocked && "cursor-not-allowed opacity-75"
+              )}
             >
               {card}
             </Card>

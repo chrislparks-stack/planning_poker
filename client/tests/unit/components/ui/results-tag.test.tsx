@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { ResultsTag } from "./results-tag";
+import { ResultsTag } from "@/components/ui/results-tag";
 
 describe("ResultsTag", () => {
   it("marks the divider when a room background is active", () => {

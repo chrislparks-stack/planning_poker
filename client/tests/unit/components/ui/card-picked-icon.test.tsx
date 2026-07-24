@@ -1,6 +1,5 @@
-import { fireEvent, render, screen } from "@/test";
-
-import { CardPickedIcon } from "./card-picked-icon";
+import { CardPickedIcon } from "@/components/ui/card-picked-icon";
+import { fireEvent, render, screen } from "@test";
 
 describe("CardPickedIcon", () => {
   test("renders the animated picked-card asset with a native fallback", () => {
