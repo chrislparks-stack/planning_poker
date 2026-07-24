@@ -1,4 +1,11 @@
 import { FieldPolicy, FieldReadFunction, TypePolicies, TypePolicy } from '@apollo/client/cache';
+export type ArchivedPlayerVoteKeySpecifier = ('card' | 'userId' | 'username' | 'value' | ArchivedPlayerVoteKeySpecifier)[];
+export type ArchivedPlayerVoteFieldPolicy = {
+	card?: FieldPolicy<any> | FieldReadFunction<any>,
+	userId?: FieldPolicy<any> | FieldReadFunction<any>,
+	username?: FieldPolicy<any> | FieldReadFunction<any>,
+	value?: FieldPolicy<any> | FieldReadFunction<any>
+};
 export type ChatMessageKeySpecifier = ('content' | 'contentType' | 'formattedContent' | 'id' | 'position' | 'roomId' | 'timestamp' | 'userId' | 'username' | ChatMessageKeySpecifier)[];
 export type ChatMessageFieldPolicy = {
 	content?: FieldPolicy<any> | FieldReadFunction<any>,
@@ -28,7 +35,7 @@ export type GameFieldPolicy = {
 	id?: FieldPolicy<any> | FieldReadFunction<any>,
 	table?: FieldPolicy<any> | FieldReadFunction<any>
 };
-export type MutationRootKeySpecifier = ('banUser' | 'cancelRevealCountdown' | 'createRoom' | 'createUser' | 'editUser' | 'joinRoom' | 'kickUser' | 'logout' | 'markChatSeen' | 'pickCard' | 'renameRoom' | 'resetGame' | 'sendChatMessage' | 'sendReaction' | 'setRoomOwner' | 'setVoteUncensored' | 'showCards' | 'startRevealCountdown' | 'toggleCensorVotes' | 'toggleConfirmNewGame' | 'toggleCountdownOption' | 'toggleShowVoteChanges' | 'unbanUser' | 'updateDeck' | MutationRootKeySpecifier)[];
+export type MutationRootKeySpecifier = ('banUser' | 'cancelRevealCountdown' | 'createRoom' | 'createUser' | 'editUser' | 'joinRoom' | 'kickUser' | 'logout' | 'markChatSeen' | 'pickCard' | 'renameRoom' | 'resetGame' | 'sendChatMessage' | 'sendReaction' | 'setRoomOwner' | 'setVoteUncensored' | 'showCards' | 'startRevealCountdown' | 'startRevote' | 'toggleCensorVotes' | 'toggleConfirmNewGame' | 'toggleCountdownOption' | 'toggleLockVotes' | 'toggleShowVoteChanges' | 'unbanUser' | 'updateDeck' | MutationRootKeySpecifier)[];
 export type MutationRootFieldPolicy = {
 	banUser?: FieldPolicy<any> | FieldReadFunction<any>,
 	cancelRevealCountdown?: FieldPolicy<any> | FieldReadFunction<any>,
@@ -48,9 +55,11 @@ export type MutationRootFieldPolicy = {
 	setVoteUncensored?: FieldPolicy<any> | FieldReadFunction<any>,
 	showCards?: FieldPolicy<any> | FieldReadFunction<any>,
 	startRevealCountdown?: FieldPolicy<any> | FieldReadFunction<any>,
+	startRevote?: FieldPolicy<any> | FieldReadFunction<any>,
 	toggleCensorVotes?: FieldPolicy<any> | FieldReadFunction<any>,
 	toggleConfirmNewGame?: FieldPolicy<any> | FieldReadFunction<any>,
 	toggleCountdownOption?: FieldPolicy<any> | FieldReadFunction<any>,
+	toggleLockVotes?: FieldPolicy<any> | FieldReadFunction<any>,
 	toggleShowVoteChanges?: FieldPolicy<any> | FieldReadFunction<any>,
 	unbanUser?: FieldPolicy<any> | FieldReadFunction<any>,
 	updateDeck?: FieldPolicy<any> | FieldReadFunction<any>
@@ -61,7 +70,7 @@ export type QueryRootFieldPolicy = {
 	rooms?: FieldPolicy<any> | FieldReadFunction<any>,
 	userRooms?: FieldPolicy<any> | FieldReadFunction<any>
 };
-export type RoomKeySpecifier = ('bannedUsers' | 'censorVotes' | 'chatHistory' | 'confirmNewGame' | 'countdownEnabled' | 'countdownValue' | 'deck' | 'game' | 'hasUnreadChat' | 'id' | 'isGameOver' | 'name' | 'revealStage' | 'roomOwnerId' | 'showVoteChanges' | 'users' | RoomKeySpecifier)[];
+export type RoomKeySpecifier = ('bannedUsers' | 'censorVotes' | 'chatHistory' | 'confirmNewGame' | 'countdownEnabled' | 'countdownValue' | 'deck' | 'game' | 'hasUnreadChat' | 'id' | 'isGameOver' | 'lockVotes' | 'name' | 'previousRound' | 'revealStage' | 'roomOwnerId' | 'showVoteChanges' | 'users' | RoomKeySpecifier)[];
 export type RoomFieldPolicy = {
 	bannedUsers?: FieldPolicy<any> | FieldReadFunction<any>,
 	censorVotes?: FieldPolicy<any> | FieldReadFunction<any>,
@@ -74,7 +83,9 @@ export type RoomFieldPolicy = {
 	hasUnreadChat?: FieldPolicy<any> | FieldReadFunction<any>,
 	id?: FieldPolicy<any> | FieldReadFunction<any>,
 	isGameOver?: FieldPolicy<any> | FieldReadFunction<any>,
+	lockVotes?: FieldPolicy<any> | FieldReadFunction<any>,
 	name?: FieldPolicy<any> | FieldReadFunction<any>,
+	previousRound?: FieldPolicy<any> | FieldReadFunction<any>,
 	revealStage?: FieldPolicy<any> | FieldReadFunction<any>,
 	roomOwnerId?: FieldPolicy<any> | FieldReadFunction<any>,
 	showVoteChanges?: FieldPolicy<any> | FieldReadFunction<any>,
@@ -93,6 +104,13 @@ export type RoomReactionFieldPolicy = {
 	reaction?: FieldPolicy<any> | FieldReadFunction<any>,
 	roomId?: FieldPolicy<any> | FieldReadFunction<any>,
 	userId?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type RoundVoteHistoryKeySpecifier = ('completedAt' | 'id' | 'roundNumber' | 'votes' | RoundVoteHistoryKeySpecifier)[];
+export type RoundVoteHistoryFieldPolicy = {
+	completedAt?: FieldPolicy<any> | FieldReadFunction<any>,
+	id?: FieldPolicy<any> | FieldReadFunction<any>,
+	roundNumber?: FieldPolicy<any> | FieldReadFunction<any>,
+	votes?: FieldPolicy<any> | FieldReadFunction<any>
 };
 export type SubscriptionRootKeySpecifier = ('room' | 'roomChat' | 'roomEvents' | 'roomReactions' | SubscriptionRootKeySpecifier)[];
 export type SubscriptionRootFieldPolicy = {
@@ -119,6 +137,10 @@ export type UserCardFieldPolicy = {
 	userId?: FieldPolicy<any> | FieldReadFunction<any>
 };
 export type StrictTypedTypePolicies = {
+	ArchivedPlayerVote?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | ArchivedPlayerVoteKeySpecifier | (() => undefined | ArchivedPlayerVoteKeySpecifier),
+		fields?: ArchivedPlayerVoteFieldPolicy,
+	},
 	ChatMessage?: Omit<TypePolicy, "fields" | "keyFields"> & {
 		keyFields?: false | ChatMessageKeySpecifier | (() => undefined | ChatMessageKeySpecifier),
 		fields?: ChatMessageFieldPolicy,
@@ -154,6 +176,10 @@ export type StrictTypedTypePolicies = {
 	RoomReaction?: Omit<TypePolicy, "fields" | "keyFields"> & {
 		keyFields?: false | RoomReactionKeySpecifier | (() => undefined | RoomReactionKeySpecifier),
 		fields?: RoomReactionFieldPolicy,
+	},
+	RoundVoteHistory?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | RoundVoteHistoryKeySpecifier | (() => undefined | RoundVoteHistoryKeySpecifier),
+		fields?: RoundVoteHistoryFieldPolicy,
 	},
 	SubscriptionRoot?: Omit<TypePolicy, "fields" | "keyFields"> & {
 		keyFields?: false | SubscriptionRootKeySpecifier | (() => undefined | SubscriptionRootKeySpecifier),

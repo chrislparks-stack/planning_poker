@@ -11,6 +11,22 @@ use super::{
     user::User,
 };
 
+#[derive(Clone, Debug, PartialEq, SimpleObject)]
+pub struct ArchivedPlayerVote {
+    pub user_id: EntityId,
+    pub username: String,
+    pub card: Option<Card>,
+    pub value: Option<f32>,
+}
+
+#[derive(Clone, Debug, PartialEq, SimpleObject)]
+pub struct RoundVoteHistory {
+    pub id: EntityId,
+    pub round_number: i32,
+    pub completed_at: DateTime<Utc>,
+    pub votes: Vec<ArchivedPlayerVote>,
+}
+
 #[derive(Clone, Debug, SimpleObject)]
 #[graphql(complex)]
 pub struct Room {
@@ -28,6 +44,8 @@ pub struct Room {
     pub confirm_new_game: bool,
     pub show_vote_changes: bool,
     pub censor_votes: bool,
+    pub lock_votes: bool,
+    pub previous_round: Option<RoundVoteHistory>,
     pub chat_history: Vec<crate::domain::chat::ChatMessage>,
 
     #[graphql(skip)]
@@ -35,6 +53,9 @@ pub struct Room {
 
     #[graphql(skip)]
     pub last_active_instant: Instant,
+
+    #[graphql(skip)]
+    pub vote_history: Vec<RoundVoteHistory>,
 }
 
 impl Room {
@@ -54,9 +75,12 @@ impl Room {
             confirm_new_game: true,
             show_vote_changes: true,
             censor_votes: false,
+            lock_votes: false,
+            previous_round: None,
             last_active: Utc::now(),
             last_active_instant: Instant::now(),
             chat_history: Vec::new(),
+            vote_history: Vec::new(),
         }
     }
 
@@ -68,7 +92,10 @@ impl Room {
     /// Return a Room snapshot suitable for publishing to clients.
     pub fn get_room(&self) -> Room {
         if self.is_game_over {
-            self.clone()
+            Room {
+                vote_history: Vec::new(),
+                ..self.clone()
+            }
         } else {
             let table: Vec<UserCard> = self
                 .clone()
@@ -86,6 +113,7 @@ impl Room {
                     table,
                     ..self.game.clone()
                 },
+                vote_history: Vec::new(),
                 ..self.clone()
             }
         }
@@ -173,6 +201,64 @@ impl Room {
         self.is_game_over = true;
     }
 
+    pub fn archive_revealed_round(&mut self) -> Option<RoundVoteHistory> {
+        if !self.is_game_over {
+            return None;
+        }
+
+        let votes = self
+            .users
+            .iter()
+            .map(|user| ArchivedPlayerVote {
+                user_id: user.id,
+                username: user.username.clone(),
+                card: user.last_card_picked.clone(),
+                value: user.last_card_value,
+            })
+            .collect();
+
+        let round = RoundVoteHistory {
+            id: Uuid::new_v4(),
+            round_number: (self.vote_history.len() + 1) as i32,
+            completed_at: Utc::now(),
+            votes,
+        };
+        self.vote_history.push(round.clone());
+
+        Some(round)
+    }
+
+    pub fn start_new_round(&mut self) {
+        self.archive_revealed_round();
+        self.reset_round(None);
+    }
+
+    pub fn start_revote_round(&mut self) -> bool {
+        let Some(previous_round) = self.archive_revealed_round() else {
+            return false;
+        };
+
+        self.reset_round(Some(previous_round));
+        true
+    }
+
+    fn reset_round(&mut self, previous_round: Option<RoundVoteHistory>) {
+        self.is_game_over = false;
+        self.game = Game::new();
+        self.previous_round = previous_round;
+        self.reveal_stage = Some("idle".to_string());
+        self.countdown_value = None;
+
+        for user in &mut self.users {
+            user.last_card_picked = None;
+            user.last_card_value = None;
+            user.previous_card_picked = None;
+            user.previous_card_value = None;
+            user.hand_raised = false;
+            user.vote_uncensored = false;
+        }
+    }
+
     pub fn complete_countdown(&mut self) {
         self.reveal_stage = Some("revealed".to_string());
         self.countdown_value = None;
@@ -199,6 +285,10 @@ impl Room {
                 user.vote_uncensored = false;
             }
         }
+    }
+
+    pub fn toggle_lock_votes(&mut self, enabled: bool) {
+        self.lock_votes = enabled;
     }
 
     // === Activity / cleanup helpers ===

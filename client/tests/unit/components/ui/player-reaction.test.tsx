@@ -18,7 +18,7 @@ vi.mock("@/hooks/use-toast", () => ({
 describe("QuickReactionPicker", () => {
   beforeEach(() => sendReaction.mockClear());
 
-  test("shows five story-point reactions in one compact hover tray", async () => {
+  test("shows six story-point reactions with thumbs up after the heart", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
     render(
@@ -34,18 +34,27 @@ describe("QuickReactionPicker", () => {
       />
     );
 
-    expect([
-      ...screen.getAllByRole("menuitem"),
-      ...screen.getAllByRole("menuitemcheckbox")
-    ]).toHaveLength(5);
-    await user.click(screen.getByRole("menuitem", { name: "Question" }));
+    const items = screen
+      .getByRole("menu")
+      .querySelectorAll<HTMLElement>('[role^="menuitem"]');
+    expect(
+      Array.from(items, (item) => item.getAttribute("aria-label"))
+    ).toEqual([
+      "Celebrate",
+      "Love it",
+      "Thumbs up",
+      "Laugh",
+      "Question",
+      "Raise hand"
+    ]);
+    await user.click(screen.getByRole("menuitem", { name: "Thumbs up" }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(sendReaction).toHaveBeenCalledWith({
       variables: {
         roomId: "room-1",
         userId: "user-1",
-        reaction: ReactionKind.Confused
+        reaction: ReactionKind.ThumbsUp
       }
     });
   });
@@ -97,6 +106,7 @@ describe("QuickReactionPicker", () => {
     [ReactionKind.Celebrate, "confetti"],
     [ReactionKind.Confused, "floating-questions"],
     [ReactionKind.Heart, "floating-hearts"],
+    [ReactionKind.ThumbsUp, "thumbs-up-pop"],
     [ReactionKind.Laugh, "laugh-bounce"],
     [ReactionKind.RaiseHand, "raised-hand-wave"]
   ])("uses a distinct %s animation", (reaction, animation) => {

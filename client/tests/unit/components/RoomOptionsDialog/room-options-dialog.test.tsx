@@ -10,7 +10,8 @@ const apiMocks = vi.hoisted(() => ({
   toggleCountdown: vi.fn().mockResolvedValue({}),
   toggleConfirm: vi.fn().mockResolvedValue({}),
   toggleVoteChanges: vi.fn().mockResolvedValue({}),
-  toggleCensorVotes: vi.fn().mockResolvedValue({})
+  toggleCensorVotes: vi.fn().mockResolvedValue({}),
+  toggleLockVotes: vi.fn().mockResolvedValue({})
 }));
 
 vi.mock("@/api", () => ({
@@ -30,6 +31,10 @@ vi.mock("@/api", () => ({
   ],
   useToggleCensorVotesMutation: () => [
     apiMocks.toggleCensorVotes,
+    { loading: false }
+  ],
+  useToggleLockVotesMutation: () => [
+    apiMocks.toggleLockVotes,
     { loading: false }
   ]
 }));
@@ -66,6 +71,7 @@ const room: Room = {
     table: []
   },
   isGameOver: false,
+  lockVotes: false,
   revealStage: "idle",
   roomOwnerId: "user-1",
   showVoteChanges: true,
@@ -90,7 +96,7 @@ describe("RoomOptionsDialog", () => {
       screen.getByRole("heading", { name: "Voting deck" })
     ).toBeInTheDocument();
     expect(screen.getByText("Round behavior")).toBeInTheDocument();
-    expect(screen.getAllByRole("switch")).toHaveLength(4);
+    expect(screen.getAllByRole("switch")).toHaveLength(5);
     expect(screen.getByDisplayValue("Design review")).toBeInTheDocument();
     expect(screen.getByTestId("room-options-dialog")).toHaveClass(
       "top-[calc(50%+1.75rem)]",
@@ -136,6 +142,26 @@ describe("RoomOptionsDialog", () => {
       }
     });
     expect(censorVotes).toHaveAttribute("aria-checked", "true");
+  });
+
+  test("defaults vote locking off and can enable it immediately", async () => {
+    const user = userEvent.setup();
+    render(<RoomOptionsDialog open setOpen={vi.fn()} room={room} />);
+
+    const lockVotes = screen.getByRole("switch", {
+      name: "Lock votes after reveal"
+    });
+    expect(lockVotes).toHaveAttribute("aria-checked", "false");
+
+    await user.click(lockVotes);
+
+    expect(apiMocks.toggleLockVotes).toHaveBeenCalledWith({
+      variables: {
+        roomId: "room-1",
+        enabled: true
+      }
+    });
+    expect(lockVotes).toHaveAttribute("aria-checked", "true");
   });
 
   test("preserves name drafts when a setting publishes a new room snapshot", async () => {

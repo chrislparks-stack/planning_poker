@@ -10,6 +10,7 @@ const apiMocks = vi.hoisted(() => ({
   resetGame: vi.fn().mockResolvedValue({}),
   setVoteUncensored: vi.fn().mockResolvedValue({}),
   showCards: vi.fn().mockResolvedValue({}),
+  startRevote: vi.fn().mockResolvedValue({}),
   startCountdown: vi.fn().mockResolvedValue({}),
   toggleConfirm: vi.fn().mockResolvedValue({})
 }));
@@ -25,6 +26,7 @@ vi.mock("@/api", () => ({
     { loading: false }
   ],
   useShowCardsMutation: () => [apiMocks.showCards, { loading: false }],
+  useStartRevoteMutation: () => [apiMocks.startRevote, { loading: false }],
   useStartRevealCountdownMutation: () => [
     apiMocks.startCountdown,
     { loading: false }
@@ -57,6 +59,7 @@ const room: Room = {
     table: [{ userId: "user-1", card: "5" }]
   },
   isGameOver: true,
+  lockVotes: false,
   revealStage: "revealed",
   roomOwnerId: "user-1",
   showVoteChanges: true,
@@ -123,6 +126,40 @@ describe("Table vote visibility control", () => {
         roomId: "room-1",
         userId: "user-1",
         uncensored: false
+      }
+    });
+  });
+
+  test("shows split new-game and revote actions when vote locking is enabled", async () => {
+    const user = userEvent.setup();
+    const innerRef = createRef<HTMLDivElement>();
+    render(
+      <Table
+        room={{ ...room, lockVotes: true }}
+        isGameOver
+        innerRef={innerRef}
+        roomOverlayRef={null}
+      />
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Start New Game" })
+    ).toBeInTheDocument();
+
+    const newGame = screen.getByRole("button", { name: "Start New Game" });
+    const revote = screen.getByRole("button", { name: "Revote Issue" });
+    expect(newGame.parentElement).toHaveClass("w-[86%]");
+    expect(newGame).toHaveClass("h-12", "top-0", "w-[55%]");
+    expect(revote).toHaveClass("h-10", "top-1", "w-[57%]");
+    expect(newGame.className).toContain("82%_100%");
+    expect(revote.className).toContain("18%_0");
+    expect(revote.className).toContain("hue-rotate(12deg)");
+
+    await user.click(revote);
+    expect(apiMocks.startRevote).toHaveBeenCalledWith({
+      variables: {
+        roomId: "room-1",
+        userId: "user-1"
       }
     });
   });

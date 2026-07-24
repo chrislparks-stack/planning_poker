@@ -11,6 +11,14 @@ export type Scalars = {
   UUID: { input: string; output: string; }
 };
 
+export type ArchivedPlayerVote = {
+  __typename?: 'ArchivedPlayerVote';
+  card?: Maybe<Scalars['String']['output']>;
+  userId: Scalars['UUID']['output'];
+  username: Scalars['String']['output'];
+  value?: Maybe<Scalars['Float']['output']>;
+};
+
 /** A chat message within a room. */
 export type ChatMessage = {
   __typename?: 'ChatMessage';
@@ -75,9 +83,11 @@ export type MutationRoot = {
   setVoteUncensored: Room;
   showCards: Room;
   startRevealCountdown: Room;
+  startRevote: Room;
   toggleCensorVotes: Room;
   toggleConfirmNewGame: Room;
   toggleCountdownOption: Room;
+  toggleLockVotes: Room;
   toggleShowVoteChanges: Room;
   unbanUser: Room;
   updateDeck: Room;
@@ -192,6 +202,12 @@ export type MutationRootStartRevealCountdownArgs = {
 };
 
 
+export type MutationRootStartRevoteArgs = {
+  roomId: Scalars['UUID']['input'];
+  userId: Scalars['UUID']['input'];
+};
+
+
 export type MutationRootToggleCensorVotesArgs = {
   enabled: Scalars['Boolean']['input'];
   roomId: Scalars['UUID']['input'];
@@ -205,6 +221,12 @@ export type MutationRootToggleConfirmNewGameArgs = {
 
 
 export type MutationRootToggleCountdownOptionArgs = {
+  enabled: Scalars['Boolean']['input'];
+  roomId: Scalars['UUID']['input'];
+};
+
+
+export type MutationRootToggleLockVotesArgs = {
   enabled: Scalars['Boolean']['input'];
   roomId: Scalars['UUID']['input'];
 };
@@ -248,7 +270,8 @@ export enum ReactionKind {
   Confused = 'CONFUSED',
   Heart = 'HEART',
   Laugh = 'LAUGH',
-  RaiseHand = 'RAISE_HAND'
+  RaiseHand = 'RAISE_HAND',
+  ThumbsUp = 'THUMBS_UP'
 }
 
 export type Room = {
@@ -264,7 +287,9 @@ export type Room = {
   hasUnreadChat?: Maybe<Scalars['Boolean']['output']>;
   id: Scalars['UUID']['output'];
   isGameOver: Scalars['Boolean']['output'];
+  lockVotes: Scalars['Boolean']['output'];
   name?: Maybe<Scalars['String']['output']>;
+  previousRound?: Maybe<RoundVoteHistory>;
   revealStage?: Maybe<Scalars['String']['output']>;
   roomOwnerId?: Maybe<Scalars['UUID']['output']>;
   showVoteChanges: Scalars['Boolean']['output'];
@@ -290,6 +315,14 @@ export type RoomReaction = {
   reaction: ReactionKind;
   roomId: Scalars['UUID']['output'];
   userId: Scalars['UUID']['output'];
+};
+
+export type RoundVoteHistory = {
+  __typename?: 'RoundVoteHistory';
+  completedAt: Scalars['DateTime']['output'];
+  id: Scalars['UUID']['output'];
+  roundNumber: Scalars['Int']['output'];
+  votes: Array<ArchivedPlayerVote>;
 };
 
 export type SendChatInput = {

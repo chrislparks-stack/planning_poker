@@ -27,6 +27,22 @@ fragment GameFragment on Game {
   }
 }
 
+fragment ArchivedPlayerVoteFragment on ArchivedPlayerVote {
+  userId
+  username
+  card
+  value
+}
+
+fragment RoundVoteHistoryFragment on RoundVoteHistory {
+  id
+  roundNumber
+  completedAt
+  votes {
+    ...ArchivedPlayerVoteFragment
+  }
+}
+
 fragment ChatPositionFragment on ChatPosition {
   x
   y
@@ -69,6 +85,10 @@ fragment RoomFragment on Room {
   confirmNewGame
   showVoteChanges
   censorVotes
+  lockVotes
+  previousRound {
+    ...RoundVoteHistoryFragment
+  }
   chatHistory {
     ...ChatMessageFragment
   }
@@ -172,6 +192,12 @@ mutation ResetGame($roomId: UUID!) {
   }
 }
 
+mutation StartRevote($roomId: UUID!, $userId: UUID!) {
+  startRevote(roomId: $roomId, userId: $userId) {
+    ...RoomFragment
+  }
+}
+
 mutation KickUser($roomId: UUID!, $targetUserId: UUID!) {
   kickUser(roomId: $roomId, targetUserId: $targetUserId) {
     ...RoomFragment
@@ -204,6 +230,12 @@ mutation ToggleShowVoteChanges($roomId: UUID!, $enabled: Boolean!) {
 
 mutation ToggleCensorVotes($roomId: UUID!, $enabled: Boolean!) {
   toggleCensorVotes(roomId: $roomId, enabled: $enabled) {
+    ...RoomFragment
+  }
+}
+
+mutation ToggleLockVotes($roomId: UUID!, $enabled: Boolean!) {
+  toggleLockVotes(roomId: $roomId, enabled: $enabled) {
     ...RoomFragment
   }
 }

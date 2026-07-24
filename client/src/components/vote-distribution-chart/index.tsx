@@ -17,6 +17,7 @@ import {
   ChartTooltipContent
 } from "@/components/ui/chart";
 import { VoteLabel, type VoteDatum } from "@/components/ui/vote-label.tsx";
+import { cn } from "@/lib/utils";
 import { Room } from "@/types";
 
 interface VoteDistributionChartProps {
@@ -26,12 +27,31 @@ interface VoteDistributionChartProps {
 interface DistributionBarsProps {
   chartData: VoteDatum[];
   maxCardCount: number;
+  previousVoteCount: Record<string, number>;
+  hasPreviousRound: boolean;
 }
 
 interface BarBounds {
   bottom: number;
   height: number;
 }
+
+interface LocalDistributionStyleFixture {
+  current: Record<string, number>;
+  previous: Record<string, number>;
+}
+
+const getLocalDistributionStyleFixture =
+  (): LocalDistributionStyleFixture | null => {
+    // Change only this value to true while tuning the current/last-round chart.
+    const enabled = false;
+    if (!enabled) return null;
+
+    return {
+      current: { "0.5": 1, "2": 20, "5": 2, "8": 1 },
+      previous: { "0.5": 3, "2": 1, "3": 3, "5": 1 }
+    };
+  };
 
 const normalizeCardLabel = (card: string) =>
   card === "½" || card === "1/2" ? "0.5" : card;
@@ -43,21 +63,35 @@ const numericCardValue = (card: string) => {
 
 const DistributionBars = memo(function DistributionBars({
   chartData,
-  maxCardCount
+  maxCardCount,
+  previousVoteCount,
+  hasPreviousRound
 }: DistributionBarsProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const previousVotesRef = useRef<Map<string, number>>(new Map());
   const previousBoundsRef = useRef<Map<string, BarBounds>>(new Map());
   const uniqueMajority =
     chartData.filter((datum) => datum.votes === maxCardCount).length === 1;
+  const comparisonMaxCardCount = Math.max(
+    maxCardCount,
+    ...Object.values(previousVoteCount),
+    1
+  );
   const visualData = useMemo(
     () =>
       chartData.map((datum) => ({
         ...datum,
+        previousVotes: previousVoteCount[datum.card] ?? 0,
+        delta: datum.votes - (previousVoteCount[datum.card] ?? 0),
+        comparisonMaxVotes: comparisonMaxCardCount,
+        hasPreviousRound,
         visualHeight:
-          0.56 + (maxCardCount ? (datum.votes / maxCardCount) * 0.44 : 0)
+          0.56 +
+          (Math.max(datum.votes, previousVoteCount[datum.card] ?? 0) /
+            comparisonMaxCardCount) *
+            0.44
       })),
-    [chartData, maxCardCount]
+    [chartData, comparisonMaxCardCount, hasPreviousRound, previousVoteCount]
   );
 
   useLayoutEffect(() => {
@@ -188,7 +222,7 @@ const DistributionBars = memo(function DistributionBars({
     >
       <BarChart
         data={visualData}
-        margin={{ top: 18, right: 4, bottom: 2, left: 4 }}
+        margin={{ top: 28, right: 4, bottom: 2, left: 4 }}
         barCategoryGap="10%"
       >
         <Bar
@@ -207,11 +241,29 @@ const DistributionBars = memo(function DistributionBars({
                 `Story Points | ${payload[0]?.payload.card ?? ""}`
               }
               formatter={(_value, _name, item) => (
-                <div className="flex min-w-[7rem] items-center justify-between gap-4">
-                  <span className="text-muted-foreground">Votes</span>
+                <div className="grid min-w-[8.5rem] grid-cols-[1fr_auto] gap-x-4 gap-y-1">
+                  <span className="text-muted-foreground">Current</span>
                   <span className="font-mono font-medium tabular-nums text-foreground">
                     {item.payload.votes}
                   </span>
+                  {roomHasPreviousVotes(item.payload) && (
+                    <>
+                      <span className="text-muted-foreground">Last round</span>
+                      <span className="font-mono tabular-nums text-foreground/75">
+                        {item.payload.previousVotes}
+                      </span>
+                      <span className="text-muted-foreground">Change</span>
+                      <span
+                        className={cn(
+                          "font-mono font-semibold tabular-nums",
+                          item.payload.delta > 0 && "text-emerald-500",
+                          item.payload.delta < 0 && "text-rose-500"
+                        )}
+                      >
+                        {formatDelta(item.payload.delta)}
+                      </span>
+                    </>
+                  )}
                 </div>
               )}
             />
@@ -225,7 +277,16 @@ const DistributionBars = memo(function DistributionBars({
 export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
   room
 }) => {
+  const localStyleFixture = useMemo(
+    () => getLocalDistributionStyleFixture(),
+    []
+  );
+
   const voteCount = useMemo(() => {
+    if (localStyleFixture) {
+      return { ...localStyleFixture.current };
+    }
+
     const counts: { [key: string]: number } = {};
     room.game.table.forEach((userCard) => {
       if (userCard.card) {
@@ -234,43 +295,36 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
       }
     });
 
-    // Local styling fixture. Uncomment while tuning the distribution chart.
-    // Object.entries({ "0.5": 1, "2": 4 }).forEach(
-    //   ([card, count]) => {
-    //     counts[card] = (counts[card] || 0) + count;
-    //   }
-    // );
-
     return counts;
-  }, [room.game.table]);
+  }, [localStyleFixture, room.game.table]);
 
-  const voteSignature = useMemo(
-    () =>
-      Object.entries(voteCount)
-        .sort(([a], [b]) => {
-          const aValue = numericCardValue(a);
-          const bValue = numericCardValue(b);
-          if (aValue != null && bValue != null) return aValue - bValue;
-          if (aValue != null) return -1;
-          if (bValue != null) return 1;
-          return a.localeCompare(b);
-        })
-        .map(([card, n]) => `${card}:${n}`)
-        .join("|"),
-    [voteCount]
-  );
+  const previousVoteCount = useMemo(() => {
+    if (localStyleFixture) {
+      return { ...localStyleFixture.previous };
+    }
+
+    const counts: Record<string, number> = {};
+    room.previousRound?.votes.forEach((vote) => {
+      if (!vote.card) return;
+      const card = normalizeCardLabel(vote.card);
+      counts[card] = (counts[card] ?? 0) + 1;
+    });
+    return counts;
+  }, [localStyleFixture, room.previousRound]);
+
+  const hasPreviousDistribution =
+    room.previousRound != null || localStyleFixture != null;
 
   const chartData = useMemo<VoteDatum[]>(() => {
-    if (!voteSignature) return [];
-
-    return voteSignature.split("|").map((entry) => {
-      const [card, count] = entry.split(":");
-      return {
+    return Array.from(
+      new Set([...Object.keys(voteCount), ...Object.keys(previousVoteCount)])
+    )
+      .sort(compareCardLabels)
+      .map((card) => ({
         card,
-        votes: Number(count)
-      };
-    });
-  }, [voteSignature]);
+        votes: voteCount[card] ?? 0
+      }));
+  }, [previousVoteCount, voteCount]);
 
   const maxCardCount = useMemo(
     () => (chartData.length ? Math.max(...chartData.map((c) => c.votes)) : 0),
@@ -289,7 +343,6 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
     });
     return n > 0 ? sum / n : 0;
   }, [voteCount]);
-
   const agreement = useMemo(() => {
     const counts = Object.values(voteCount);
     const totalVotes = counts.reduce((total, n) => total + n, 0);
@@ -401,7 +454,12 @@ export const VoteDistributionChart: FC<VoteDistributionChartProps> = ({
           </span>
         </div>
       )}
-      <DistributionBars chartData={chartData} maxCardCount={maxCardCount} />
+      <DistributionBars
+        chartData={chartData}
+        maxCardCount={maxCardCount}
+        previousVoteCount={previousVoteCount}
+        hasPreviousRound={hasPreviousDistribution}
+      />
 
       <div className="vote-distribution-summary mt-2 grid min-h-[76px] w-full items-center overflow-hidden rounded-xl px-1.5 py-1.5 backdrop-blur-md">
         <div className="flex items-center justify-center">
@@ -492,3 +550,19 @@ const AverageMetric: FC<{
     </CardTitle>
   </div>
 );
+
+const compareCardLabels = (a: string, b: string) => {
+  const aValue = numericCardValue(a);
+  const bValue = numericCardValue(b);
+  if (aValue != null && bValue != null) return aValue - bValue;
+  if (aValue != null) return -1;
+  if (bValue != null) return 1;
+  return a.localeCompare(b);
+};
+
+const formatDelta = (delta: number) => (delta > 0 ? `+${delta}` : `${delta}`);
+
+const roomHasPreviousVotes = (payload: {
+  previousVotes?: number;
+  delta?: number;
+}) => payload.previousVotes != null && payload.delta != null;

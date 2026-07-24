@@ -21,6 +21,7 @@ interface VoteAdjustmentProps {
   currentValue?: number | null;
   previousCard?: string | null;
   previousValue?: number | null;
+  showOriginalLabel?: boolean;
 }
 
 type VoteDirection = keyof typeof DIRECTION_COLOR_CLASSES;
@@ -119,7 +120,8 @@ export function VoteAdjustment({
   currentCard,
   currentValue,
   previousCard,
-  previousValue
+  previousValue,
+  showOriginalLabel = true
 }: VoteAdjustmentProps) {
   const priorSelectionRef = useRef<VoteSelection>({
     card: currentCard,
@@ -176,7 +178,7 @@ export function VoteAdjustment({
           eventId={burst.eventId}
         />
       )}
-      {showOriginalChange && (
+      {showOriginalLabel && showOriginalChange && (
         <div
           role="status"
           aria-label={`Vote ${accessibleDirection} from ${previousCard} to ${currentCard}`}

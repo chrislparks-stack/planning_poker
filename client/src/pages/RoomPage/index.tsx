@@ -489,12 +489,15 @@ export function RoomPage() {
                     <Deck
                       roomId={roomId}
                       isGameOver={room.isGameOver}
+                      lockVotes={room.lockVotes}
                       cards={room.deck.cards}
                       users={room.users}
+                      previousRound={room.previousRound}
                     />
                     {room.isGameOver && (
                       <div className="ml-2 flex min-w-[246px] max-w-[548px] flex-[0_1_auto] justify-center">
                         <ResultsTag
+                          isRevote={room.previousRound != null}
                           hasBackground={
                             background.enabled && background.id === "starry"
                           }

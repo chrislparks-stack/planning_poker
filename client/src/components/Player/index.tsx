@@ -4,6 +4,7 @@ import {
   Crown,
   DoorOpen,
   Hand,
+  History,
   Hourglass,
   MessageSquareText,
   MessagesSquare
@@ -71,6 +72,30 @@ interface PlayerProps {
 
 type MenuPos = { x: number; y: number } | null;
 
+export function PreviousRoundVoteBadge({
+  username,
+  card,
+  censored
+}: {
+  username: string;
+  card?: string | null;
+  censored: boolean;
+}) {
+  if (!card || censored) return null;
+
+  return (
+    <div
+      role="status"
+      aria-label={`${username}'s previous vote was ${card}`}
+      className="pointer-events-none absolute inset-x-0 top-[22px] z-10 flex items-center justify-center gap-0.5 whitespace-nowrap text-[8px] font-bold uppercase leading-none tracking-[0.06em] text-accent drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]"
+      data-previous-round-vote={card}
+    >
+      <History aria-hidden="true" className="size-2.5" strokeWidth={2.5} />
+      <span>prev {card}</span>
+    </div>
+  );
+}
+
 export function Player({
   user,
   room,
@@ -90,6 +115,9 @@ export function Player({
 
   const isStarry = background.enabled && background.id === "starry";
   const isVoteCensored = room.censorVotes && !user.voteUncensored;
+  const previousRoundVote = room.previousRound?.votes.find(
+    (vote) => vote.userId === user.id
+  );
 
   const { registerCardRef } = useCardPosition();
   const cardRef = useRef<HTMLDivElement>(null);
@@ -577,6 +605,7 @@ export function Player({
     }
 
     const name = truncateUsername(user.username);
+    const isRevote = room.previousRound != null;
 
     if (hasUnreadFromUser) {
       return `${name} has a new message...`;
@@ -584,13 +613,17 @@ export function Player({
 
     if (!isGameOver) {
       return user.lastCardPicked == null
-        ? `${name} is thinking...`
-        : `${name} has voted`;
+        ? `${name} is ${isRevote ? "considering their revote" : "thinking"}...`
+        : `${name} has ${isRevote ? "revoted" : "voted"}`;
     }
 
-    if (user.lastCardPicked == null) return `${name} did not vote`;
-    if (isVoteCensored) return `${name}'s vote is censored`;
-    return `${name} voted ${user.lastCardValue}`;
+    if (user.lastCardPicked == null) {
+      return `${name} did not ${isRevote ? "revote" : "vote"}`;
+    }
+    if (isVoteCensored) {
+      return `${name}'s ${isRevote ? "revote" : "vote"} is censored`;
+    }
+    return `${name} ${isRevote ? "revoted" : "voted"} ${user.lastCardValue}`;
   }, [
     user.username,
     user.lastCardPicked,
@@ -599,7 +632,8 @@ export function Player({
     hasUnreadFromUser,
     chatVisible,
     isTargetSelf,
-    isVoteCensored
+    isVoteCensored,
+    room.previousRound
   ]);
 
   return (
@@ -759,6 +793,14 @@ export function Player({
                     currentValue={user.lastCardValue}
                     previousCard={user.previousCardPicked}
                     previousValue={user.previousCardValue}
+                    showOriginalLabel={room.previousRound == null}
+                  />
+                )}
+                {isGameOver && (
+                  <PreviousRoundVoteBadge
+                    username={user.username}
+                    card={previousRoundVote?.card}
+                    censored={isVoteCensored}
                   />
                 )}
                 <div

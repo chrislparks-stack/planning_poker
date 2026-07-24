@@ -3,6 +3,7 @@ import {
   Eye,
   EyeOff,
   Layers3,
+  LockKeyhole,
   PencilLine,
   RotateCcw,
   Settings2,
@@ -15,6 +16,7 @@ import {
   useToggleCensorVotesMutation,
   useToggleConfirmNewGameMutation,
   useToggleCountdownOptionMutation,
+  useToggleLockVotesMutation,
   useToggleShowVoteChangesMutation,
   useUpdateDeckMutation
 } from "@/api";
@@ -124,6 +126,8 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
     useToggleShowVoteChangesMutation();
   const [toggleCensorVotes, { loading: censorVotesLoading }] =
     useToggleCensorVotesMutation();
+  const [toggleLockVotes, { loading: lockVotesLoading }] =
+    useToggleLockVotesMutation();
 
   const [roomId, setRoomId] = useState("");
   const [roomName, setRoomName] = useState("");
@@ -142,6 +146,7 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
     room?.showVoteChanges ?? true
   );
   const [censorVotes, setCensorVotes] = useState(room?.censorVotes ?? false);
+  const [lockVotes, setLockVotes] = useState(room?.lockVotes ?? false);
   const initializedRoomRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -160,6 +165,7 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
     setConfirmNewGame(room.confirmNewGame ?? true);
     setShowVoteChanges(room.showVoteChanges ?? true);
     setCensorVotes(room.censorVotes ?? false);
+    setLockVotes(room.lockVotes ?? false);
     initializedRoomRef.current = room.id;
   }, [room, open]);
 
@@ -343,6 +349,24 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
           enabledTitle: "Individual votes censored",
           disabledTitle: "Individual votes visible",
           errorTitle: "Error updating vote censorship"
+        })
+    },
+    {
+      id: "lock-votes",
+      title: "Lock votes after reveal",
+      description:
+        "Prevent vote changes after reveal and let the room owner start a linked issue revote.",
+      checked: lockVotes,
+      disabled: lockVotesLoading,
+      icon: LockKeyhole,
+      onCheckedChange: (enabled) =>
+        void updateBooleanSetting({
+          enabled,
+          setValue: setLockVotes,
+          mutate: () => toggleLockVotes({ variables: { roomId, enabled } }),
+          enabledTitle: "Votes lock after reveal",
+          disabledTitle: "Post-reveal vote changes allowed",
+          errorTitle: "Error updating vote locking"
         })
     }
   ];
