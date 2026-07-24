@@ -52,7 +52,7 @@ test("shows the correct idle visuals before anyone votes", async ({
 
   await expect(host.getByText("No votes yet")).toBeVisible();
   await expect(host.getByText("Waiting for players to vote...")).toBeVisible();
-  await expect(guest.getByText("Select card to vote")).toBeVisible();
+  await expect(guest.getByText("Select a card to vote")).toBeVisible();
   await expect(
     host.getByRole("button", { name: "Reveal Votes" })
   ).not.toBeVisible();
@@ -87,7 +87,7 @@ test("clicking your card again clears the vote everywhere", async ({
     tile(host, "Bruno").getByAltText("Card picked")
   ).not.toBeVisible();
   await expect(host.getByText("No votes yet")).toBeVisible();
-  await expect(guest.getByText("Select card to vote")).toBeVisible();
+  await expect(guest.getByText("Select a card to vote")).toBeVisible();
 });
 
 test("reveal shows each player's value and computes the average correctly", async ({
@@ -178,7 +178,7 @@ test("non-numeric votes are excluded from the average but count for agreement", 
 
   await vote(all[0], "2");
   await vote(all[1], "2");
-  await vote(all[2], "? Undecided");
+  await vote(all[2], "?");
   await revealEstimations(host);
 
   // average over numeric votes only: (2 + 2) / 2 = "2.0";
@@ -234,7 +234,7 @@ test("starting a new round resets every tab to the voting stage", async ({
     await expect(page.getByTestId("vote-distribution-chart")).not.toBeVisible();
   }
   await expect(host.getByText("No votes yet")).toBeVisible();
-  await expect(guest.getByText("Select card to vote")).toBeVisible();
+  await expect(guest.getByText("Select a card to vote")).toBeVisible();
   await expect(
     tile(host, "Bruno").getByAltText("Card picked")
   ).not.toBeVisible();
@@ -256,7 +256,7 @@ test("countdown reveal counts down, then reveals in every tab", async ({
   await expect(
     host.getByText("Countdown enabled", { exact: true })
   ).toBeVisible();
-  await host.getByRole("button", { name: "Done" }).click();
+  await host.getByRole("button", { name: "Save & close" }).click();
 
   await vote(guest, "3");
 
