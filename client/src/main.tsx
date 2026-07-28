@@ -6,7 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import { client } from "@/api";
+import { client } from "@/api/client";
 import { ConfirmationDialogProvider } from "@/components/ConfirmationDialog";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
@@ -19,9 +19,6 @@ import { TooltipProvider } from "./components/ui/tooltip";
 import { routeTree } from "./routeTree.gen";
 
 import "./index.css";
-
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
 
 try {
   if (typeof document !== "undefined") {

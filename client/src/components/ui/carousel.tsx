@@ -2,6 +2,9 @@ import Slider from "@ant-design/react-slick";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRef, useState } from "react";
 
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Tooltip,

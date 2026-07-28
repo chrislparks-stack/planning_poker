@@ -5,7 +5,6 @@ import { ArrowDownToLine } from "lucide-react";
 import { FC, useEffect, useMemo, useRef, useState } from "react";
 
 import { useCreateRoomMutation, useGetRoomLazyQuery } from "@/api";
-import SummitLogo from "@/assets/SummitLogo.png";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
 import { Scene } from "@/components/ui/scene.tsx";
@@ -389,8 +388,11 @@ export const HomePage: FC = () => {
                     </span>
 
                     <img
-                      src={SummitLogo}
+                      src="/SummitLogo.webp"
                       alt="Summit"
+                      width={828}
+                      height={388}
+                      fetchPriority="high"
                       className="w-[clamp(200px,50svh,600px)] h-auto"
                     />
                   </div>
