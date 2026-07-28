@@ -1,17 +1,8 @@
-import { useState, useCallback, createContext, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 
 import ModalDialog from "./ConfirmationDialog";
+import { ConfirmationDialogContext } from "./ConfirmationDialogContext";
 import { ModalOptions } from "./types";
-
-interface ConfirmationDialogContextValue {
-  open: (id: string, options?: ModalOptions) => Promise<void>;
-  update: (id: string, options?: ModalOptions) => void;
-  clear: (id: string) => void;
-  close: (id: string) => void;
-}
-
-export const ConfirmationDialogContext =
-  createContext<ConfirmationDialogContextValue | null>(null);
 
 const DEFAULT_OPTIONS: ModalOptions = {
   title: "Are you sure?",
