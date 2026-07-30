@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import { VoteSessionPanel } from "@/components/VoteSessionPanel";
 import type { Room } from "@/types";
-import { fireEvent, render, screen, userEvent, within } from "@test";
+import { fireEvent, render, screen, userEvent, waitFor, within } from "@test";
 
 const apiMocks = vi.hoisted(() => ({
   addQueueItem: vi.fn().mockResolvedValue({}),
@@ -341,6 +341,50 @@ describe("VoteSessionPanel history", () => {
       variables: {
         itemId: "queue-1",
         roomId: "room-1",
+        userId: "user-1"
+      }
+    });
+  });
+
+  test("clearly labels queue-item rename mode and saves with Enter", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem("vote-session-panel-open", "true");
+    render(
+      <VoteSessionPanel
+        room={{
+          ...room,
+          voteQueue: [{ id: "queue-1", title: "Checkout validation" }]
+        }}
+      />
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Manage Checkout validation" })
+    );
+    await user.click(screen.getByRole("menuitem", { name: "Rename" }));
+
+    const renameInput = screen.getByRole("textbox", {
+      name: "Rename Checkout validation"
+    });
+    expect(renameInput).toHaveAccessibleDescription(
+      "Renaming · Enter to save · Esc to cancel"
+    );
+    expect(screen.getByText("Renaming")).toBeInTheDocument();
+    await waitFor(() => expect(renameInput).toHaveFocus());
+    expect(renameInput).toHaveProperty("selectionStart", 0);
+    expect(renameInput).toHaveProperty(
+      "selectionEnd",
+      "Checkout validation".length
+    );
+
+    await user.clear(renameInput);
+    await user.type(renameInput, "Checkout error states{Enter}");
+
+    expect(apiMocks.renameQueueItem).toHaveBeenCalledWith({
+      variables: {
+        itemId: "queue-1",
+        roomId: "room-1",
+        title: "Checkout error states",
         userId: "user-1"
       }
     });

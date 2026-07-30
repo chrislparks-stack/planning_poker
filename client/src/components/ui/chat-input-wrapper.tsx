@@ -1,5 +1,12 @@
-// @ts-expect-error TS6133: React is declared but its value is never read.
-import React, { useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState
+} from "react";
+import type { RefObject } from "react";
+import { createPortal } from "react-dom";
 
 import { ChatInput } from "@/components/ui/chat-input";
 import { cn } from "@/lib/utils";
@@ -9,8 +16,8 @@ type Phase = "idle" | "enter-pre" | "enter" | "exit";
 export const ChatInputWrapper = ({
   onSend,
   onClose,
-  className,
   isOpen,
+  anchorRef,
   isLeftSide = false,
   isTopSide = false
 }: {
@@ -20,14 +27,15 @@ export const ChatInputWrapper = ({
     position?: { x: number; y: number; width: number; height: number } | null
   ) => void;
   onClose: () => void;
-  className?: string;
   isOpen: boolean;
+  anchorRef: RefObject<HTMLElement | null>;
   isLeftSide?: boolean;
   isTopSide?: boolean;
 }) => {
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [phase, setPhase] = useState<Phase>("idle");
   const skipExitRef = useRef(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -71,8 +79,6 @@ export const ChatInputWrapper = ({
     setPhase("exit");
   };
 
-  if (!shouldRender) return null;
-
   const animClasses = cn(
     phase === "enter-pre" && "opacity-0 -translate-y-2",
     phase === "enter" &&
@@ -80,9 +86,68 @@ export const ChatInputWrapper = ({
     phase === "exit" && "animate-fade-slide-up   [animation-fill-mode:forwards]"
   );
 
-  return (
+  const updatePosition = useCallback(() => {
+    const anchor = anchorRef.current;
+    const wrapper = wrapperRef.current;
+    if (!anchor || !wrapper) return;
+
+    const anchorRect = anchor.getBoundingClientRect();
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const width = wrapperRect.width || 220;
+    const height = wrapperRect.height || 96;
+    const gap = 12;
+    const viewportMargin = 8;
+    const roomOnLeft = anchorRect.left - viewportMargin;
+    const roomOnRight = window.innerWidth - anchorRect.right - viewportMargin;
+
+    let placeOnRight = !isLeftSide;
+    const preferredRoom = placeOnRight ? roomOnRight : roomOnLeft;
+    const alternateRoom = placeOnRight ? roomOnLeft : roomOnRight;
+
+    if (preferredRoom < width + gap && alternateRoom > preferredRoom) {
+      placeOnRight = !placeOnRight;
+    }
+
+    const desiredLeft = placeOnRight
+      ? anchorRect.right + gap
+      : anchorRect.left - width - gap;
+    const desiredTop = anchorRect.top + (anchorRect.height - height) / 2;
+    const maxLeft = Math.max(
+      viewportMargin,
+      window.innerWidth - width - viewportMargin
+    );
+    const maxTop = Math.max(
+      viewportMargin,
+      window.innerHeight - height - viewportMargin
+    );
+    const left = Math.min(Math.max(desiredLeft, viewportMargin), maxLeft);
+    const top = Math.min(Math.max(desiredTop, viewportMargin), maxTop);
+
+    wrapper.style.left = `${Math.round(left)}px`;
+    wrapper.style.top = `${Math.round(top)}px`;
+    wrapper.style.visibility = "visible";
+  }, [anchorRef, isLeftSide]);
+
+  useLayoutEffect(() => {
+    if (!shouldRender) return;
+
+    let frameId = 0;
+    const followAnchor = () => {
+      updatePosition();
+      frameId = window.requestAnimationFrame(followAnchor);
+    };
+
+    frameId = window.requestAnimationFrame(followAnchor);
+    return () => window.cancelAnimationFrame(frameId);
+  }, [shouldRender, updatePosition]);
+
+  if (!shouldRender || typeof document === "undefined") return null;
+
+  return createPortal(
     <div
-      className={cn("absolute z-50", className)}
+      ref={wrapperRef}
+      className="fixed z-[99999]"
+      style={{ left: 0, top: 0, visibility: "hidden" }}
       onAnimationEnd={handleAnimEnd}
     >
       <ChatInput
@@ -92,6 +157,7 @@ export const ChatInputWrapper = ({
         isLeftSide={isLeftSide}
         isTopSide={isTopSide}
       />
-    </div>
+    </div>,
+    document.body
   );
 };

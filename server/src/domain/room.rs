@@ -486,9 +486,9 @@ impl Room {
     }
 
     pub fn start_vote_queue_item(&mut self, item_id: EntityId) -> bool {
-        let Some(index) = self.vote_queue.iter().position(|item| item.id == item_id) else {
+        if !self.vote_queue.iter().any(|item| item.id == item_id) {
             return false;
-        };
+        }
 
         if let Some(previous_round) = self.previous_round.take() {
             if let Some(history_index) = self
@@ -502,6 +502,23 @@ impl Room {
             }
         }
 
+        if let (Some(current_id), Some(current_title)) =
+            (self.current_queue_item_id, self.current_issue_title.clone())
+        {
+            if !self.vote_queue.iter().any(|item| item.id == current_id) {
+                self.vote_queue.insert(
+                    0,
+                    VoteQueueItem {
+                        id: current_id,
+                        title: current_title,
+                    },
+                );
+            }
+        }
+
+        let Some(index) = self.vote_queue.iter().position(|item| item.id == item_id) else {
+            return false;
+        };
         let item = self.vote_queue.remove(index);
         self.reset_round(None);
         self.current_issue_title = Some(item.title);

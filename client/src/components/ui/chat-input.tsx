@@ -27,7 +27,6 @@ import { getShiftedAccent } from "@/lib/theme-accent.ts";
 import { cn } from "@/lib/utils";
 import { GRAPHQL_ENDPOINT } from "@/settings";
 import { compressMessage } from "@/utils/messageUtils.ts";
-import { OverlayPortal } from "@/utils/overlayPortal.tsx";
 
 interface PickerGif {
   id: string;
@@ -587,7 +586,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     return (
       <div
         role="presentation"
-        className="flex justify-between px-1 items-center relative"
+        className={cn(
+          "relative flex items-center justify-between px-1",
+          inPanel && "chat-composer-toolbar"
+        )}
         onMouseDown={(e) => e.preventDefault()}
       >
         <div className="flex gap-1.5">
@@ -680,8 +682,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         aria-label="Type message"
         tabIndex={0}
         className={cn(
-          "w-full bg-background/95 text-sm rounded-xl min-h-[38px] max-h-[80px]",
-          "px-3 py-2 pr-10 outline-none overflow-y-auto focus:ring-1 focus:ring-accent"
+          "min-h-[38px] max-h-[80px] w-full overflow-y-auto rounded-xl px-3 py-2 pr-10 text-sm outline-none focus:ring-1 focus:ring-accent",
+          inPanel ? "chat-composer-editor" : "bg-background/95"
         )}
         style={{ whiteSpace: "pre-wrap" }}
         onInput={(e) => {
@@ -694,7 +696,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         onMouseUp={saveSelection}
       />
       {isEmpty && (
-        <span className="absolute left-3 top-2 text-muted-foreground text-sm opacity-60 pointer-events-none select-none">
+        <span className="pointer-events-none absolute left-3 top-2 select-none text-sm text-muted-foreground/65">
           Type message...
         </span>
       )}
@@ -1375,14 +1377,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   );
 
   // === MAIN RETURN ===
-  const coreContent = (
+  return (
     <div
       ref={containerRef}
       role="presentation"
       className={cn(
         "flex flex-col items-stretch justify-center space-y-2 relative",
         inPanel
-          ? "rounded-none bg-transparent border-none shadow-none p-2"
+          ? "chat-composer-content rounded-xl border p-2.5 shadow-[inset_0_0_18px_rgba(var(--accent-rgb),0.035)]"
           : "rounded-2xl bg-accent/20 border border-accent/30 shadow-lg backdrop-blur-md px-2 pt-1 pb-2",
         className
       )}
@@ -1417,7 +1419,4 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       {renderAttachments()}
     </div>
   );
-
-  if (inPanel) return coreContent;
-  return <OverlayPortal>{coreContent}</OverlayPortal>;
 };

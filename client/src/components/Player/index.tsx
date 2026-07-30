@@ -855,19 +855,17 @@ export function Player({
             reaction={reaction.reaction}
           />
         )}
+        {isTargetSelf && (
+          <ChatInputWrapper
+            onSend={(plain, formatted) => handleSendChat(plain, formatted)}
+            onClose={() => setShowChatInput(false)}
+            isOpen={showChatInput}
+            anchorRef={cardRef}
+            isLeftSide={isLeftSide}
+            isTopSide={isTopSide}
+          />
+        )}
       </div>
-      {isTargetSelf && (
-        <ChatInputWrapper
-          onSend={(plain, formatted) => handleSendChat(plain, formatted)}
-          onClose={() => setShowChatInput(false)}
-          isOpen={showChatInput}
-          className={`${
-            isLeftSide ? "right-[20px] top-5" : "-right-[280px] top-5"
-          }`}
-          isLeftSide={isLeftSide}
-          isTopSide={isTopSide}
-        />
-      )}
       {menu && typeof document !== "undefined"
         ? createPortal(menu, document.body)
         : menu}

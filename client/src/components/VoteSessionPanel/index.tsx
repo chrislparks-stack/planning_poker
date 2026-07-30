@@ -175,13 +175,17 @@ export function VoteSessionPanel({ room }: VoteSessionPanelProps) {
   const resizeFrameRef = useRef<number | null>(null);
   const newItemInputRef = useRef<HTMLInputElement>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
+  const renameFocusPendingRef = useRef(false);
 
   useEffect(() => {
     if (adding) newItemInputRef.current?.focus();
   }, [adding]);
 
   useEffect(() => {
-    if (editingId) renameInputRef.current?.focus();
+    if (!editingId) return;
+
+    renameInputRef.current?.focus();
+    renameInputRef.current?.select();
   }, [editingId]);
 
   useEffect(() => {
@@ -681,7 +685,10 @@ export function VoteSessionPanel({ room }: VoteSessionPanelProps) {
                 axis="y"
                 values={queueItems}
                 onReorder={handleQueueReorder}
-                className="space-y-2"
+                className={cn(
+                  "flex flex-col gap-2",
+                  draggedItemId && "queue-dragging"
+                )}
                 data-queue-dragging={draggedItemId != null}
                 role="list"
               >
@@ -691,10 +698,10 @@ export function VoteSessionPanel({ room }: VoteSessionPanelProps) {
                     as="div"
                     value={item}
                     role="listitem"
-                    dragListener={isOwner}
+                    dragListener={isOwner && editingId !== item.id}
                     dragMomentum={false}
-                    dragElastic={0.06}
-                    whileDrag={{ scale: 1.012 }}
+                    dragElastic={0.025}
+                    whileDrag={{ scale: 1.008 }}
                     transition={{
                       layout: {
                         type: "spring",
@@ -707,6 +714,7 @@ export function VoteSessionPanel({ room }: VoteSessionPanelProps) {
                     onDoubleClick={() => {
                       if (!draggedItemId) void startQueuedItem(item);
                     }}
+                    data-drag-active={draggedItemId === item.id}
                     className={cn(
                       "vote-session-queue-item group relative flex min-h-11 items-center rounded-xl border text-sm",
                       isOwner && "cursor-grab active:cursor-grabbing",
@@ -714,7 +722,7 @@ export function VoteSessionPanel({ room }: VoteSessionPanelProps) {
                         draggedItemId !== item.id &&
                         "pointer-events-none",
                       draggedItemId === item.id &&
-                        "z-20 cursor-grabbing border-accent/75 bg-background shadow-[0_10px_28px_rgba(0,0,0,0.35),0_0_18px_rgba(var(--accent-rgb),0.2)] dark:bg-[hsl(var(--background))]"
+                        "queue-drag-active z-20 cursor-grabbing border-accent/75 bg-background shadow-[0_10px_28px_rgba(0,0,0,0.35),0_0_18px_rgba(var(--accent-rgb),0.2)] dark:bg-[hsl(var(--background))]"
                     )}
                   >
                     {isOwner && (
@@ -726,18 +734,43 @@ export function VoteSessionPanel({ room }: VoteSessionPanelProps) {
                       {index + 1}
                     </span>
                     {editingId === item.id ? (
-                      <input
-                        ref={renameInputRef}
-                        maxLength={140}
-                        value={editingTitle}
-                        onChange={(event) =>
-                          setEditingTitle(event.target.value)
-                        }
-                        onBlur={() => void saveRename()}
-                        onKeyDown={handleRenameKeyDown}
-                        className="mx-2 min-w-0 flex-1 bg-transparent text-sm outline-none ring-0"
-                        aria-label={`Rename ${item.title}`}
-                      />
+                      <div className="mx-2 min-w-0 flex-1 py-1.5">
+                        <div className="flex h-8 items-center gap-1.5 rounded-md border border-accent/70 bg-accent/[0.08] px-2 shadow-[inset_0_0_12px_rgba(var(--accent-rgb),0.06),0_0_8px_rgba(var(--accent-rgb),0.08)] focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20">
+                          <Pencil
+                            className="size-3.5 shrink-0 text-accent"
+                            aria-hidden="true"
+                          />
+                          <input
+                            ref={renameInputRef}
+                            maxLength={140}
+                            value={editingTitle}
+                            onChange={(event) =>
+                              setEditingTitle(event.target.value)
+                            }
+                            onBlur={() => {
+                              if (!renameFocusPendingRef.current) {
+                                void saveRename();
+                              }
+                            }}
+                            onKeyDown={handleRenameKeyDown}
+                            className="min-w-0 flex-1 bg-transparent text-sm font-medium outline-none"
+                            aria-label={`Rename ${item.title}`}
+                            aria-describedby={`rename-help-${item.id}`}
+                          />
+                        </div>
+                        <p
+                          id={`rename-help-${item.id}`}
+                          className="mt-1 truncate text-[0.5rem] font-medium tracking-[0.04em] text-muted-foreground"
+                        >
+                          <span className="font-semibold uppercase text-accent">
+                            Renaming
+                          </span>
+                          <span> · </span>
+                          Enter to save
+                          <span> · </span>
+                          Esc to cancel
+                        </p>
+                      </div>
                     ) : (
                       <span className="relative flex h-10 min-w-0 flex-1 items-center overflow-hidden px-3">
                         <span
@@ -774,9 +807,22 @@ export function VoteSessionPanel({ room }: VoteSessionPanelProps) {
                             />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent
+                          align="end"
+                          onCloseAutoFocus={(event) => {
+                            if (!renameFocusPendingRef.current) return;
+
+                            event.preventDefault();
+                            renameFocusPendingRef.current = false;
+                            window.requestAnimationFrame(() => {
+                              renameInputRef.current?.focus();
+                              renameInputRef.current?.select();
+                            });
+                          }}
+                        >
                           <DropdownMenuItem
                             onSelect={() => {
+                              renameFocusPendingRef.current = true;
                               setEditingId(item.id);
                               setEditingTitle(item.title);
                             }}
@@ -808,7 +854,7 @@ export function VoteSessionPanel({ room }: VoteSessionPanelProps) {
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onSelect={() => void removeItem(item.id)}
-                            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                            className="text-red-600 focus:bg-red-500/15 focus:text-red-700 data-[highlighted]:bg-red-500/15 data-[highlighted]:text-red-700 dark:text-red-400 dark:focus:bg-red-500/20 dark:focus:text-red-300 dark:data-[highlighted]:bg-red-500/20 dark:data-[highlighted]:text-red-300"
                           >
                             <Trash2 className="mr-2 size-3.5" />
                             Remove

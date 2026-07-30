@@ -2158,6 +2158,69 @@ mod schema_tests {
     }
 
     #[tokio::test]
+    async fn starting_a_queued_issue_returns_the_current_queued_issue_to_the_queue() {
+        let (schema, room_id, user_id) = schema_with_room(false);
+        let mut first_id = String::new();
+        let mut selected_id = String::new();
+
+        for title in ["Current issue", "Selected issue"] {
+            let response = schema
+                .execute(Request::new(format!(
+                    "mutation {{ addVoteQueueItem(roomId: \"{room_id}\", userId: \"{user_id}\", title: \"{title}\") {{
+                        voteQueue {{ id title }}
+                    }} }}"
+                )))
+                .await;
+            assert!(response.errors.is_empty(), "{:?}", response.errors);
+            let data = response
+                .data
+                .into_json()
+                .expect("queue item result should be JSON");
+            let queue = data["addVoteQueueItem"]["voteQueue"]
+                .as_array()
+                .expect("vote queue should be an array");
+            let item_id = queue
+                .last()
+                .and_then(|item| item["id"].as_str())
+                .expect("queue item id should be a string")
+                .to_string();
+
+            if title == "Current issue" {
+                first_id = item_id;
+            } else {
+                selected_id = item_id;
+            }
+        }
+
+        for item_id in [&first_id, &selected_id] {
+            let response = schema
+                .execute(Request::new(format!(
+                    "mutation {{ startVoteQueueItem(roomId: \"{room_id}\", userId: \"{user_id}\", itemId: \"{item_id}\") {{
+                        currentIssueTitle
+                        currentQueueItemId
+                        voteQueue {{ id title }}
+                    }} }}"
+                )))
+                .await;
+            assert!(response.errors.is_empty(), "{:?}", response.errors);
+
+            if item_id == &selected_id {
+                let data = response
+                    .data
+                    .into_json()
+                    .expect("selected queue result should be JSON");
+                let room = &data["startVoteQueueItem"];
+
+                assert_eq!(room["currentIssueTitle"], "Selected issue");
+                assert_eq!(room["currentQueueItemId"], selected_id);
+                assert_eq!(room["voteQueue"].as_array().map(Vec::len), Some(1));
+                assert_eq!(room["voteQueue"][0]["id"], first_id);
+                assert_eq!(room["voteQueue"][0]["title"], "Current issue");
+            }
+        }
+    }
+
+    #[tokio::test]
     async fn room_owner_can_return_the_current_issue_to_the_front_of_the_queue() {
         let (schema, room_id, user_id) = schema_with_room(false);
         let queued = schema
