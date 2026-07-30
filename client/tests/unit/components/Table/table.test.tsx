@@ -165,11 +165,43 @@ describe("Table vote visibility control", () => {
     });
 
     await user.click(revote);
+    expect(screen.getByText("Start a revote?")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Start another voting pass for this issue. The current result will remain as the original result in this round’s history."
+      )
+    ).toBeInTheDocument();
+    expect(apiMocks.startRevote).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Start revote" }));
     expect(apiMocks.startRevote).toHaveBeenCalledWith({
       variables: {
         roomId: "room-1",
         userId: "user-1"
       }
+    });
+  });
+
+  test("confirms before starting a blank new game", async () => {
+    const user = userEvent.setup();
+    const innerRef = createRef<HTMLDivElement>();
+    render(
+      <Table room={room} isGameOver innerRef={innerRef} roomOverlayRef={null} />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Start New Game" }));
+
+    expect(screen.getByText("Start a new game?")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Archive the current result, clear everyone’s selected cards, and start a blank voting round."
+      )
+    ).toBeInTheDocument();
+    expect(apiMocks.resetGame).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Start new game" }));
+    expect(apiMocks.resetGame).toHaveBeenCalledWith({
+      variables: { roomId: "room-1" }
     });
   });
 
@@ -195,12 +227,73 @@ describe("Table vote visibility control", () => {
     });
 
     await user.click(next);
+    expect(screen.getByText("Start the next queue item?")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Archive the current result and start voting on “Checkout validation”, the next item in the queue."
+      )
+    ).toBeInTheDocument();
+    expect(apiMocks.startNextQueueItem).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Start next item" }));
     expect(apiMocks.startNextQueueItem).toHaveBeenCalledWith({
       variables: {
         roomId: "room-1",
         userId: "user-1"
       }
     });
+  });
+
+  test("uses the shared room setting to skip every vote-start confirmation", async () => {
+    const user = userEvent.setup();
+    const innerRef = createRef<HTMLDivElement>();
+    render(
+      <Table
+        room={{
+          ...room,
+          confirmNewGame: false,
+          lockVotes: true,
+          voteQueue: [{ id: "queue-1", title: "Checkout validation" }]
+        }}
+        isGameOver
+        innerRef={innerRef}
+        roomOverlayRef={null}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Revote Issue" }));
+    expect(apiMocks.startRevote).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Next Queue Item" }));
+    expect(apiMocks.startNextQueueItem).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  test("can disable all vote-start confirmations from a revote dialog", async () => {
+    const user = userEvent.setup();
+    const innerRef = createRef<HTMLDivElement>();
+    render(
+      <Table
+        room={{ ...room, lockVotes: true }}
+        isGameOver
+        innerRef={innerRef}
+        roomOverlayRef={null}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Revote Issue" }));
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: "Don't show this confirmation again"
+      })
+    );
+    await user.click(screen.getByRole("button", { name: "Start revote" }));
+
+    expect(apiMocks.toggleConfirm).toHaveBeenCalledWith({
+      variables: { roomId: "room-1", enabled: false }
+    });
+    expect(apiMocks.startRevote).toHaveBeenCalledTimes(1);
   });
 
   test("shows the compact round-complete summary to participants", () => {

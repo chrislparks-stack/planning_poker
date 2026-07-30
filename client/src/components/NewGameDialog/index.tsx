@@ -15,8 +15,41 @@ interface NewGameDialogProps {
   open: boolean;
   setOpen: (open: boolean) => void;
   room: Room;
+  action: VoteStartAction;
   onConfirm: () => void;
 }
+
+export type VoteStartAction = "new-game" | "revote" | "next-queue-item";
+
+const getDialogCopy = (action: VoteStartAction, room: Room) => {
+  switch (action) {
+    case "revote":
+      return {
+        title: "Start a revote?",
+        description: room.currentIssueTitle
+          ? `Start another voting pass for “${room.currentIssueTitle}”. The current result will remain as the original result in this round’s history.`
+          : "Start another voting pass for this issue. The current result will remain as the original result in this round’s history.",
+        confirmationText: "Start revote"
+      };
+    case "next-queue-item": {
+      const nextIssueTitle = room.voteQueue[0]?.title;
+      return {
+        title: "Start the next queue item?",
+        description: nextIssueTitle
+          ? `Archive the current result and start voting on “${nextIssueTitle}”, the next item in the queue.`
+          : "Archive the current result and start voting on the next item in the queue.",
+        confirmationText: "Start next item"
+      };
+    }
+    default:
+      return {
+        title: "Start a new game?",
+        description:
+          "Archive the current result, clear everyone’s selected cards, and start a blank voting round.",
+        confirmationText: "Start new game"
+      };
+  }
+};
 
 /**
  * A reimagined confirmation dialog — sleek, minimal, and command-palette inspired.
@@ -25,10 +58,12 @@ export const NewGameDialog: FC<NewGameDialogProps> = ({
   open,
   setOpen,
   room,
+  action,
   onConfirm
 }) => {
   const [toggleConfirmNewGame] = useToggleConfirmNewGameMutation();
   const [disableFutureConfirm, setDisableFutureConfirm] = useState(false);
+  const dialogCopy = getDialogCopy(action, room);
 
   useEffect(() => {
     if (!room?.confirmNewGame) return;
@@ -68,11 +103,10 @@ export const NewGameDialog: FC<NewGameDialogProps> = ({
         <div className="px-6 py-5 space-y-4 relative">
           <div>
             <DialogTitle className="text-lg font-semibold tracking-tight">
-              Start a new game?
+              {dialogCopy.title}
             </DialogTitle>
             <DialogDescription className="mt-1.5 text-sm text-muted-foreground">
-              This will reset the current round and clear everyone&apos;s
-              selected cards
+              {dialogCopy.description}
             </DialogDescription>
           </div>
           <div className="relative">
@@ -128,7 +162,7 @@ export const NewGameDialog: FC<NewGameDialogProps> = ({
                 hover:-translate-y-[1px]
               "
             >
-              Start new game
+              {dialogCopy.confirmationText}
             </Button>
           </DialogFooter>
         </div>

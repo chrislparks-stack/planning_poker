@@ -170,6 +170,51 @@ describe("VoteSessionPanel history", () => {
     ).toBeInTheDocument();
   });
 
+  test("counts unread history cards on the collapsed rail and marks them read when opened", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<VoteSessionPanel room={room} />);
+
+    expect(
+      screen.getByLabelText("2 unread vote session history cards")
+    ).toHaveTextContent("2");
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Open vote session"
+      })
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "Collapse vote session"
+      })
+    );
+
+    expect(
+      screen.queryByLabelText(/unread vote session history/)
+    ).not.toBeInTheDocument();
+
+    rerender(
+      <VoteSessionPanel
+        room={{
+          ...room,
+          voteHistory: [
+            ...room.voteHistory,
+            {
+              ...room.voteHistory[0],
+              id: "round-3",
+              completedAt: "2026-07-28T16:05:00Z",
+              roundNumber: 3
+            }
+          ]
+        }}
+      />
+    );
+
+    expect(
+      screen.getByLabelText("1 unread vote session history card")
+    ).toHaveTextContent("1");
+  });
+
   test("resizes from the middle handle and remembers the width", () => {
     localStorage.setItem("vote-session-panel-open", "true");
     localStorage.setItem("vote-session-panel-width", "420");
@@ -178,7 +223,14 @@ describe("VoteSessionPanel history", () => {
     const resizeHandle = screen.getByRole("button", {
       name: "Resize vote session panel"
     });
-    expect(resizeHandle).toHaveClass("cursor-grab", "active:cursor-grabbing");
+    expect(resizeHandle).toHaveClass(
+      "right-0",
+      "translate-x-full",
+      "rounded-r-full",
+      "cursor-grab",
+      "active:cursor-grabbing"
+    );
+    expect(resizeHandle).not.toHaveClass("rounded-l-full", "translate-x-[60%]");
 
     fireEvent.keyDown(resizeHandle, { key: "ArrowRight" });
 

@@ -279,9 +279,9 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
     },
     {
       id: "confirm-new-game",
-      title: "Confirm before new game",
+      title: "Confirm before starting votes",
       description:
-        "Ask for confirmation before the current votes are cleared and a new round begins.",
+        "Ask for confirmation before starting a new game, revote, or the next queued issue.",
       checked: confirmNewGame,
       disabled: confirmLoading,
       icon: RotateCcw,

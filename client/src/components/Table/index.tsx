@@ -22,7 +22,10 @@ import {
 } from "@/api";
 import bumperTexture from "@/assets/table-bumper-texture.webp";
 import feltTexture from "@/assets/table-felt-texture.webp";
-import { NewGameDialog } from "@/components/NewGameDialog";
+import {
+  NewGameDialog,
+  type VoteStartAction
+} from "@/components/NewGameDialog";
 import { Button } from "@/components/ui/button";
 import { CountdownOverlay } from "@/components/ui/countdown-overlay.tsx";
 import { useToast } from "@/hooks/use-toast";
@@ -51,7 +54,8 @@ export const Table: FC<TableProps> = ({
   roomOverlayRef
 }) => {
   const { toast } = useToast();
-  const [openNewGameDialog, setOpenNewGameDialog] = useState(false);
+  const [pendingVoteStart, setPendingVoteStart] =
+    useState<VoteStartAction | null>(null);
   const [editingIssue, setEditingIssue] = useState(false);
   const [issueDraft, setIssueDraft] = useState(
     room.currentIssueTitle?.trim() ?? ""
@@ -264,9 +268,9 @@ export const Table: FC<TableProps> = ({
   function handleResetGame() {
     if (!currentIsRoomOwner) return;
 
-    resetGameMutation({ variables: { roomId: room.id } })
-      .catch(() => undefined)
-      .finally(() => setOpenNewGameDialog(false));
+    resetGameMutation({ variables: { roomId: room.id } }).catch(
+      () => undefined
+    );
   }
 
   async function handleStartRevote() {
@@ -281,6 +285,30 @@ export const Table: FC<TableProps> = ({
     await startNextQueueItem({
       variables: { roomId: room.id, userId: currentUserId }
     });
+  }
+
+  function startVote(action: VoteStartAction) {
+    switch (action) {
+      case "revote":
+        void handleStartRevote().catch(() => undefined);
+        break;
+      case "next-queue-item":
+        void handleStartNextQueueItem().catch(() => undefined);
+        break;
+      default:
+        handleResetGame();
+    }
+  }
+
+  function requestVoteStart(action: VoteStartAction) {
+    if (!currentIsRoomOwner) return;
+
+    if (room.confirmNewGame) {
+      setPendingVoteStart(action);
+      return;
+    }
+
+    startVote(action);
   }
 
   async function handleIssueTitleSave() {
@@ -422,17 +450,9 @@ export const Table: FC<TableProps> = ({
                         startRevoteLoading ||
                         startNextQueueLoading
                       }
-                      onNewGame={() =>
-                        room.confirmNewGame
-                          ? setOpenNewGameDialog(true)
-                          : handleResetGame()
-                      }
-                      onRevote={() =>
-                        void handleStartRevote().catch(() => undefined)
-                      }
-                      onNext={() =>
-                        void handleStartNextQueueItem().catch(() => undefined)
-                      }
+                      onNewGame={() => requestVoteStart("new-game")}
+                      onRevote={() => requestVoteStart("revote")}
+                      onNext={() => requestVoteStart("next-queue-item")}
                     />
                   ) : (
                     <div className="flex min-h-8 flex-col items-center justify-center text-center">
@@ -545,10 +565,15 @@ export const Table: FC<TableProps> = ({
         )}
 
       <NewGameDialog
-        open={openNewGameDialog}
-        setOpen={setOpenNewGameDialog}
+        open={pendingVoteStart != null}
+        setOpen={(open) => {
+          if (!open) setPendingVoteStart(null);
+        }}
         room={room}
-        onConfirm={handleResetGame}
+        action={pendingVoteStart ?? "new-game"}
+        onConfirm={() => {
+          if (pendingVoteStart) startVote(pendingVoteStart);
+        }}
       />
     </div>
   );

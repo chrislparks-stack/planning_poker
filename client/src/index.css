@@ -1101,6 +1101,31 @@ body.dialog-open .chat-panel {
   background: hsl(var(--accent) / 0.78);
 }
 
+.vote-session-resize-handle {
+  background-color: hsl(var(--background));
+}
+
+.vote-session-resize-handle::before {
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  left: -2px;
+  width: 3px;
+  pointer-events: none;
+  content: "";
+  background: inherit;
+}
+
+.vote-session-resize-handle:hover,
+.vote-session-resize-handle:focus-visible,
+.vote-session-resize-handle[data-resizing="true"] {
+  background-color: color-mix(
+    in srgb,
+    hsl(var(--background)) 88%,
+    hsl(var(--accent)) 12%
+  );
+}
+
 @container vote-session-panel (max-width: 300px) {
   .history-card-button {
     grid-template-columns: 44px minmax(0, 1fr) 12px;

@@ -67,6 +67,7 @@ const issueFallback = (roundNumber?: number) =>
 
 const PANEL_OPEN_STORAGE_KEY = "vote-session-panel-open";
 const PANEL_WIDTH_STORAGE_KEY = "vote-session-panel-width";
+const HISTORY_READ_STORAGE_KEY_PREFIX = "vote-session-history-read";
 const DEFAULT_PANEL_WIDTH = 420;
 const MIN_PANEL_WIDTH = 320;
 const MAX_PANEL_WIDTH = 560;
@@ -107,6 +108,27 @@ const storePanelPreference = (key: string, value: string) => {
   }
 };
 
+const getHistoryFingerprint = (round: RoundVoteHistory) =>
+  `${round.id}:${round.completedAt}:${round.revoteCount}`;
+
+const getStoredReadHistory = (key: string) => {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const storedValue = window.localStorage.getItem(key);
+    if (!storedValue) return [];
+
+    const parsedValue: unknown = JSON.parse(storedValue);
+    return Array.isArray(parsedValue)
+      ? parsedValue.filter(
+          (value): value is string => typeof value === "string"
+        )
+      : [];
+  } catch {
+    return [];
+  }
+};
+
 const formatCompletedAt = (completedAt: string) => {
   const completedDate = new Date(completedAt);
   if (Number.isNaN(completedDate.getTime())) return completedAt;
@@ -122,8 +144,19 @@ const formatCompletedAt = (completedAt: string) => {
 export function VoteSessionPanel({ room }: VoteSessionPanelProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const currentUserId = user?.id;
+  const historyReadStorageKey = `${HISTORY_READ_STORAGE_KEY_PREFIX}:${
+    room.id
+  }:${currentUserId ?? "guest"}`;
+  const historyFingerprints = useMemo(
+    () => room.voteHistory.map(getHistoryFingerprint),
+    [room.voteHistory]
+  );
   const [open, setOpen] = useState(getStoredPanelOpen);
   const [panelWidth, setPanelWidth] = useState(getStoredPanelWidth);
+  const [readHistoryFingerprints, setReadHistoryFingerprints] = useState(() =>
+    getStoredReadHistory(historyReadStorageKey)
+  );
   const [resizing, setResizing] = useState(false);
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -157,6 +190,31 @@ export function VoteSessionPanel({ room }: VoteSessionPanelProps) {
       setQueueItems(room.voteQueue);
     }
   }, [draggedItemId, reordering, room.voteQueue]);
+
+  useEffect(() => {
+    setReadHistoryFingerprints(getStoredReadHistory(historyReadStorageKey));
+  }, [historyReadStorageKey]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    setReadHistoryFingerprints((current) => {
+      if (
+        current.length === historyFingerprints.length &&
+        current.every(
+          (fingerprint, index) => fingerprint === historyFingerprints[index]
+        )
+      ) {
+        return current;
+      }
+
+      storePanelPreference(
+        historyReadStorageKey,
+        JSON.stringify(historyFingerprints)
+      );
+      return historyFingerprints;
+    });
+  }, [historyFingerprints, historyReadStorageKey, open]);
 
   useEffect(
     () => () => {
@@ -195,8 +253,10 @@ export function VoteSessionPanel({ room }: VoteSessionPanelProps) {
     };
   }, []);
 
-  const currentUserId = user?.id;
   const isOwner = currentUserId != null && currentUserId === room.roomOwnerId;
+  const unreadHistoryCount = historyFingerprints.filter(
+    (fingerprint) => !readHistoryFingerprints.includes(fingerprint)
+  ).length;
   const currentMetrics = useMemo(
     () =>
       getVoteMetrics(
@@ -480,11 +540,11 @@ export function VoteSessionPanel({ room }: VoteSessionPanelProps) {
           onPointerUp={handleResizeEnd}
           onPointerCancel={handleResizeEnd}
           onKeyDown={handleResizeKeyDown}
+          data-resizing={resizing}
           className={cn(
-            "absolute right-0 top-1/2 z-30 flex h-16 w-6 -translate-y-1/2 translate-x-1/2 cursor-grab touch-none items-center justify-center rounded-full border border-accent/55 active:cursor-grabbing",
-            "bg-background text-accent shadow-[0_0_0_4px_hsl(var(--background)),0_0_14px_rgba(var(--accent-rgb),0.22)]",
-            "transition-colors hover:bg-accent/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60",
-            resizing && "bg-accent/15"
+            "vote-session-resize-handle absolute right-0 top-1/2 z-30 flex h-16 w-5 -translate-y-1/2 translate-x-full cursor-grab touch-none items-center justify-center rounded-r-full border-y border-r border-accent/45 text-accent active:cursor-grabbing",
+            "shadow-[5px_0_14px_rgba(var(--accent-rgb),0.12)]",
+            "transition-colors hover:border-accent/65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/60"
           )}
         >
           <GripVertical className="size-3.5" aria-hidden="true" />
@@ -502,12 +562,24 @@ export function VoteSessionPanel({ room }: VoteSessionPanelProps) {
           <span className="absolute left-1/2 top-5 flex size-7 -translate-x-1/2 items-center justify-center rounded-md transition-all group-hover:bg-accent/15 group-hover:shadow-[0_0_12px_rgba(var(--accent-rgb),0.18)]">
             <ChevronsRight className="size-4" aria-hidden="true" />
           </span>
-          <span className="[writing-mode:vertical-rl] text-[0.58rem] font-bold uppercase tracking-[0.28em] text-accent/80">
-            Vote session
+          <span className="flex flex-col items-center gap-2">
+            <span className="[writing-mode:vertical-rl] text-[0.58rem] font-bold uppercase tracking-[0.28em] text-accent/80">
+              Vote session
+            </span>
+            {unreadHistoryCount > 0 && (
+              <span
+                aria-label={`${unreadHistoryCount} unread vote session history ${
+                  unreadHistoryCount === 1 ? "card" : "cards"
+                }`}
+                className="flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 font-mono text-[0.48rem] font-bold leading-none tracking-normal text-accent-foreground shadow-[0_0_10px_rgba(var(--accent-rgb),0.32)]"
+              >
+                {unreadHistoryCount > 99 ? "99+" : unreadHistoryCount}
+              </span>
+            )}
           </span>
         </button>
       ) : (
-        <div className="vote-session-panel vote-session-panel-scroll mr-3 h-full overflow-y-auto overflow-x-hidden pb-8 pl-6 pr-3 pt-5">
+        <div className="vote-session-panel vote-session-panel-scroll mr-2 h-full overflow-y-auto overflow-x-hidden pb-8 pl-6 pr-3 pt-5">
           <header className="mb-4 flex items-start justify-between gap-3">
             <div>
               <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
