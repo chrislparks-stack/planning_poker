@@ -18,6 +18,7 @@ import { RoomOptionsDialog } from "@/components/RoomOptionsDialog";
 import { StarrySky } from "@/components/StarrySky";
 import { ResultsTag } from "@/components/ui/results-tag.tsx";
 import { VoteDistributionChart } from "@/components/vote-distribution-chart";
+import { VoteSessionPanel } from "@/components/VoteSessionPanel";
 import { useAuth } from "@/contexts";
 import { useBackgroundConfig } from "@/contexts/BackgroundContext.tsx";
 import { useToast } from "@/hooks/use-toast";
@@ -488,40 +489,49 @@ export function RoomPage() {
                 />
               </div>
             )}
-            <div className="flex flex-1 min-h-0 w-full flex-col">
-              <div ref={roomRef} className="flex-1 min-h-0 overflow-auto">
-                <div className="flex justify-center px-4 pt-[25px]">
-                  <Room
-                    room={room}
-                    onShowInChat={handleShowInChat}
-                    roomRef={roomRef}
-                    chatVisible={chatVisible}
-                  />
-                </div>
-              </div>
+            <div className="room-session-layout flex min-h-0 w-full flex-1">
+              <VoteSessionPanel room={room} />
+              <div
+                aria-label="Room workspace"
+                className="room-workspace-scroll flex min-w-0 flex-1 flex-col overflow-x-auto overflow-y-hidden focus-visible:outline-none"
+                role="region"
+              >
+                <div className="room-workspace-canvas flex min-h-0 w-full flex-1 flex-col">
+                  <div ref={roomRef} className="min-h-0 flex-1 overflow-y-auto">
+                    <div className="flex justify-center px-4 pt-[25px]">
+                      <Room
+                        room={room}
+                        onShowInChat={handleShowInChat}
+                        roomRef={roomRef}
+                        chatVisible={chatVisible}
+                      />
+                    </div>
+                  </div>
 
-              <div className="sticky bottom-0 w-full">
-                <div className="vote-results-scroller relative w-full pt-4 pb-6 backdrop-blur-sm [scrollbar-width:thin]">
-                  <div className="mx-auto flex w-full min-w-[660px] items-end justify-center px-2">
-                    <Deck
-                      roomId={roomId}
-                      isGameOver={room.isGameOver}
-                      lockVotes={room.lockVotes}
-                      cards={room.deck.cards}
-                      users={room.users}
-                      previousRound={room.previousRound}
-                    />
-                    {room.isGameOver && (
-                      <div className="ml-2 flex min-w-[246px] max-w-[548px] flex-[0_1_auto] justify-center">
-                        <ResultsTag
-                          isRevote={room.previousRound != null}
-                          hasBackground={
-                            background.enabled && background.id === "starry"
-                          }
+                  <div className="sticky bottom-0 w-full">
+                    <div className="vote-results-scroller relative w-full pb-6 pt-4 backdrop-blur-sm">
+                      <div className="mx-auto flex w-max min-w-full items-end justify-center px-2">
+                        <Deck
+                          roomId={roomId}
+                          isGameOver={room.isGameOver}
+                          lockVotes={room.lockVotes}
+                          cards={room.deck.cards}
+                          users={room.users}
+                          previousRound={room.previousRound}
                         />
-                        <VoteDistributionChart room={room} />
+                        {room.isGameOver && (
+                          <div className="ml-2 flex min-w-[246px] max-w-[548px] flex-[0_1_auto] justify-center">
+                            <ResultsTag
+                              isRevote={room.previousRound != null}
+                              hasBackground={
+                                background.enabled && background.id === "starry"
+                              }
+                            />
+                            <VoteDistributionChart room={room} />
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               </div>

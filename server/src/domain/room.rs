@@ -1,5 +1,6 @@
 use async_graphql::SimpleObject;
 use chrono::{DateTime, Duration, Utc};
+use std::collections::HashMap;
 use std::time::Instant;
 use uuid::Uuid;
 
@@ -12,18 +13,34 @@ use super::{
 };
 
 #[derive(Clone, Debug, PartialEq, SimpleObject)]
+pub struct VoteQueueItem {
+    pub id: EntityId,
+    pub title: String,
+}
+
+#[derive(Clone, Debug, PartialEq, SimpleObject)]
+pub struct ArchivedVoteSelection {
+    pub card: Card,
+    pub value: Option<f32>,
+    pub phase: i32,
+}
+
+#[derive(Clone, Debug, PartialEq, SimpleObject)]
 pub struct ArchivedPlayerVote {
     pub user_id: EntityId,
     pub username: String,
     pub card: Option<Card>,
     pub value: Option<f32>,
+    pub selections: Vec<ArchivedVoteSelection>,
 }
 
 #[derive(Clone, Debug, PartialEq, SimpleObject)]
 pub struct RoundVoteHistory {
     pub id: EntityId,
     pub round_number: i32,
+    pub revote_count: i32,
     pub completed_at: DateTime<Utc>,
+    pub issue_title: Option<String>,
     pub votes: Vec<ArchivedPlayerVote>,
 }
 
@@ -46,6 +63,10 @@ pub struct Room {
     pub censor_votes: bool,
     pub lock_votes: bool,
     pub previous_round: Option<RoundVoteHistory>,
+    pub current_issue_title: Option<String>,
+    pub current_queue_item_id: Option<EntityId>,
+    pub vote_queue: Vec<VoteQueueItem>,
+    pub vote_history: Vec<RoundVoteHistory>,
     pub chat_history: Vec<crate::domain::chat::ChatMessage>,
 
     #[graphql(skip)]
@@ -55,7 +76,7 @@ pub struct Room {
     pub last_active_instant: Instant,
 
     #[graphql(skip)]
-    pub vote_history: Vec<RoundVoteHistory>,
+    pub current_vote_selections: HashMap<EntityId, Vec<Card>>,
 }
 
 impl Room {
@@ -77,10 +98,14 @@ impl Room {
             censor_votes: false,
             lock_votes: false,
             previous_round: None,
+            current_issue_title: None,
+            current_queue_item_id: None,
+            vote_queue: Vec::new(),
+            vote_history: Vec::new(),
             last_active: Utc::now(),
             last_active_instant: Instant::now(),
             chat_history: Vec::new(),
-            vote_history: Vec::new(),
+            current_vote_selections: HashMap::new(),
         }
     }
 
@@ -92,10 +117,7 @@ impl Room {
     /// Return a Room snapshot suitable for publishing to clients.
     pub fn get_room(&self) -> Room {
         if self.is_game_over {
-            Room {
-                vote_history: Vec::new(),
-                ..self.clone()
-            }
+            self.clone()
         } else {
             let table: Vec<UserCard> = self
                 .clone()
@@ -113,7 +135,6 @@ impl Room {
                     table,
                     ..self.game.clone()
                 },
-                vote_history: Vec::new(),
                 ..self.clone()
             }
         }
@@ -126,6 +147,7 @@ impl Room {
     pub fn remove_user(&mut self, user_id: EntityId) {
         self.users.retain(|user| user.id != user_id);
         self.game.table.retain(|uc| uc.user_id != user_id);
+        self.current_vote_selections.remove(&user_id);
 
         if self.room_owner_id == Some(user_id) {
             self.room_owner_id = self.users.first().map(|user| user.id);
@@ -197,7 +219,18 @@ impl Room {
         self.is_game_over = true;
     }
 
-    pub fn archive_revealed_round(&mut self) -> Option<RoundVoteHistory> {
+    pub fn record_vote_selection(&mut self, user_id: EntityId, card: &str) {
+        if card.trim().is_empty() {
+            return;
+        }
+
+        let selections = self.current_vote_selections.entry(user_id).or_default();
+        if selections.last().is_none_or(|last| last != card) {
+            selections.push(card.to_string());
+        }
+    }
+
+    fn snapshot_revealed_round(&self) -> Option<RoundVoteHistory> {
         if !self.is_game_over {
             return None;
         }
@@ -210,16 +243,122 @@ impl Room {
                 username: user.username.clone(),
                 card: user.last_card_picked.clone(),
                 value: user.last_card_value,
+                selections: self
+                    .current_vote_selections
+                    .get(&user.id)
+                    .cloned()
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|card| ArchivedVoteSelection {
+                        value: crate::domain::user::parse_card_to_number(&card),
+                        card,
+                        phase: 0,
+                    })
+                    .collect(),
             })
             .collect();
 
         let round = RoundVoteHistory {
             id: Uuid::new_v4(),
             round_number: (self.vote_history.len() + 1) as i32,
+            revote_count: 0,
             completed_at: Utc::now(),
+            issue_title: self.current_issue_title.clone(),
             votes,
         };
-        self.vote_history.push(round.clone());
+
+        Some(round)
+    }
+
+    fn merge_revote_rounds(
+        previous_round: RoundVoteHistory,
+        current_round: RoundVoteHistory,
+    ) -> RoundVoteHistory {
+        let revote_phase = previous_round.revote_count + 1;
+        let previous_votes: HashMap<EntityId, ArchivedPlayerVote> = previous_round
+            .votes
+            .into_iter()
+            .map(|vote| (vote.user_id, vote))
+            .collect();
+
+        let votes = current_round
+            .votes
+            .into_iter()
+            .map(|mut current_vote| {
+                let Some(previous_vote) = previous_votes.get(&current_vote.user_id) else {
+                    return current_vote;
+                };
+
+                let mut selections = if previous_vote.selections.is_empty() {
+                    vec![ArchivedVoteSelection {
+                        card: previous_vote
+                            .card
+                            .clone()
+                            .unwrap_or_else(|| "—".to_string()),
+                        value: previous_vote.value,
+                        phase: previous_round.revote_count,
+                    }]
+                } else {
+                    previous_vote.selections.clone()
+                };
+
+                let current_selections = if current_vote.selections.is_empty() {
+                    vec![ArchivedVoteSelection {
+                        card: current_vote.card.clone().unwrap_or_else(|| "—".to_string()),
+                        value: current_vote.value,
+                        phase: revote_phase,
+                    }]
+                } else {
+                    current_vote
+                        .selections
+                        .iter()
+                        .cloned()
+                        .map(|mut selection| {
+                            selection.phase = revote_phase;
+                            selection
+                        })
+                        .collect()
+                };
+
+                for selection in current_selections {
+                    if selections.last().is_none_or(|last| {
+                        last.card != selection.card || last.phase != selection.phase
+                    }) {
+                        selections.push(selection);
+                    }
+                }
+
+                current_vote.selections = selections;
+                current_vote
+            })
+            .collect();
+
+        RoundVoteHistory {
+            id: previous_round.id,
+            round_number: previous_round.round_number,
+            revote_count: revote_phase,
+            completed_at: current_round.completed_at,
+            issue_title: current_round.issue_title,
+            votes,
+        }
+    }
+
+    pub fn archive_revealed_round(&mut self) -> Option<RoundVoteHistory> {
+        let current_round = self.snapshot_revealed_round()?;
+        let round = match self.previous_round.take() {
+            Some(previous_round) => Self::merge_revote_rounds(previous_round, current_round),
+            None => current_round,
+        };
+
+        if let Some(index) = self
+            .vote_history
+            .iter()
+            .position(|archived| archived.id == round.id)
+        {
+            self.vote_history[index] = round.clone();
+        } else {
+            self.vote_history.push(round.clone());
+        }
 
         Some(round)
     }
@@ -227,13 +366,21 @@ impl Room {
     pub fn start_new_round(&mut self) {
         self.archive_revealed_round();
         self.reset_round(None);
+        self.current_issue_title = None;
+        self.current_queue_item_id = None;
     }
 
     pub fn start_revote_round(&mut self) -> bool {
-        let Some(previous_round) = self.archive_revealed_round() else {
+        let Some(current_round) = self.snapshot_revealed_round() else {
             return false;
         };
 
+        let previous_round = match self.previous_round.take() {
+            Some(previous_round) => Self::merge_revote_rounds(previous_round, current_round),
+            None => current_round,
+        };
+        self.vote_history
+            .retain(|archived| archived.id != previous_round.id);
         self.reset_round(Some(previous_round));
         true
     }
@@ -242,6 +389,7 @@ impl Room {
         self.is_game_over = false;
         self.game = Game::new();
         self.previous_round = previous_round;
+        self.current_vote_selections.clear();
         self.reveal_stage = Some("idle".to_string());
         self.countdown_value = None;
 
@@ -285,6 +433,98 @@ impl Room {
 
     pub fn toggle_lock_votes(&mut self, enabled: bool) {
         self.lock_votes = enabled;
+    }
+
+    pub fn add_vote_queue_item(&mut self, title: String) -> VoteQueueItem {
+        let item = VoteQueueItem {
+            id: Uuid::new_v4(),
+            title,
+        };
+        self.vote_queue.push(item.clone());
+        item
+    }
+
+    pub fn rename_vote_queue_item(&mut self, item_id: EntityId, title: String) -> bool {
+        let Some(item) = self.vote_queue.iter_mut().find(|item| item.id == item_id) else {
+            return false;
+        };
+        item.title = title;
+        true
+    }
+
+    pub fn remove_vote_queue_item(&mut self, item_id: EntityId) -> bool {
+        let before = self.vote_queue.len();
+        self.vote_queue.retain(|item| item.id != item_id);
+        self.vote_queue.len() != before
+    }
+
+    pub fn reorder_vote_queue_item(&mut self, item_id: EntityId, to_index: usize) -> bool {
+        let Some(from_index) = self.vote_queue.iter().position(|item| item.id == item_id) else {
+            return false;
+        };
+        let item = self.vote_queue.remove(from_index);
+        let target = to_index.min(self.vote_queue.len());
+        self.vote_queue.insert(target, item);
+        true
+    }
+
+    pub fn set_current_issue_title(&mut self, title: Option<String>) {
+        self.current_issue_title = title;
+    }
+
+    pub fn start_next_queue_item(&mut self) -> bool {
+        if self.vote_queue.is_empty() {
+            return false;
+        }
+
+        self.archive_revealed_round();
+        let item = self.vote_queue.remove(0);
+        self.reset_round(None);
+        self.current_issue_title = Some(item.title);
+        self.current_queue_item_id = Some(item.id);
+        true
+    }
+
+    pub fn start_vote_queue_item(&mut self, item_id: EntityId) -> bool {
+        let Some(index) = self.vote_queue.iter().position(|item| item.id == item_id) else {
+            return false;
+        };
+
+        if let Some(previous_round) = self.previous_round.take() {
+            if let Some(history_index) = self
+                .vote_history
+                .iter()
+                .position(|archived| archived.id == previous_round.id)
+            {
+                self.vote_history[history_index] = previous_round;
+            } else {
+                self.vote_history.push(previous_round);
+            }
+        }
+
+        let item = self.vote_queue.remove(index);
+        self.reset_round(None);
+        self.current_issue_title = Some(item.title);
+        self.current_queue_item_id = Some(item.id);
+        true
+    }
+
+    pub fn return_current_queue_item(&mut self) -> bool {
+        let (Some(id), Some(title)) =
+            (self.current_queue_item_id, self.current_issue_title.clone())
+        else {
+            return false;
+        };
+
+        if self.vote_queue.iter().any(|item| item.id == id) {
+            return false;
+        }
+
+        self.current_queue_item_id = None;
+        self.current_issue_title = None;
+        self.vote_queue.insert(0, VoteQueueItem { id, title });
+        self.reset_round(None);
+        true
     }
 
     // === Activity / cleanup helpers ===

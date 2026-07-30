@@ -129,7 +129,6 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
     useToggleCensorVotesMutation();
   const [toggleLockVotes, { loading: lockVotesLoading }] =
     useToggleLockVotesMutation();
-
   const [roomId, setRoomId] = useState("");
   const [roomName, setRoomName] = useState("");
   const [originalName, setOriginalName] = useState("");

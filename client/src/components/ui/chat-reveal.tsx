@@ -157,7 +157,7 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({
                   onClick?.();
                 }
               }}
-              className="absolute inset-y-0 right-[6px] w-[9.8vw] max-w-[245px] cursor-pointer"
+              className="absolute inset-y-0 left-0 right-[18px] cursor-pointer"
               style={{ pointerEvents: "auto" }}
             >
               <motion.div

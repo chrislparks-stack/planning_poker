@@ -231,6 +231,231 @@ impl MutationRoot {
         }
     }
 
+    async fn add_vote_queue_item(
+        &self,
+        ctx: &Context<'_>,
+        room_id: EntityId,
+        user_id: EntityId,
+        title: String,
+    ) -> Result<Room> {
+        let title = title.trim();
+        if title.is_empty() {
+            return Err(Error::new("Queue item title cannot be empty"));
+        }
+        if title.chars().count() > 140 {
+            return Err(Error::new("Queue item title cannot exceed 140 characters"));
+        }
+
+        let mut storage = get_storage(ctx).await;
+        let room = storage
+            .get_mut(&room_id)
+            .ok_or_else(|| Error::new("Room not found"))?;
+        if room.room_owner_id != Some(user_id) {
+            return Err(Error::new("Only the room owner can manage the vote queue"));
+        }
+
+        room.add_vote_queue_item(title.to_string());
+        room.touch();
+        SimpleBroker::publish(room.get_room());
+        Ok(room.get_room())
+    }
+
+    async fn rename_vote_queue_item(
+        &self,
+        ctx: &Context<'_>,
+        room_id: EntityId,
+        user_id: EntityId,
+        item_id: EntityId,
+        title: String,
+    ) -> Result<Room> {
+        let title = title.trim();
+        if title.is_empty() {
+            return Err(Error::new("Queue item title cannot be empty"));
+        }
+        if title.chars().count() > 140 {
+            return Err(Error::new("Queue item title cannot exceed 140 characters"));
+        }
+
+        let mut storage = get_storage(ctx).await;
+        let room = storage
+            .get_mut(&room_id)
+            .ok_or_else(|| Error::new("Room not found"))?;
+        if room.room_owner_id != Some(user_id) {
+            return Err(Error::new("Only the room owner can manage the vote queue"));
+        }
+        if !room.rename_vote_queue_item(item_id, title.to_string()) {
+            return Err(Error::new("Queue item not found"));
+        }
+
+        room.touch();
+        SimpleBroker::publish(room.get_room());
+        Ok(room.get_room())
+    }
+
+    async fn remove_vote_queue_item(
+        &self,
+        ctx: &Context<'_>,
+        room_id: EntityId,
+        user_id: EntityId,
+        item_id: EntityId,
+    ) -> Result<Room> {
+        let mut storage = get_storage(ctx).await;
+        let room = storage
+            .get_mut(&room_id)
+            .ok_or_else(|| Error::new("Room not found"))?;
+        if room.room_owner_id != Some(user_id) {
+            return Err(Error::new("Only the room owner can manage the vote queue"));
+        }
+        if !room.remove_vote_queue_item(item_id) {
+            return Err(Error::new("Queue item not found"));
+        }
+
+        room.touch();
+        SimpleBroker::publish(room.get_room());
+        Ok(room.get_room())
+    }
+
+    async fn reorder_vote_queue_item(
+        &self,
+        ctx: &Context<'_>,
+        room_id: EntityId,
+        user_id: EntityId,
+        item_id: EntityId,
+        to_index: i32,
+    ) -> Result<Room> {
+        if to_index < 0 {
+            return Err(Error::new("Queue position cannot be negative"));
+        }
+
+        let mut storage = get_storage(ctx).await;
+        let room = storage
+            .get_mut(&room_id)
+            .ok_or_else(|| Error::new("Room not found"))?;
+        if room.room_owner_id != Some(user_id) {
+            return Err(Error::new("Only the room owner can manage the vote queue"));
+        }
+        if !room.reorder_vote_queue_item(item_id, to_index as usize) {
+            return Err(Error::new("Queue item not found"));
+        }
+
+        room.touch();
+        SimpleBroker::publish(room.get_room());
+        Ok(room.get_room())
+    }
+
+    async fn set_current_issue_title(
+        &self,
+        ctx: &Context<'_>,
+        room_id: EntityId,
+        user_id: EntityId,
+        title: Option<String>,
+    ) -> Result<Room> {
+        let normalized = title
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty());
+        if normalized
+            .as_ref()
+            .is_some_and(|value| value.chars().count() > 140)
+        {
+            return Err(Error::new("Issue title cannot exceed 140 characters"));
+        }
+
+        let mut storage = get_storage(ctx).await;
+        let room = storage
+            .get_mut(&room_id)
+            .ok_or_else(|| Error::new("Room not found"))?;
+        if room.room_owner_id != Some(user_id) {
+            return Err(Error::new(
+                "Only the room owner can rename the current issue",
+            ));
+        }
+
+        room.set_current_issue_title(normalized);
+        room.touch();
+        SimpleBroker::publish(room.get_room());
+        Ok(room.get_room())
+    }
+
+    async fn start_next_queue_item(
+        &self,
+        ctx: &Context<'_>,
+        room_id: EntityId,
+        user_id: EntityId,
+    ) -> Result<Room> {
+        let mut storage = get_storage(ctx).await;
+        let room = storage
+            .get_mut(&room_id)
+            .ok_or_else(|| Error::new("Room not found"))?;
+        if room.room_owner_id != Some(user_id) {
+            return Err(Error::new(
+                "Only the room owner can start the next queue item",
+            ));
+        }
+        if !room.is_game_over {
+            return Err(Error::new(
+                "The next queue item can only start after votes are revealed",
+            ));
+        }
+        if !room.start_next_queue_item() {
+            return Err(Error::new("The vote queue is empty"));
+        }
+
+        room.touch();
+        SimpleBroker::publish(room.get_room());
+        Ok(room.get_room())
+    }
+
+    async fn start_vote_queue_item(
+        &self,
+        ctx: &Context<'_>,
+        room_id: EntityId,
+        user_id: EntityId,
+        item_id: EntityId,
+    ) -> Result<Room> {
+        let mut storage = get_storage(ctx).await;
+        let room = storage
+            .get_mut(&room_id)
+            .ok_or_else(|| Error::new("Room not found"))?;
+        if room.room_owner_id != Some(user_id) {
+            return Err(Error::new("Only the room owner can start a queued item"));
+        }
+        if room.is_game_over {
+            return Err(Error::new("A queued item cannot replace a completed vote"));
+        }
+        if !room.start_vote_queue_item(item_id) {
+            return Err(Error::new("Queue item not found"));
+        }
+
+        room.touch();
+        SimpleBroker::publish(room.get_room());
+        Ok(room.get_room())
+    }
+
+    async fn return_current_vote_queue_item(
+        &self,
+        ctx: &Context<'_>,
+        room_id: EntityId,
+        user_id: EntityId,
+    ) -> Result<Room> {
+        let mut storage = get_storage(ctx).await;
+        let room = storage
+            .get_mut(&room_id)
+            .ok_or_else(|| Error::new("Room not found"))?;
+        if room.room_owner_id != Some(user_id) {
+            return Err(Error::new("Only the room owner can manage the vote queue"));
+        }
+        if room.is_game_over {
+            return Err(Error::new("A completed vote cannot return to the queue"));
+        }
+        if !room.return_current_queue_item() {
+            return Err(Error::new("The current vote did not come from the queue"));
+        }
+
+        room.touch();
+        SimpleBroker::publish(room.get_room());
+        Ok(room.get_room())
+    }
+
     async fn toggle_countdown_option(
         &self,
         ctx: &Context<'_>,
@@ -265,10 +490,10 @@ impl MutationRoot {
                 .get_mut(&room_id)
                 .ok_or(Error::new("Room not found"))?;
 
-            if let Some(uid) = user_id {
-                if Some(uid) != room.room_owner_id {
-                    return Err(Error::new("Only the room owner can start the countdown"));
-                }
+            if let Some(uid) = user_id
+                && Some(uid) != room.room_owner_id
+            {
+                return Err(Error::new("Only the room owner can start the countdown"));
             }
 
             if !room.countdown_enabled {
@@ -325,10 +550,10 @@ impl MutationRoot {
         match storage.get_mut(&room_id) {
             Some(room) => {
                 // Ownership check
-                if let Some(uid) = user_id {
-                    if Some(uid) != room.room_owner_id {
-                        return Err(Error::new("Only the room owner can cancel the countdown"));
-                    }
+                if let Some(uid) = user_id
+                    && Some(uid) != room.room_owner_id
+                {
+                    return Err(Error::new("Only the room owner can cancel the countdown"));
                 }
 
                 room.cancel_countdown();
@@ -454,6 +679,7 @@ impl MutationRoot {
                 }
 
                 if !card.trim().is_empty() {
+                    room.record_vote_selection(user_id, &card);
                     room.game.table.push(UserCard::new(user_id, card));
                 }
 
@@ -909,6 +1135,7 @@ mod schema_tests {
         let room_id = room.id;
         let user_id = user.id;
         room.users.push(user);
+        room.room_owner_id = Some(user_id);
         room.is_game_over = is_game_over;
 
         let storage: Storage = Arc::new(Mutex::new(HashMap::from([(room_id, room)])));
@@ -1343,12 +1570,71 @@ mod schema_tests {
             }
         }
 
+        {
+            let stored_rooms = storage.lock().await;
+            let stored_room = stored_rooms
+                .get(&room_id)
+                .expect("room should remain in storage");
+            assert!(stored_room.vote_history.is_empty());
+            assert!(stored_room.previous_round.is_some());
+        }
+
+        for mutation in [
+            format!(
+                "mutation {{ startRevote(roomId: \"{room_id}\", userId: \"{first_voter_id}\") {{ isGameOver }} }}"
+            ),
+            format!(
+                "mutation {{ pickCard(roomId: \"{room_id}\", userId: \"{first_voter_id}\", card: \"8\") {{ id }} }}"
+            ),
+            format!(
+                "mutation {{ pickCard(roomId: \"{room_id}\", userId: \"{second_voter_id}\", card: \"3\") {{ id }} }}"
+            ),
+            format!("mutation {{ showCards(roomId: \"{room_id}\") {{ isGameOver }} }}"),
+            format!("mutation {{ resetGame(roomId: \"{room_id}\") {{ isGameOver }} }}"),
+        ] {
+            let response = schema.execute(Request::new(mutation)).await;
+            assert!(response.errors.is_empty(), "{:?}", response.errors);
+        }
+
         let stored_rooms = storage.lock().await;
         let stored_room = stored_rooms
             .get(&room_id)
             .expect("room should remain in storage");
         assert_eq!(stored_room.vote_history.len(), 1);
-        assert!(stored_room.previous_round.is_some());
+        assert!(stored_room.previous_round.is_none());
+
+        let round = &stored_room.vote_history[0];
+        assert_eq!(round.round_number, 1);
+
+        let first_vote = round
+            .votes
+            .iter()
+            .find(|vote| vote.user_id == first_voter_id)
+            .expect("first voter should be archived");
+        assert_eq!(first_vote.card.as_deref(), Some("8"));
+        assert_eq!(
+            first_vote
+                .selections
+                .iter()
+                .map(|selection| selection.card.as_str())
+                .collect::<Vec<_>>(),
+            vec!["3", "5", "8"]
+        );
+
+        let second_vote = round
+            .votes
+            .iter()
+            .find(|vote| vote.user_id == second_voter_id)
+            .expect("second voter should be archived");
+        assert_eq!(second_vote.card.as_deref(), Some("3"));
+        assert_eq!(
+            second_vote
+                .selections
+                .iter()
+                .map(|selection| selection.card.as_str())
+                .collect::<Vec<_>>(),
+            vec!["8", "5", "3"]
+        );
     }
 
     #[tokio::test]
@@ -1647,5 +1933,279 @@ mod schema_tests {
             .expect("reset vote data should be JSON");
         assert!(reset_data["resetGame"]["users"][0]["previousCardPicked"].is_null());
         assert!(reset_data["resetGame"]["users"][0]["previousCardValue"].is_null());
+    }
+
+    #[tokio::test]
+    async fn vote_sessions_archive_issue_titles_and_selection_changes() {
+        let (schema, room_id, user_id) = schema_with_room(false);
+
+        for mutation in [
+            format!(
+                "mutation {{ setCurrentIssueTitle(roomId: \"{room_id}\", userId: \"{user_id}\", title: \"Checkout validation\") {{ currentIssueTitle }} }}"
+            ),
+            format!(
+                "mutation {{ pickCard(roomId: \"{room_id}\", userId: \"{user_id}\", card: \"3\") {{ id }} }}"
+            ),
+            format!(
+                "mutation {{ pickCard(roomId: \"{room_id}\", userId: \"{user_id}\", card: \"5\") {{ id }} }}"
+            ),
+            format!("mutation {{ showCards(roomId: \"{room_id}\") {{ isGameOver }} }}"),
+            format!("mutation {{ resetGame(roomId: \"{room_id}\") {{ id }} }}"),
+        ] {
+            let response = schema.execute(Request::new(mutation)).await;
+            assert!(response.errors.is_empty(), "{:?}", response.errors);
+        }
+
+        let history = schema
+            .execute(Request::new(format!(
+                "query {{ roomById(roomId: \"{room_id}\") {{
+                    currentIssueTitle
+                    voteHistory {{
+                        issueTitle
+                        revoteCount
+                        votes {{ card selections {{ card value phase }} }}
+                    }}
+                }} }}"
+            )))
+            .await;
+        assert!(history.errors.is_empty(), "{:?}", history.errors);
+        let data = history.data.into_json().expect("history should be JSON");
+        let room = &data["roomById"];
+        assert!(room["currentIssueTitle"].is_null());
+        assert_eq!(room["voteHistory"][0]["issueTitle"], "Checkout validation");
+        assert_eq!(room["voteHistory"][0]["revoteCount"], 0);
+        assert_eq!(room["voteHistory"][0]["votes"][0]["card"], "5");
+        assert_eq!(
+            room["voteHistory"][0]["votes"][0]["selections"][0]["card"],
+            "3"
+        );
+        assert_eq!(
+            room["voteHistory"][0]["votes"][0]["selections"][0]["phase"],
+            0
+        );
+        assert_eq!(
+            room["voteHistory"][0]["votes"][0]["selections"][1]["card"],
+            "5"
+        );
+    }
+
+    #[tokio::test]
+    async fn queued_issue_revotes_archive_as_one_history_entry() {
+        let (schema, room_id, user_id) = schema_with_room(false);
+
+        for mutation in [
+            format!(
+                "mutation {{ toggleLockVotes(roomId: \"{room_id}\", enabled: true) {{ lockVotes }} }}"
+            ),
+            format!(
+                "mutation {{ addVoteQueueItem(roomId: \"{room_id}\", userId: \"{user_id}\", title: \"Checkout validation\") {{ id }} }}"
+            ),
+            format!(
+                "mutation {{ addVoteQueueItem(roomId: \"{room_id}\", userId: \"{user_id}\", title: \"Declined card messaging\") {{ id }} }}"
+            ),
+            format!("mutation {{ showCards(roomId: \"{room_id}\") {{ isGameOver }} }}"),
+            format!(
+                "mutation {{ startNextQueueItem(roomId: \"{room_id}\", userId: \"{user_id}\") {{ currentIssueTitle }} }}"
+            ),
+            format!(
+                "mutation {{ pickCard(roomId: \"{room_id}\", userId: \"{user_id}\", card: \"3\") {{ id }} }}"
+            ),
+            format!("mutation {{ showCards(roomId: \"{room_id}\") {{ isGameOver }} }}"),
+            format!(
+                "mutation {{ startRevote(roomId: \"{room_id}\", userId: \"{user_id}\") {{ isGameOver }} }}"
+            ),
+            format!(
+                "mutation {{ pickCard(roomId: \"{room_id}\", userId: \"{user_id}\", card: \"5\") {{ id }} }}"
+            ),
+            format!("mutation {{ showCards(roomId: \"{room_id}\") {{ isGameOver }} }}"),
+        ] {
+            let response = schema.execute(Request::new(mutation)).await;
+            assert!(response.errors.is_empty(), "{:?}", response.errors);
+        }
+
+        let next = schema
+            .execute(Request::new(format!(
+                "mutation {{ startNextQueueItem(roomId: \"{room_id}\", userId: \"{user_id}\") {{
+                    currentIssueTitle
+                    voteHistory {{
+                        issueTitle
+                        revoteCount
+                        votes {{ card selections {{ card phase }} }}
+                    }}
+                }} }}"
+            )))
+            .await;
+        assert!(next.errors.is_empty(), "{:?}", next.errors);
+        let data = next.data.into_json().expect("queue result should be JSON");
+        let room = &data["startNextQueueItem"];
+
+        assert_eq!(room["currentIssueTitle"], "Declined card messaging");
+        assert_eq!(room["voteHistory"].as_array().map(Vec::len), Some(2));
+        assert_eq!(room["voteHistory"][1]["issueTitle"], "Checkout validation");
+        assert_eq!(room["voteHistory"][1]["revoteCount"], 1);
+        assert_eq!(room["voteHistory"][1]["votes"][0]["card"], "5");
+        assert_eq!(
+            room["voteHistory"][1]["votes"][0]["selections"][0]["card"],
+            "3"
+        );
+        assert_eq!(
+            room["voteHistory"][1]["votes"][0]["selections"][0]["phase"],
+            0
+        );
+        assert_eq!(
+            room["voteHistory"][1]["votes"][0]["selections"][1]["card"],
+            "5"
+        );
+        assert_eq!(
+            room["voteHistory"][1]["votes"][0]["selections"][1]["phase"],
+            1
+        );
+    }
+
+    #[tokio::test]
+    async fn room_owner_can_start_the_next_queued_issue() {
+        let (schema, room_id, user_id) = schema_with_room(false);
+
+        for title in ["Save payment methods", "Declined card messaging"] {
+            let response = schema
+                .execute(Request::new(format!(
+                    "mutation {{ addVoteQueueItem(roomId: \"{room_id}\", userId: \"{user_id}\", title: \"{title}\") {{
+                        voteQueue {{ title }}
+                    }} }}"
+                )))
+                .await;
+            assert!(response.errors.is_empty(), "{:?}", response.errors);
+        }
+
+        for mutation in [
+            format!(
+                "mutation {{ pickCard(roomId: \"{room_id}\", userId: \"{user_id}\", card: \"3\") {{ id }} }}"
+            ),
+            format!("mutation {{ showCards(roomId: \"{room_id}\") {{ isGameOver }} }}"),
+        ] {
+            let response = schema.execute(Request::new(mutation)).await;
+            assert!(response.errors.is_empty(), "{:?}", response.errors);
+        }
+
+        let next = schema
+            .execute(Request::new(format!(
+                "mutation {{ startNextQueueItem(roomId: \"{room_id}\", userId: \"{user_id}\") {{
+                    isGameOver
+                    currentIssueTitle
+                    voteQueue {{ title }}
+                    voteHistory {{ issueTitle }}
+                }} }}"
+            )))
+            .await;
+        assert!(next.errors.is_empty(), "{:?}", next.errors);
+        let data = next
+            .data
+            .into_json()
+            .expect("next queue item should be JSON");
+        let room = &data["startNextQueueItem"];
+        assert_eq!(room["isGameOver"], false);
+        assert_eq!(room["currentIssueTitle"], "Save payment methods");
+        assert_eq!(room["voteQueue"][0]["title"], "Declined card messaging");
+        assert_eq!(room["voteHistory"].as_array().map(Vec::len), Some(1));
+    }
+
+    #[tokio::test]
+    async fn room_owner_can_start_a_specific_queued_issue_during_open_voting() {
+        let (schema, room_id, user_id) = schema_with_room(false);
+        let mut selected_id = String::new();
+
+        for title in ["First issue", "Selected issue"] {
+            let response = schema
+                .execute(Request::new(format!(
+                    "mutation {{ addVoteQueueItem(roomId: \"{room_id}\", userId: \"{user_id}\", title: \"{title}\") {{
+                        voteQueue {{ id title }}
+                    }} }}"
+                )))
+                .await;
+            assert!(response.errors.is_empty(), "{:?}", response.errors);
+            let data = response
+                .data
+                .into_json()
+                .expect("queue item result should be JSON");
+            if title == "Selected issue" {
+                selected_id = data["addVoteQueueItem"]["voteQueue"][1]["id"]
+                    .as_str()
+                    .expect("queue item id should be a string")
+                    .to_string();
+            }
+        }
+
+        let response = schema
+            .execute(Request::new(format!(
+                "mutation {{ startVoteQueueItem(roomId: \"{room_id}\", userId: \"{user_id}\", itemId: \"{selected_id}\") {{
+                    isGameOver
+                    currentIssueTitle
+                    voteQueue {{ title }}
+                }} }}"
+            )))
+            .await;
+        assert!(response.errors.is_empty(), "{:?}", response.errors);
+        let data = response
+            .data
+            .into_json()
+            .expect("selected queue result should be JSON");
+        let room = &data["startVoteQueueItem"];
+
+        assert_eq!(room["isGameOver"], false);
+        assert_eq!(room["currentIssueTitle"], "Selected issue");
+        assert_eq!(room["voteQueue"].as_array().map(Vec::len), Some(1));
+        assert_eq!(room["voteQueue"][0]["title"], "First issue");
+    }
+
+    #[tokio::test]
+    async fn room_owner_can_return_the_current_issue_to_the_front_of_the_queue() {
+        let (schema, room_id, user_id) = schema_with_room(false);
+        let queued = schema
+            .execute(Request::new(format!(
+                "mutation {{ addVoteQueueItem(roomId: \"{room_id}\", userId: \"{user_id}\", title: \"Accidental issue\") {{
+                    voteQueue {{ id }}
+                }} }}"
+            )))
+            .await;
+        assert!(queued.errors.is_empty(), "{:?}", queued.errors);
+        let queued_data = queued
+            .data
+            .into_json()
+            .expect("queue item result should be JSON");
+        let item_id = queued_data["addVoteQueueItem"]["voteQueue"][0]["id"]
+            .as_str()
+            .expect("queue item id should be a string");
+
+        let started = schema
+            .execute(Request::new(format!(
+                "mutation {{ startVoteQueueItem(roomId: \"{room_id}\", userId: \"{user_id}\", itemId: \"{item_id}\") {{
+                    currentQueueItemId
+                }} }}"
+            )))
+            .await;
+        assert!(started.errors.is_empty(), "{:?}", started.errors);
+
+        let returned = schema
+            .execute(Request::new(format!(
+                "mutation {{ returnCurrentVoteQueueItem(roomId: \"{room_id}\", userId: \"{user_id}\") {{
+                    currentIssueTitle
+                    currentQueueItemId
+                    voteQueue {{ id title }}
+                    game {{ table {{ card }} }}
+                }} }}"
+            )))
+            .await;
+        assert!(returned.errors.is_empty(), "{:?}", returned.errors);
+        let returned_data = returned
+            .data
+            .into_json()
+            .expect("returned queue item should be JSON");
+        let room = &returned_data["returnCurrentVoteQueueItem"];
+
+        assert_eq!(room["currentIssueTitle"], serde_json::Value::Null);
+        assert_eq!(room["currentQueueItemId"], serde_json::Value::Null);
+        assert_eq!(room["voteQueue"][0]["id"], item_id);
+        assert_eq!(room["voteQueue"][0]["title"], "Accidental issue");
+        assert_eq!(room["game"]["table"].as_array().map(Vec::len), Some(0));
     }
 }

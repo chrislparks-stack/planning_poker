@@ -14,8 +14,16 @@ export type Scalars = {
 export type ArchivedPlayerVote = {
   __typename?: 'ArchivedPlayerVote';
   card?: Maybe<Scalars['String']['output']>;
+  selections: Array<ArchivedVoteSelection>;
   userId: Scalars['UUID']['output'];
   username: Scalars['String']['output'];
+  value?: Maybe<Scalars['Float']['output']>;
+};
+
+export type ArchivedVoteSelection = {
+  __typename?: 'ArchivedVoteSelection';
+  card: Scalars['String']['output'];
+  phase: Scalars['Int']['output'];
   value?: Maybe<Scalars['Float']['output']>;
 };
 
@@ -65,6 +73,7 @@ export type Game = {
 
 export type MutationRoot = {
   __typename?: 'MutationRoot';
+  addVoteQueueItem: Room;
   banUser: Room;
   cancelRevealCountdown: Room;
   createRoom: Room;
@@ -76,15 +85,22 @@ export type MutationRoot = {
   logout: Scalars['Boolean']['output'];
   markChatSeen: Room;
   pickCard: Room;
+  removeVoteQueueItem: Room;
   renameRoom: Room;
+  renameVoteQueueItem: Room;
+  reorderVoteQueueItem: Room;
   resetGame: Room;
+  returnCurrentVoteQueueItem: Room;
   sendChatMessage: ChatMessage;
   sendReaction: RoomReaction;
+  setCurrentIssueTitle: Room;
   setRoomOwner: Room;
   setVoteUncensored: Room;
   showCards: Room;
+  startNextQueueItem: Room;
   startRevealCountdown: Room;
   startRevote: Room;
+  startVoteQueueItem: Room;
   toggleCensorVotes: Room;
   toggleConfirmNewGame: Room;
   toggleCountdownOption: Room;
@@ -92,6 +108,13 @@ export type MutationRoot = {
   toggleShowVoteChanges: Room;
   unbanUser: Room;
   updateDeck: Room;
+};
+
+
+export type MutationRootAddVoteQueueItemArgs = {
+  roomId: Scalars['UUID']['input'];
+  title: Scalars['String']['input'];
+  userId: Scalars['UUID']['input'];
 };
 
 
@@ -163,14 +186,43 @@ export type MutationRootPickCardArgs = {
 };
 
 
+export type MutationRootRemoveVoteQueueItemArgs = {
+  itemId: Scalars['UUID']['input'];
+  roomId: Scalars['UUID']['input'];
+  userId: Scalars['UUID']['input'];
+};
+
+
 export type MutationRootRenameRoomArgs = {
   name?: InputMaybe<Scalars['String']['input']>;
   roomId: Scalars['UUID']['input'];
 };
 
 
+export type MutationRootRenameVoteQueueItemArgs = {
+  itemId: Scalars['UUID']['input'];
+  roomId: Scalars['UUID']['input'];
+  title: Scalars['String']['input'];
+  userId: Scalars['UUID']['input'];
+};
+
+
+export type MutationRootReorderVoteQueueItemArgs = {
+  itemId: Scalars['UUID']['input'];
+  roomId: Scalars['UUID']['input'];
+  toIndex: Scalars['Int']['input'];
+  userId: Scalars['UUID']['input'];
+};
+
+
 export type MutationRootResetGameArgs = {
   roomId: Scalars['UUID']['input'];
+};
+
+
+export type MutationRootReturnCurrentVoteQueueItemArgs = {
+  roomId: Scalars['UUID']['input'];
+  userId: Scalars['UUID']['input'];
 };
 
 
@@ -182,6 +234,13 @@ export type MutationRootSendChatMessageArgs = {
 export type MutationRootSendReactionArgs = {
   reaction: ReactionKind;
   roomId: Scalars['UUID']['input'];
+  userId: Scalars['UUID']['input'];
+};
+
+
+export type MutationRootSetCurrentIssueTitleArgs = {
+  roomId: Scalars['UUID']['input'];
+  title?: InputMaybe<Scalars['String']['input']>;
   userId: Scalars['UUID']['input'];
 };
 
@@ -204,6 +263,12 @@ export type MutationRootShowCardsArgs = {
 };
 
 
+export type MutationRootStartNextQueueItemArgs = {
+  roomId: Scalars['UUID']['input'];
+  userId: Scalars['UUID']['input'];
+};
+
+
 export type MutationRootStartRevealCountdownArgs = {
   roomId: Scalars['UUID']['input'];
   userId?: InputMaybe<Scalars['UUID']['input']>;
@@ -211,6 +276,13 @@ export type MutationRootStartRevealCountdownArgs = {
 
 
 export type MutationRootStartRevoteArgs = {
+  roomId: Scalars['UUID']['input'];
+  userId: Scalars['UUID']['input'];
+};
+
+
+export type MutationRootStartVoteQueueItemArgs = {
+  itemId: Scalars['UUID']['input'];
   roomId: Scalars['UUID']['input'];
   userId: Scalars['UUID']['input'];
 };
@@ -290,6 +362,8 @@ export type Room = {
   confirmNewGame: Scalars['Boolean']['output'];
   countdownEnabled: Scalars['Boolean']['output'];
   countdownValue?: Maybe<Scalars['Int']['output']>;
+  currentIssueTitle?: Maybe<Scalars['String']['output']>;
+  currentQueueItemId?: Maybe<Scalars['UUID']['output']>;
   deck: Deck;
   game: Game;
   hasUnreadChat?: Maybe<Scalars['Boolean']['output']>;
@@ -302,6 +376,8 @@ export type Room = {
   roomOwnerId?: Maybe<Scalars['UUID']['output']>;
   showVoteChanges: Scalars['Boolean']['output'];
   users: Array<User>;
+  voteHistory: Array<RoundVoteHistory>;
+  voteQueue: Array<VoteQueueItem>;
 };
 
 
@@ -329,6 +405,8 @@ export type RoundVoteHistory = {
   __typename?: 'RoundVoteHistory';
   completedAt: Scalars['DateTime']['output'];
   id: Scalars['UUID']['output'];
+  issueTitle?: Maybe<Scalars['String']['output']>;
+  revoteCount: Scalars['Int']['output'];
   roundNumber: Scalars['Int']['output'];
   votes: Array<ArchivedPlayerVote>;
 };
@@ -400,4 +478,10 @@ export type UserInput = {
   lastCardPicked?: InputMaybe<Scalars['String']['input']>;
   roomName?: InputMaybe<Scalars['String']['input']>;
   username: Scalars['String']['input'];
+};
+
+export type VoteQueueItem = {
+  __typename?: 'VoteQueueItem';
+  id: Scalars['UUID']['output'];
+  title: Scalars['String']['output'];
 };

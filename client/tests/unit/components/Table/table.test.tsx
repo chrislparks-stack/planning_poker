@@ -8,8 +8,10 @@ import { render, screen, userEvent } from "@test";
 const apiMocks = vi.hoisted(() => ({
   cancelCountdown: vi.fn().mockResolvedValue({}),
   resetGame: vi.fn().mockResolvedValue({}),
+  setCurrentIssueTitle: vi.fn().mockResolvedValue({}),
   setVoteUncensored: vi.fn().mockResolvedValue({}),
   showCards: vi.fn().mockResolvedValue({}),
+  startNextQueueItem: vi.fn().mockResolvedValue({}),
   startRevote: vi.fn().mockResolvedValue({}),
   startCountdown: vi.fn().mockResolvedValue({}),
   toggleConfirm: vi.fn().mockResolvedValue({})
@@ -21,11 +23,19 @@ vi.mock("@/api", () => ({
     { loading: false }
   ],
   useResetGameMutation: () => [apiMocks.resetGame, { loading: false }],
+  useSetCurrentIssueTitleMutation: () => [
+    apiMocks.setCurrentIssueTitle,
+    { loading: false }
+  ],
   useSetVoteUncensoredMutation: () => [
     apiMocks.setVoteUncensored,
     { loading: false }
   ],
   useShowCardsMutation: () => [apiMocks.showCards, { loading: false }],
+  useStartNextQueueItemMutation: () => [
+    apiMocks.startNextQueueItem,
+    { loading: false }
+  ],
   useStartRevoteMutation: () => [apiMocks.startRevote, { loading: false }],
   useStartRevealCountdownMutation: () => [
     apiMocks.startCountdown,
@@ -63,6 +73,8 @@ const room: Room = {
   revealStage: "revealed",
   roomOwnerId: "user-1",
   showVoteChanges: true,
+  voteHistory: [],
+  voteQueue: [],
   users: [
     {
       id: "user-1",
@@ -130,7 +142,7 @@ describe("Table vote visibility control", () => {
     });
   });
 
-  test("shows split new-game and revote actions when vote locking is enabled", async () => {
+  test("shows segmented new-game and revote actions when vote locking is enabled", async () => {
     const user = userEvent.setup();
     const innerRef = createRef<HTMLDivElement>();
     render(
@@ -148,12 +160,9 @@ describe("Table vote visibility control", () => {
 
     const newGame = screen.getByRole("button", { name: "Start New Game" });
     const revote = screen.getByRole("button", { name: "Revote Issue" });
-    expect(newGame.parentElement).toHaveClass("w-[86%]");
-    expect(newGame).toHaveClass("h-12", "top-0", "w-[55%]");
-    expect(revote).toHaveClass("h-10", "top-1", "w-[57%]");
-    expect(newGame.className).toContain("82%_100%");
-    expect(revote.className).toContain("18%_0");
-    expect(revote.className).toContain("hue-rotate(12deg)");
+    expect(newGame.parentElement).toHaveStyle({
+      gridTemplateColumns: "repeat(2, minmax(0, 1fr))"
+    });
 
     await user.click(revote);
     expect(apiMocks.startRevote).toHaveBeenCalledWith({
@@ -162,5 +171,136 @@ describe("Table vote visibility control", () => {
         userId: "user-1"
       }
     });
+  });
+
+  test("adds the next queue item as a third locked-round action", async () => {
+    const user = userEvent.setup();
+    const innerRef = createRef<HTMLDivElement>();
+    render(
+      <Table
+        room={{
+          ...room,
+          lockVotes: true,
+          voteQueue: [{ id: "queue-1", title: "Checkout validation" }]
+        }}
+        isGameOver
+        innerRef={innerRef}
+        roomOverlayRef={null}
+      />
+    );
+
+    const next = screen.getByRole("button", { name: "Next Queue Item" });
+    expect(next.parentElement).toHaveStyle({
+      gridTemplateColumns: "repeat(3, minmax(0, 1fr))"
+    });
+
+    await user.click(next);
+    expect(apiMocks.startNextQueueItem).toHaveBeenCalledWith({
+      variables: {
+        roomId: "room-1",
+        userId: "user-1"
+      }
+    });
+  });
+
+  test("shows the compact round-complete summary to participants", () => {
+    localStorage.setItem("user", JSON.stringify({ id: "user-2" }));
+    const innerRef = createRef<HTMLDivElement>();
+
+    render(
+      <Table
+        room={{
+          ...room,
+          game: {
+            ...room.game,
+            table: [...room.game.table, { userId: "user-2", card: "5" }]
+          },
+          users: [
+            ...room.users,
+            {
+              id: "user-2",
+              username: "Justin",
+              handRaised: false,
+              lastCardPicked: "5",
+              lastCardValue: 5,
+              previousCardPicked: "5",
+              previousCardValue: 5,
+              voteUncensored: false
+            }
+          ]
+        }}
+        isGameOver
+        innerRef={innerRef}
+        roomOverlayRef={null}
+      />
+    );
+
+    expect(screen.getByText("You voted 5")).toBeInTheDocument();
+    expect(screen.getByText("Round complete")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Start New Game" })
+    ).not.toBeInTheDocument();
+  });
+
+  test("renders agreement as a result meter", () => {
+    const innerRef = createRef<HTMLDivElement>();
+
+    render(
+      <Table room={room} isGameOver innerRef={innerRef} roomOverlayRef={null} />
+    );
+
+    expect(
+      screen.getByRole("progressbar", { name: "Agreement" })
+    ).toHaveAttribute("aria-valuenow", "100");
+  });
+
+  test("shows keyboard guidance after an issue title changes", async () => {
+    const user = userEvent.setup();
+    const innerRef = createRef<HTMLDivElement>();
+
+    render(
+      <Table
+        room={{ ...room, currentIssueTitle: "Checkout validation" }}
+        isGameOver
+        innerRef={innerRef}
+        roomOverlayRef={null}
+      />
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /Checkout validation/ })
+    );
+    const titleInput = screen.getByRole("textbox", { name: "Issue title" });
+
+    expect(
+      screen.queryByText("Enter to save · Esc to cancel")
+    ).not.toBeInTheDocument();
+
+    await user.type(titleInput, " errors");
+
+    expect(
+      screen.getByText("Enter to save · Esc to cancel")
+    ).toBeInTheDocument();
+  });
+
+  test("keeps compact rooms legible and gives untitled rounds a friendly label", () => {
+    const innerRef = createRef<HTMLDivElement>();
+    const { container } = render(
+      <Table
+        room={{ ...room, currentIssueTitle: null }}
+        isGameOver
+        innerRef={innerRef}
+        roomOverlayRef={null}
+      />
+    );
+
+    expect(screen.getByText("Quick vote (Round 1)")).toBeInTheDocument();
+    expect(innerRef.current).toHaveClass(
+      "h-[clamp(146px,14vw,204px)]",
+      "w-[clamp(320px,34vw,480px)]"
+    );
+    expect(
+      container.querySelector(".poker-table-felt-backing")
+    ).toBeInTheDocument();
   });
 });

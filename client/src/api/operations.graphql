@@ -32,15 +32,27 @@ fragment ArchivedPlayerVoteFragment on ArchivedPlayerVote {
   username
   card
   value
+  selections {
+    card
+    value
+    phase
+  }
 }
 
 fragment RoundVoteHistoryFragment on RoundVoteHistory {
   id
   roundNumber
+  revoteCount
   completedAt
+  issueTitle
   votes {
     ...ArchivedPlayerVoteFragment
   }
+}
+
+fragment VoteQueueItemFragment on VoteQueueItem {
+  id
+  title
 }
 
 fragment ChatPositionFragment on ChatPosition {
@@ -86,6 +98,14 @@ fragment RoomFragment on Room {
   showVoteChanges
   censorVotes
   lockVotes
+  currentIssueTitle
+  currentQueueItemId
+  voteQueue {
+    ...VoteQueueItemFragment
+  }
+  voteHistory {
+    ...RoundVoteHistoryFragment
+  }
   previousRound {
     ...RoundVoteHistoryFragment
   }
@@ -136,6 +156,74 @@ mutation UpdateDeck($roomId: UUID!, $cards: [String!]!) {
 
 mutation RenameRoom($roomId: UUID!, $name: String) {
   renameRoom(roomId: $roomId, name: $name) {
+    ...RoomFragment
+  }
+}
+
+mutation AddVoteQueueItem($roomId: UUID!, $userId: UUID!, $title: String!) {
+  addVoteQueueItem(roomId: $roomId, userId: $userId, title: $title) {
+    ...RoomFragment
+  }
+}
+
+mutation RenameVoteQueueItem(
+  $roomId: UUID!
+  $userId: UUID!
+  $itemId: UUID!
+  $title: String!
+) {
+  renameVoteQueueItem(
+    roomId: $roomId
+    userId: $userId
+    itemId: $itemId
+    title: $title
+  ) {
+    ...RoomFragment
+  }
+}
+
+mutation RemoveVoteQueueItem($roomId: UUID!, $userId: UUID!, $itemId: UUID!) {
+  removeVoteQueueItem(roomId: $roomId, userId: $userId, itemId: $itemId) {
+    ...RoomFragment
+  }
+}
+
+mutation ReorderVoteQueueItem(
+  $roomId: UUID!
+  $userId: UUID!
+  $itemId: UUID!
+  $toIndex: Int!
+) {
+  reorderVoteQueueItem(
+    roomId: $roomId
+    userId: $userId
+    itemId: $itemId
+    toIndex: $toIndex
+  ) {
+    ...RoomFragment
+  }
+}
+
+mutation SetCurrentIssueTitle($roomId: UUID!, $userId: UUID!, $title: String) {
+  setCurrentIssueTitle(roomId: $roomId, userId: $userId, title: $title) {
+    ...RoomFragment
+  }
+}
+
+mutation StartNextQueueItem($roomId: UUID!, $userId: UUID!) {
+  startNextQueueItem(roomId: $roomId, userId: $userId) {
+    ...RoomFragment
+  }
+}
+
+mutation StartVoteQueueItem($roomId: UUID!, $userId: UUID!, $itemId: UUID!) {
+  startVoteQueueItem(roomId: $roomId, userId: $userId, itemId: $itemId) {
+    ...RoomFragment
+  }
+}
+
+mutation ReturnCurrentVoteQueueItem($roomId: UUID!, $userId: UUID!) {
+  returnCurrentVoteQueueItem(roomId: $roomId, userId: $userId) {
     ...RoomFragment
   }
 }

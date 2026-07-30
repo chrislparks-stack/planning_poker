@@ -16,7 +16,7 @@ import { useAuth } from "@/contexts";
 import { useCopyRoomUrlToClipboard } from "@/hooks";
 import { Room, User } from "@/types";
 import { getStoredRoom } from "@/utils";
-import { withTestUsers } from "@/utils/testUtils.tsx";
+import { DEV_TEST_USER_COUNT, withTestUsers } from "@/utils/testUtils.tsx";
 
 interface HeaderProps {
   room?: Room;
@@ -35,7 +35,10 @@ export const Header: FC<HeaderProps> = ({
 }) => {
   const { user } = useAuth();
   const { copyRoomUrlToClipboard } = useCopyRoomUrlToClipboard();
-  const displayUsers = useMemo(() => withTestUsers(0, users), [users]);
+  const displayUsers = useMemo(
+    () => withTestUsers(DEV_TEST_USER_COUNT, users),
+    [users]
+  );
 
   const handleCopyRoomUrl = async () => {
     if (room) {
