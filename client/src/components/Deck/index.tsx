@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 
 import { usePickCardMutation } from "@/api";
 import { Card } from "@/components/Card";
@@ -16,6 +16,12 @@ interface DeckProps {
   users: User[];
   previousRound?: Room["previousRound"];
 }
+
+const CARD_MIN_WIDTH = 52;
+const DECK_INLINE_BUFFER = 16;
+const MIN_CARD_GAP = 12;
+const MAX_CARD_GAP = 44;
+const MAX_WRAPPED_CARD_GAP = 64;
 
 export function Deck({
   roomId,
@@ -35,7 +41,11 @@ export function Deck({
     null;
   const votesLocked = isGameOver && lockVotes;
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
-  const [windowWidth, setWindowWidth] = useState(() => window.innerWidth);
+  const [singleRowCardsWidth, setSingleRowCardsWidth] = useState(
+    () => cards.length * CARD_MIN_WIDTH
+  );
+  const [visibleWidth, setVisibleWidth] = useState(() => window.innerWidth);
+  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
 
   const [pickCardMutation] = usePickCardMutation({
     onError(error) {
@@ -48,17 +58,95 @@ export function Deck({
   });
 
   useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+    const deckContainer = cardsContainerRef.current?.parentElement;
+    if (!deckContainer) return;
+    const visibleWorkspace =
+      deckContainer.closest<HTMLElement>('[aria-label="Room workspace"]') ??
+      deckContainer;
 
-  const resultsWidth = isGameOver ? 360 : 0;
+    const updateAvailableWidth = () => {
+      setVisibleWidth(visibleWorkspace.getBoundingClientRect().width);
+      setViewportWidth(window.innerWidth);
+    };
+
+    updateAvailableWidth();
+
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(updateAvailableWidth);
+    observer?.observe(visibleWorkspace);
+    window.addEventListener("resize", updateAvailableWidth);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", updateAvailableWidth);
+    };
+  }, [cardsContainerRef]);
+
+  useLayoutEffect(() => {
+    const deck = cardsContainerRef.current;
+    const visibleWorkspace =
+      deck?.closest<HTMLElement>('[aria-label="Room workspace"]') ??
+      deck?.parentElement;
+    if (!deck || !visibleWorkspace) return;
+
+    const workspaceWidth = visibleWorkspace.getBoundingClientRect().width;
+    const cardWidths = Array.from(
+      deck.children,
+      (card) => card.getBoundingClientRect().width
+    );
+    const isSyntheticUniformMeasurement = cardWidths.every(
+      (width) => Math.abs(width - workspaceWidth) < 1
+    );
+    if (isSyntheticUniformMeasurement) return;
+
+    const measuredCardsWidth = cardWidths.reduce(
+      (total, width) => total + width,
+      0
+    );
+    if (
+      measuredCardsWidth > 0 &&
+      Math.abs(measuredCardsWidth - singleRowCardsWidth) >= 0.25
+    ) {
+      setSingleRowCardsWidth(measuredCardsWidth);
+    }
+  }, [cards, cardsContainerRef, singleRowCardsWidth]);
+
+  const resultsWidth = isGameOver ? 320 : 0;
+  const preferredCardGap = Math.min(
+    MAX_CARD_GAP,
+    Math.max(MIN_CARD_GAP, viewportWidth * 0.03)
+  );
+  const gapCount = Math.max(cards.length - 1, 0);
+  const fixedSingleRowWidth =
+    singleRowCardsWidth + resultsWidth + DECK_INLINE_BUFFER;
+  const minimumSingleRowWidth = fixedSingleRowWidth + gapCount * MIN_CARD_GAP;
   const shouldTwoRowLayout =
-    cards.length > 5 && windowWidth < 250 + 75 * cards.length + resultsWidth;
+    cards.length > 5 && visibleWidth < minimumSingleRowWidth;
   const cardsPerRow = shouldTwoRowLayout
     ? Math.ceil(cards.length / 2)
     : cards.length;
+  const maximumFittingSingleRowGap =
+    gapCount > 0
+      ? (visibleWidth - fixedSingleRowWidth) / gapCount
+      : preferredCardGap;
+  const singleRowGap = Math.min(
+    preferredCardGap,
+    Math.max(MIN_CARD_GAP, maximumFittingSingleRowGap)
+  );
+  const wrappedGapCount = Math.max(cardsPerRow - 1, 0);
+  const fixedWrappedRowWidth =
+    cardsPerRow * CARD_MIN_WIDTH + resultsWidth + DECK_INLINE_BUFFER;
+  const maximumFittingWrappedGap =
+    wrappedGapCount > 0
+      ? (visibleWidth - fixedWrappedRowWidth) / wrappedGapCount
+      : preferredCardGap;
+  const wrappedCardGap = Math.min(
+    MAX_WRAPPED_CARD_GAP,
+    Math.max(MIN_CARD_GAP, maximumFittingWrappedGap)
+  );
+  const cardGap = shouldTwoRowLayout ? wrappedCardGap : singleRowGap;
 
   useEffect(() => {
     const serverPick = currentUser?.lastCardPicked ?? null;
@@ -87,8 +175,20 @@ export function Deck({
   return (
     <div
       ref={cardsContainerRef}
+      data-layout={shouldTwoRowLayout ? "two-row" : "single-row"}
+      data-gap-mode={
+        shouldTwoRowLayout
+          ? wrappedCardGap === MIN_CARD_GAP
+            ? "wrapped-minimum"
+            : wrappedCardGap === MAX_WRAPPED_CARD_GAP
+            ? "wrapped-maximum"
+            : "wrapped-fluid"
+          : singleRowGap < preferredCardGap
+          ? "compressed"
+          : "preferred"
+      }
       className={cn(
-        "items-end justify-center transition-[transform,opacity] duration-300",
+        "shrink-0 items-end justify-center transition-[transform,opacity] duration-300",
         shouldTwoRowLayout ? "grid" : "flex flex-nowrap"
       )}
       style={
@@ -96,14 +196,14 @@ export function Deck({
           ? {
               display: "grid",
               gridTemplateRows: "repeat(2, auto)",
-              gridTemplateColumns: `repeat(${cardsPerRow}, minmax(min(5vw, 80px), 1fr))`,
+              gridTemplateColumns: `repeat(${cardsPerRow}, ${CARD_MIN_WIDTH}px)`,
               justifyContent: "center",
               alignContent: "end",
-              gap: "3vw",
-              paddingLeft: "5vw"
+              columnGap: `${cardGap}px`,
+              rowGap: "clamp(1rem, 2.5vh, 2rem)"
             }
           : {
-              gap: "1.5vw"
+              gap: `${cardGap}px`
             }
       }
     >

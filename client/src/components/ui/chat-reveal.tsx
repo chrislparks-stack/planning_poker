@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
+import { ChevronLeft } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
 import { useMarkChatSeenMutation } from "@/api";
@@ -94,7 +95,7 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({
     };
   }, [menuOpen]);
 
-  const unreadCount = React.useMemo(() => {
+  const fallbackUnreadCount = React.useMemo(() => {
     if (!room?.chatHistory || !user?.id) return 0;
 
     const roomUser = room?.users.find((u) => u.id === user?.id);
@@ -119,6 +120,7 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({
       .filter((m) => m.userId !== user.id).length;
   }, [room?.chatHistory, room?.users, user?.id]);
 
+  const unreadCount = room?.unreadChatCount ?? fallbackUnreadCount;
   const hasUnread = unreadCount > 0;
 
   return (
@@ -157,7 +159,7 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({
                   onClick?.();
                 }
               }}
-              className="absolute inset-y-0 right-[6px] w-[9.8vw] max-w-[245px] cursor-pointer"
+              className="absolute inset-y-0 left-0 right-[18px] cursor-pointer"
               style={{ pointerEvents: "auto" }}
             >
               <motion.div
@@ -179,11 +181,11 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({
                 }}
               >
                 <div
-                  className={`flex flex-row font-mono text-[13px] uppercase tracking-[0.18em]
-                  backdrop-blur-sm transition-all duration-300
+                  className={`flex flex-row text-[0.58rem] font-bold uppercase tracking-[0.28em]
+                  transition-all duration-300
                   ${
                     hasUnread
-                      ? "text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]"
+                      ? "text-accent drop-shadow-[0_0_8px_rgba(var(--accent-rgb),0.5)]"
                       : "text-accent/70 drop-shadow-[0_0_1px_rgba(0,0,0,0.4)] group-hover:text-accent"
                   }`}
                 >
@@ -194,20 +196,19 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({
                     : "SHOW CHAT"}
                   <NotificationDot
                     count={unreadCount}
-                    className="bg-red-500 text-white shadow-md -mr-[5px] -mt-[2px]"
+                    className="-mr-[5px] -mt-[2px] bg-accent text-accent-foreground shadow-[0_0_9px_rgba(var(--accent-rgb),0.4)]"
                   />
                 </div>
-                <div
-                  className={`mt-2 text-accent/70 text-xl font-light transition-transform duration-300
-                   group-hover:translate-x-[1px]
+                <ChevronLeft
+                  aria-hidden="true"
+                  className={`mt-2 size-4 text-accent/70 transition-transform duration-300
+                   group-hover:-translate-x-[1px]
                    ${
                      hasUnread
-                       ? "text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]"
+                       ? "text-accent drop-shadow-[0_0_8px_rgba(var(--accent-rgb),0.5)]"
                        : "text-accent/70 drop-shadow-[0_0_1px_rgba(0,0,0,0.4)] group-hover:text-accent"
                    }`}
-                >
-                  ◂
-                </div>
+                />
               </motion.div>
             </div>
           </motion.div>

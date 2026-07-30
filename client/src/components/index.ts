@@ -5,4 +5,3 @@ export * from "./Room";
 export * from "./ConfirmationDialog";
 export * from "./theme-provider";
 export * from "./mode-toggle";
-export * from "./vote-distribution-chart";

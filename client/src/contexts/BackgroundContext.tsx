@@ -1,6 +1,13 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode
+} from "react";
 
 import {
+  BACKGROUND_STORAGE_KEY,
   loadBackgroundConfig,
   saveBackgroundConfig,
   type BackgroundConfig
@@ -27,6 +34,17 @@ export function BackgroundConfigProvider({
     setBackgroundState(config);
     saveBackgroundConfig(config);
   };
+
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === BACKGROUND_STORAGE_KEY || event.key === null) {
+        setBackgroundState(loadBackgroundConfig());
+      }
+    };
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
 
   return (
     <BackgroundConfigContext.Provider value={{ background, setBackground }}>

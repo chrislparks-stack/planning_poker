@@ -5,13 +5,42 @@ import type { Room } from "@/types";
 import { render, screen } from "@test";
 
 beforeAll(() => {
-  vi.stubGlobal(
-    "ResizeObserver",
-    class {
-      observe() {}
-      disconnect() {}
+  class ResizeObserverMock implements ResizeObserver {
+    constructor(private readonly callback: ResizeObserverCallback) {}
+
+    observe(target: Element) {
+      const contentRect = {
+        bottom: 260,
+        height: 260,
+        left: 0,
+        right: 280,
+        top: 0,
+        width: 280,
+        x: 0,
+        y: 0,
+        toJSON: () => ({})
+      } as DOMRectReadOnly;
+
+      this.callback(
+        [
+          {
+            borderBoxSize: [],
+            contentBoxSize: [],
+            contentRect,
+            devicePixelContentBoxSize: [],
+            target
+          }
+        ],
+        this
+      );
     }
-  );
+
+    disconnect() {}
+
+    unobserve() {}
+  }
+
+  vi.stubGlobal("ResizeObserver", ResizeObserverMock);
   Object.defineProperty(window, "matchMedia", {
     writable: true,
     value: vi.fn().mockReturnValue({
@@ -47,25 +76,31 @@ const room: Room = {
   previousRound: {
     id: "round-1",
     roundNumber: 1,
+    revoteCount: 0,
     completedAt: "2026-07-23T12:00:00Z",
+    issueTitle: null,
     votes: [
       {
         userId: "user-1",
         username: "One",
         card: "3",
-        value: 3
+        value: 3,
+        selections: [{ card: "3", value: 3, phase: 0 }]
       },
       {
         userId: "user-2",
         username: "Two",
         card: "8",
-        value: 8
+        value: 8,
+        selections: [{ card: "8", value: 8, phase: 0 }]
       }
     ]
   },
   revealStage: "revealed",
   roomOwnerId: "user-1",
   showVoteChanges: true,
+  voteHistory: [],
+  voteQueue: [],
   users: []
 };
 

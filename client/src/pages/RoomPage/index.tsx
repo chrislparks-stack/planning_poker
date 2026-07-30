@@ -1,11 +1,11 @@
 import { useParams, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { validate as validateUUID } from "uuid";
 
 import {
+  useGetRoomVoteHistoryLazyQuery,
   useGetRoomQuery,
   useJoinRoomMutation,
-  useLogoutMutation,
   useRoomEventsSubscription,
   useRoomSubscription,
   useSetRoomOwnerMutation,
@@ -18,22 +18,36 @@ import { Room } from "@/components/Room";
 import { RoomOptionsDialog } from "@/components/RoomOptionsDialog";
 import { StarrySky } from "@/components/StarrySky";
 import { ResultsTag } from "@/components/ui/results-tag.tsx";
-import { VoteDistributionChart } from "@/components/vote-distribution-chart";
+import { VoteSessionPanel } from "@/components/VoteSessionPanel";
 import { useAuth } from "@/contexts";
 import { useBackgroundConfig } from "@/contexts/BackgroundContext.tsx";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "@/types";
+import {
+  getStoredRoom,
+  removeStoredRoom,
+  setStoredRoom,
+  touchStoredRoom,
+  updateStoredRoom
+} from "@/utils";
+
+const VoteDistributionChart = lazy(() =>
+  import("@/components/vote-distribution-chart").then(
+    ({ VoteDistributionChart: Chart }) => ({ default: Chart })
+  )
+);
 
 export function RoomPage() {
   const { roomId } = useParams({ from: "/room/$roomId" });
   const roomRef = useRef<HTMLDivElement | null>(null);
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const redirectingRef = useRef(false);
   const navigate = useNavigate();
-  const [logoutMutation] = useLogoutMutation();
+  const joinedRoomSessionKey = `HAS_JOINED_ROOM:${roomId}`;
 
   const isJoinRoomCalledRef = useRef(false);
+  const isNewRoomSetupRef = useRef(false);
   const [updateDeck] = useUpdateDeckMutation();
   const [setRoomOwner] = useSetRoomOwnerMutation();
   const [openCreateUserDialog, setOpenCreateUserDialog] = useState(false);
@@ -49,8 +63,16 @@ export function RoomPage() {
 
   const { data: subscriptionData, error: roomSubscriptionError } =
     useRoomSubscription({
-      variables: { roomId }
+      variables: { roomId, userId: user?.id }
     });
+
+  const [
+    getVoteHistory,
+    { data: voteHistoryData, error: voteHistoryQueryError }
+  ] = useGetRoomVoteHistoryLazyQuery({
+    fetchPolicy: "network-only"
+  });
+  const voteHistoryRevisionRef = useRef<string | null>(null);
 
   const { data: roomEventsData, error: roomEventsError } =
     useRoomEventsSubscription({
@@ -66,6 +88,14 @@ export function RoomPage() {
     onCompleted: (data) => {
       const room = data?.joinRoom;
       if (!room || !user) return;
+      const roomUser = room.users.find((candidate) => candidate.id === user.id);
+
+      updateStoredRoom(room.id, {
+        Cards: room.deck.cards,
+        RoomName: room.name ?? null,
+        RoomOwner: room.roomOwnerId,
+        Username: roomUser?.username
+      });
 
       const prefix = `kickban-${room.id}-`;
       Object.keys(localStorage).forEach((key) => {
@@ -76,14 +106,14 @@ export function RoomPage() {
 
       // Only show toast on first join, not on refresh
       const hasJoinedBefore =
-        sessionStorage.getItem("HAS_JOINED_ROOM") === "true";
+        sessionStorage.getItem(joinedRoomSessionKey) === "true";
       if (!hasJoinedBefore) {
         toast({
           title: "Joined room",
           description: `You joined ${room.name ?? "the room"} successfully.`,
           duration: 2500
         });
-        sessionStorage.setItem("HAS_JOINED_ROOM", "true");
+        sessionStorage.setItem(joinedRoomSessionKey, "true");
       }
     },
     onError: (error) => {
@@ -103,7 +133,7 @@ export function RoomPage() {
 
       if (msg.includes("banned")) {
         localStorage.setItem(memoryKey, "banned");
-        localStorage.removeItem("Room");
+        removeStoredRoom(roomId);
         toast({
           title: "You are banned",
           description: `You are banned from ${roomName}`,
@@ -139,22 +169,9 @@ export function RoomPage() {
           variant: "destructive"
         });
       }
-      localStorage.removeItem("Room");
-      sessionStorage.removeItem("HAS_JOINED_ROOM");
-      // Force full auth logout: backend + local
-      try {
-        if (user?.id) {
-          logoutMutation({
-            variables: { userId: user.id }
-          }).then(() => {
-            logout?.();
-
-            setOpenCreateUserDialog(true);
-          });
-        }
-      } catch (err) {
-        console.warn("Failed to run logoutMutation after kick:", err);
-      }
+      removeStoredRoom(roomId);
+      sessionStorage.removeItem(joinedRoomSessionKey);
+      navigate({ to: "/" });
     }
 
     if (event.eventType === "USER_BANNED") {
@@ -163,11 +180,11 @@ export function RoomPage() {
         description: "You have been banned from the room.",
         variant: "destructive"
       });
-      localStorage.removeItem("Room");
-      sessionStorage.removeItem("HAS_JOINED_ROOM");
+      removeStoredRoom(roomId);
+      sessionStorage.removeItem(joinedRoomSessionKey);
       navigate({ to: "/" });
     }
-  }, [roomEventsData, user, toast, navigate, logout, logoutMutation]);
+  }, [roomEventsData, user, toast, navigate, roomId, joinedRoomSessionKey]);
 
   // --- Initial join logic ---
   useEffect(() => {
@@ -176,6 +193,7 @@ export function RoomPage() {
     const isNewRoom = sessionStorage.getItem("NEW_ROOM_CREATED") === "true";
     if (isNewRoom) {
       sessionStorage.removeItem("NEW_ROOM_CREATED");
+      isNewRoomSetupRef.current = true;
       setOpenCreateUserDialog(true);
       return;
     }
@@ -185,39 +203,32 @@ export function RoomPage() {
       return;
     }
 
-    if (user && !isJoinRoomCalledRef.current) {
-      const roomStorageRaw = localStorage.getItem("Room");
-      let roomStorage = null;
-
-      if (roomStorageRaw) {
-        try {
-          roomStorage = JSON.parse(roomStorageRaw);
-        } catch {
-          localStorage.removeItem("Room");
-        }
-      }
-
-      if (roomStorage && roomStorage.RoomID !== roomId) {
-        localStorage.removeItem("Room");
-        roomStorage = null;
-      }
+    if (user && !isJoinRoomCalledRef.current && !isNewRoomSetupRef.current) {
+      const roomStorage = getStoredRoom(roomId);
 
       let roomName = "";
       let roomOwner = "";
+      let roomUsername = user.username;
 
       if (roomStorage) {
-        roomName = roomStorage.RoomName;
-        roomOwner = roomStorage.RoomOwner;
+        roomName = roomStorage.RoomName ?? "";
+        roomOwner = roomStorage.RoomOwner ?? "";
+        roomUsername = roomStorage.Username ?? user.username;
       }
 
       if (!roomStorage && roomData.roomById) {
+        const existingMembership = roomData.roomById.users.find(
+          (candidate) => candidate.id === user.id
+        );
+        roomUsername = existingMembership?.username ?? user.username;
         const storageData = {
           RoomID: roomData.roomById.id,
           Cards: roomData.roomById.deck.cards,
           RoomName: roomData.roomById.name ?? null,
-          RoomOwner: roomData.roomById.roomOwnerId ?? user.id
+          RoomOwner: roomData.roomById.roomOwnerId ?? user.id,
+          Username: roomUsername
         };
-        localStorage.setItem("Room", JSON.stringify(storageData));
+        setStoredRoom(storageData);
       }
 
       joinRoomMutation({
@@ -225,7 +236,7 @@ export function RoomPage() {
           roomId,
           user: {
             id: user.id,
-            username: user.username,
+            username: roomUsername,
             roomName:
               roomName && roomName.trim().length > 0 ? roomName : undefined
           },
@@ -266,26 +277,21 @@ export function RoomPage() {
     roomName?: string | null
   ) {
     try {
-      if (!localStorage.getItem("Room")) {
+      isJoinRoomCalledRef.current = true;
+      isNewRoomSetupRef.current = false;
+      const storedRoom = getStoredRoom(roomId);
+      if (!storedRoom) {
         const roomData = {
           RoomID: roomId,
-          Cards: selectedCards,
+          Cards: selectedCards ?? [],
           RoomName: roomName ?? null,
-          RoomOwner: roomOwnerId
+          RoomOwner: roomOwnerId,
+          Username: user.username
         };
-        localStorage.setItem("Room", JSON.stringify(roomData));
+        setStoredRoom(roomData);
       } else {
-        const stored = localStorage.getItem("Room");
-        let roomData;
-        try {
-          roomData = stored ? JSON.parse(stored) : null;
-        } catch {
-          console.error("Failed to parse Room from localStorage");
-          roomData = null;
-        }
-        if (roomData && selectedCards) {
-          roomData.Cards = selectedCards;
-          localStorage.setItem("Room", JSON.stringify(roomData));
+        if (selectedCards) {
+          updateStoredRoom(roomId, { Cards: selectedCards });
         }
       }
 
@@ -303,7 +309,7 @@ export function RoomPage() {
           roomId: roomId,
           user: {
             id: user.id,
-            username: user.username,
+            username: getStoredRoom(roomId)?.Username ?? user.username,
             roomName: roomName ?? undefined
           }
         }
@@ -326,8 +332,75 @@ export function RoomPage() {
     }
   }
 
-  const room =
-    subscriptionData?.room ?? roomData?.roomById ?? joinRoomData?.joinRoom;
+  const room = useMemo(() => {
+    const initialRoom = roomData?.roomById ?? joinRoomData?.joinRoom;
+
+    return subscriptionData?.room
+      ? {
+          ...subscriptionData.room,
+          chatHistory: initialRoom?.chatHistory ?? [],
+          voteHistory:
+            (voteHistoryData?.roomById?.id === subscriptionData.room.id
+              ? voteHistoryData.roomById.voteHistory
+              : undefined) ??
+            initialRoom?.voteHistory ??
+            []
+        }
+      : initialRoom;
+  }, [
+    joinRoomData?.joinRoom,
+    roomData?.roomById,
+    subscriptionData?.room,
+    voteHistoryData?.roomById?.id,
+    voteHistoryData?.roomById?.voteHistory
+  ]);
+  const hasLoadedRoom = Boolean(room);
+
+  useEffect(() => {
+    const revision = subscriptionData?.room.voteHistoryRevision;
+    if (!revision || voteHistoryRevisionRef.current === revision) return;
+
+    const initialRevision =
+      roomData?.roomById?.voteHistoryRevision ??
+      joinRoomData?.joinRoom.voteHistoryRevision;
+    voteHistoryRevisionRef.current = revision;
+
+    if (revision === initialRevision) return;
+
+    void getVoteHistory({ variables: { roomId } });
+  }, [
+    getVoteHistory,
+    joinRoomData?.joinRoom.voteHistoryRevision,
+    roomData?.roomById?.voteHistoryRevision,
+    roomId,
+    subscriptionData?.room.voteHistoryRevision
+  ]);
+
+  useEffect(() => {
+    if (!hasLoadedRoom) return;
+
+    const markRoomActive = () => {
+      touchStoredRoom(roomId);
+    };
+    const markVisibleRoomActive = () => {
+      if (document.visibilityState === "visible") {
+        markRoomActive();
+      }
+    };
+
+    markRoomActive();
+    document.addEventListener("pointerdown", markRoomActive, true);
+    document.addEventListener("keydown", markRoomActive, true);
+    document.addEventListener("visibilitychange", markVisibleRoomActive);
+    window.addEventListener("focus", markRoomActive);
+
+    return () => {
+      document.removeEventListener("pointerdown", markRoomActive, true);
+      document.removeEventListener("keydown", markRoomActive, true);
+      document.removeEventListener("visibilitychange", markVisibleRoomActive);
+      window.removeEventListener("focus", markRoomActive);
+    };
+  }, [hasLoadedRoom, roomId]);
 
   const APP_NAME = "Summit Planning Poker";
   const prevTitleRef = useRef<string>(
@@ -368,8 +441,7 @@ export function RoomPage() {
   useEffect(() => {
     if (!room || !user) return;
 
-    const storedRoom = localStorage.getItem("Room");
-    const storedCards = storedRoom ? JSON.parse(storedRoom).Cards : null;
+    const storedCards = getStoredRoom(roomId)?.Cards ?? null;
 
     const hasEverConfiguredDeck =
       Array.isArray(storedCards) && storedCards.length > 0;
@@ -385,7 +457,7 @@ export function RoomPage() {
     ) {
       setOpenRoomOptionsDialog(true);
     }
-  }, [room, user]);
+  }, [room, user, roomId]);
 
   const isMissingRoom =
     roomData &&
@@ -448,6 +520,16 @@ export function RoomPage() {
     }
   }, [roomEventsError, toast]);
 
+  useEffect(() => {
+    if (!redirectingRef.current && voteHistoryQueryError) {
+      toast({
+        title: "Error",
+        description: `Vote history: ${voteHistoryQueryError.message}`,
+        variant: "destructive"
+      });
+    }
+  }, [voteHistoryQueryError, toast]);
+
   return (
     <div>
       {!room ? (
@@ -471,40 +553,58 @@ export function RoomPage() {
                 />
               </div>
             )}
-            <div className="flex flex-1 min-h-0 w-full flex-col">
-              <div ref={roomRef} className="flex-1 min-h-0 overflow-auto">
-                <div className="flex justify-center px-4 pt-[25px]">
-                  <Room
-                    room={room}
-                    onShowInChat={handleShowInChat}
-                    roomRef={roomRef}
-                    chatVisible={chatVisible}
-                  />
-                </div>
-              </div>
+            <div className="room-session-layout flex min-h-0 w-full flex-1">
+              <VoteSessionPanel room={room} />
+              <div
+                aria-label="Room workspace"
+                className="room-workspace-scroll flex min-w-0 flex-1 flex-col overflow-x-auto overflow-y-hidden focus-visible:outline-none"
+                role="region"
+              >
+                <div className="room-workspace-canvas flex min-h-0 w-full flex-1 flex-col">
+                  <div ref={roomRef} className="min-h-0 flex-1 overflow-y-auto">
+                    <div className="flex justify-center px-4 pt-[25px]">
+                      <Room
+                        room={room}
+                        onShowInChat={handleShowInChat}
+                        roomRef={roomRef}
+                        chatVisible={chatVisible}
+                      />
+                    </div>
+                  </div>
 
-              <div className="sticky bottom-0 w-full">
-                <div className="vote-results-scroller relative w-full pt-4 pb-6 backdrop-blur-sm [scrollbar-width:thin]">
-                  <div className="mx-auto flex w-full min-w-[660px] items-end justify-center px-2">
-                    <Deck
-                      roomId={roomId}
-                      isGameOver={room.isGameOver}
-                      lockVotes={room.lockVotes}
-                      cards={room.deck.cards}
-                      users={room.users}
-                      previousRound={room.previousRound}
-                    />
-                    {room.isGameOver && (
-                      <div className="ml-2 flex min-w-[246px] max-w-[548px] flex-[0_1_auto] justify-center">
-                        <ResultsTag
-                          isRevote={room.previousRound != null}
-                          hasBackground={
-                            background.enabled && background.id === "starry"
-                          }
+                  <div className="sticky bottom-0 w-full">
+                    <div className="vote-results-scroller relative w-full pb-6 pt-4 backdrop-blur-sm">
+                      <div className="mx-auto flex w-max min-w-full items-end justify-center px-2">
+                        <Deck
+                          roomId={roomId}
+                          isGameOver={room.isGameOver}
+                          lockVotes={room.lockVotes}
+                          cards={room.deck.cards}
+                          users={room.users}
+                          previousRound={room.previousRound}
                         />
-                        <VoteDistributionChart room={room} />
+                        {room.isGameOver && (
+                          <div className="ml-2 flex min-w-[246px] max-w-[548px] flex-[0_1_auto] justify-center">
+                            <ResultsTag
+                              isRevote={room.previousRound != null}
+                              hasBackground={
+                                background.enabled && background.id === "starry"
+                              }
+                            />
+                            <Suspense
+                              fallback={
+                                <div
+                                  aria-hidden="true"
+                                  className="min-h-[184px] min-w-[220px] max-w-[520px] flex-1"
+                                />
+                              }
+                            >
+                              <VoteDistributionChart room={room} />
+                            </Suspense>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -513,6 +613,7 @@ export function RoomPage() {
 
           <CreateUserDialog
             roomData={room}
+            existingUser={user}
             open={openCreateUserDialog}
             setOpen={setOpenCreateUserDialog}
             onJoin={(user, selectedCards, roomOwner?, roomName?) =>

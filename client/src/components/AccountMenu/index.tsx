@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import {
   Coffee,
   LogOut,
@@ -10,7 +11,7 @@ import {
 } from "lucide-react";
 import { FC, useEffect, useRef, useState } from "react";
 
-import { useLogoutMutation, useSetRoomOwnerMutation } from "@/api";
+import { useLeaveRoomMutation } from "@/api";
 import { ConfirmLogoutDialog } from "@/components/ConfirmLogoutDialog";
 import { EditUserDialog } from "@/components/EditUserDialog";
 import { RoomOptionsDialog } from "@/components/RoomOptionsDialog";
@@ -36,6 +37,7 @@ import { useAuth } from "@/contexts";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils.ts";
 import { Room } from "@/types";
+import { removeStoredRoom } from "@/utils";
 
 interface AccountMenuProps {
   room?: Room;
@@ -48,8 +50,9 @@ export const AccountMenu: FC<AccountMenuProps> = ({
   onOpenChange,
   highlightAppearance
 }) => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const hoverTimerRef = useRef<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [allowTooltip, setAllowTooltip] = useState(false);
@@ -61,15 +64,11 @@ export const AccountMenu: FC<AccountMenuProps> = ({
   const [flashAppearance, setFlashAppearance] = useState(false);
   const hasFlashedRef = useRef(false);
 
-  const [setRoomOwner] = useSetRoomOwnerMutation();
-  const [logoutMutation] = useLogoutMutation({
-    onCompleted: async () => {
-      logout?.();
-    },
+  const [leaveRoomMutation] = useLeaveRoomMutation({
     onError: (error) => {
       toast({
         title: "Error",
-        description: `Logout: ${error.message}`,
+        description: `Leave room: ${error.message}`,
         variant: "destructive"
       });
     }
@@ -92,23 +91,15 @@ export const AccountMenu: FC<AccountMenuProps> = ({
     setAllowTooltip(false);
   };
 
-  async function handleLogout() {
-    if (!user) return;
+  async function handleLeaveRoom() {
+    if (!user || !room) return;
 
-    if (room && room.id && user.id === room.roomOwnerId) {
-      const nextOwner = room.users.find((u) => u.id !== user.id);
-
-      await setRoomOwner({
-        variables: {
-          roomId: room.id,
-          userId: nextOwner?.id ?? null
-        }
-      });
-    }
-
-    await logoutMutation({ variables: { userId: user.id } });
-
-    localStorage.removeItem("Room");
+    await leaveRoomMutation({
+      variables: { roomId: room.id, userId: user.id }
+    });
+    removeStoredRoom(room.id);
+    sessionStorage.removeItem(`HAS_JOINED_ROOM:${room.id}`);
+    await navigate({ to: "/" });
   }
 
   useEffect(() => {
@@ -243,7 +234,7 @@ export const AccountMenu: FC<AccountMenuProps> = ({
                 className="cursor-pointer"
               >
                 <LogOut className="mr-2 h-4 w-4" />
-                <span>Logout</span>
+                <span>Leave Room</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
             <TooltipContent sideOffset={15}>
@@ -255,6 +246,7 @@ export const AccountMenu: FC<AccountMenuProps> = ({
       <EditUserDialog
         open={openEditUserDialog}
         setOpen={setOpenEditUserDialog}
+        room={room}
       />
       <RoomOptionsDialog
         open={openRoomOptionsDialog}
@@ -269,7 +261,7 @@ export const AccountMenu: FC<AccountMenuProps> = ({
         open={openConfirmLogoutDialog}
         setOpen={setOpenConfirmLogoutDialog}
         room={room}
-        onConfirm={handleLogout}
+        onConfirm={handleLeaveRoom}
       />
       <SupportDialog open={openSupportDialog} setOpen={setOpenSupportDialog} />
     </>

@@ -43,7 +43,9 @@ const ModalDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={allowClose ? onClose : undefined}>
-      <DialogContent>
+      <DialogContent
+        {...(!description ? { "aria-describedby": undefined } : {})}
+      >
         {title && (
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
@@ -52,7 +54,11 @@ const ModalDialog = ({
         {content ? (
           <div>{content}</div>
         ) : (
-          description && <DialogDescription>{description}</DialogDescription>
+          description && (
+            <DialogDescription asChild>
+              <div>{description}</div>
+            </DialogDescription>
+          )
         )}
         <DialogFooter>
           <Button

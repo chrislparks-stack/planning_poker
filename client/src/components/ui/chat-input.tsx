@@ -1,5 +1,3 @@
-import data from "@emoji-mart/data";
-import Picker from "@emoji-mart/react";
 import { motion } from "framer-motion";
 import {
   Bold,
@@ -14,20 +12,27 @@ import {
   X
 } from "lucide-react";
 import React, {
+  lazy,
   startTransition,
+  Suspense,
   useCallback,
   useEffect,
   useRef,
   useState
 } from "react";
-import { HexColorPicker } from "react-colorful";
 import { createPortal } from "react-dom";
 
 import { getShiftedAccent } from "@/lib/theme-accent.ts";
 import { cn } from "@/lib/utils";
 import { GRAPHQL_ENDPOINT } from "@/settings";
 import { compressMessage } from "@/utils/messageUtils.ts";
-import { OverlayPortal } from "@/utils/overlayPortal.tsx";
+
+const EmojiPicker = lazy(() => import("@/components/ui/lazy-emoji-picker.tsx"));
+const HexColorPicker = lazy(() =>
+  import("react-colorful").then(({ HexColorPicker: PickerComponent }) => ({
+    default: PickerComponent
+  }))
+);
 
 interface PickerGif {
   id: string;
@@ -587,7 +592,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     return (
       <div
         role="presentation"
-        className="flex justify-between px-1 items-center relative"
+        className={cn(
+          "relative flex items-center justify-between px-1",
+          inPanel && "chat-composer-toolbar"
+        )}
         onMouseDown={(e) => e.preventDefault()}
       >
         <div className="flex gap-1.5">
@@ -680,8 +688,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         aria-label="Type message"
         tabIndex={0}
         className={cn(
-          "w-full bg-background/95 text-sm rounded-xl min-h-[38px] max-h-[80px]",
-          "px-3 py-2 pr-10 outline-none overflow-y-auto focus:ring-1 focus:ring-accent"
+          "min-h-[38px] max-h-[80px] w-full overflow-y-auto rounded-xl px-3 py-2 pr-10 text-sm outline-none focus:ring-1 focus:ring-accent",
+          inPanel ? "chat-composer-editor" : "bg-background/95"
         )}
         style={{ whiteSpace: "pre-wrap" }}
         onInput={(e) => {
@@ -694,7 +702,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         onMouseUp={saveSelection}
       />
       {isEmpty && (
-        <span className="absolute left-3 top-2 text-muted-foreground text-sm opacity-60 pointer-events-none select-none">
+        <span className="pointer-events-none absolute left-3 top-2 select-none text-sm text-muted-foreground/65">
           Type message...
         </span>
       )}
@@ -758,7 +766,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         <div
           ref={emojiPickerRef}
           role="presentation"
-          className="relative border border-border rounded-xl bg-popover shadow-xl overflow-hidden z-[60] w-fit -ml-1.5"
+          className="chat-emoji-picker relative z-[60] w-full max-w-full overflow-hidden rounded-xl border border-border bg-popover shadow-xl"
           onClick={(e) => e.stopPropagation()}
         >
           <button
@@ -769,46 +777,51 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <X size={12} />
           </button>
 
-          <div className="relative w-fit h-[260px] overflow-hidden">
-            <Picker
-              data={data}
-              onEmojiSelect={(emoji: { native: string }) => {
-                const editor = editorRef.current;
-                if (!editor) return;
-
-                editor.focus();
-                restoreSelection();
-
-                const selection = window.getSelection();
-                if (!selection || !selection.rangeCount) return;
-
-                if (isEmpty) {
-                  setIsEmpty(false);
-                }
-
-                const range = selection.getRangeAt(0);
-                const textNode = document.createTextNode(emoji.native);
-                range.insertNode(textNode);
-
-                // Move caret after emoji
-                range.setStartAfter(textNode);
-                range.collapse(true);
-                selection.removeAllRanges();
-                selection.addRange(range);
-
-                saveSelection();
-              }}
-              theme={
-                document.documentElement.classList.contains("dark")
-                  ? "dark"
-                  : "light"
+          <div className="chat-emoji-picker-viewport relative h-[260px] w-full overflow-hidden">
+            <Suspense
+              fallback={
+                <div className="h-[260px] w-full animate-pulse bg-muted/20" />
               }
-              previewPosition="none"
-              skinTonePosition="none"
-              perLine={8}
-              dynamicWidth={false}
-              navPosition="none"
-            />
+            >
+              <EmojiPicker
+                onEmojiSelect={(emoji: { native: string }) => {
+                  const editor = editorRef.current;
+                  if (!editor) return;
+
+                  editor.focus();
+                  restoreSelection();
+
+                  const selection = window.getSelection();
+                  if (!selection || !selection.rangeCount) return;
+
+                  if (isEmpty) {
+                    setIsEmpty(false);
+                  }
+
+                  const range = selection.getRangeAt(0);
+                  const textNode = document.createTextNode(emoji.native);
+                  range.insertNode(textNode);
+
+                  // Move caret after emoji
+                  range.setStartAfter(textNode);
+                  range.collapse(true);
+                  selection.removeAllRanges();
+                  selection.addRange(range);
+
+                  saveSelection();
+                }}
+                theme={
+                  document.documentElement.classList.contains("dark")
+                    ? "dark"
+                    : "light"
+                }
+                previewPosition="none"
+                skinTonePosition="none"
+                perLine={8}
+                dynamicWidth
+                navPosition="none"
+              />
+            </Suspense>
           </div>
         </div>
       );
@@ -850,45 +863,50 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </button>
 
         <div className="relative w-full h-full overflow-hidden">
-          <Picker
-            data={data}
-            onEmojiSelect={(emoji: { native: string }) => {
-              const editor = editorRef.current;
-              if (!editor) return;
-
-              editor.focus();
-              restoreSelection();
-
-              const selection = window.getSelection();
-              if (!selection || !selection.rangeCount) return;
-
-              if (isEmpty) {
-                setIsEmpty(false);
-              }
-
-              const range = selection.getRangeAt(0);
-              const textNode = document.createTextNode(emoji.native);
-              range.insertNode(textNode);
-
-              // Move caret after emoji
-              range.setStartAfter(textNode);
-              range.collapse(true);
-              selection.removeAllRanges();
-              selection.addRange(range);
-
-              saveSelection();
-            }}
-            theme={
-              document.documentElement.classList.contains("dark")
-                ? "dark"
-                : "light"
+          <Suspense
+            fallback={
+              <div className="h-full w-full animate-pulse bg-muted/20" />
             }
-            previewPosition="none"
-            skinTonePosition="none"
-            perLine={5}
-            dynamicWidth={false}
-            navPosition="none"
-          />
+          >
+            <EmojiPicker
+              onEmojiSelect={(emoji: { native: string }) => {
+                const editor = editorRef.current;
+                if (!editor) return;
+
+                editor.focus();
+                restoreSelection();
+
+                const selection = window.getSelection();
+                if (!selection || !selection.rangeCount) return;
+
+                if (isEmpty) {
+                  setIsEmpty(false);
+                }
+
+                const range = selection.getRangeAt(0);
+                const textNode = document.createTextNode(emoji.native);
+                range.insertNode(textNode);
+
+                // Move caret after emoji
+                range.setStartAfter(textNode);
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+
+                saveSelection();
+              }}
+              theme={
+                document.documentElement.classList.contains("dark")
+                  ? "dark"
+                  : "light"
+              }
+              previewPosition="none"
+              skinTonePosition="none"
+              perLine={5}
+              dynamicWidth={false}
+              navPosition="none"
+            />
+          </Suspense>
         </div>
       </div>,
       targetRoot
@@ -1333,7 +1351,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               onClick={(e) => e.stopPropagation()}
             >
               <section className="small -mt-1 mb-1">
-                <HexColorPicker color={customColor} onChange={setCustomColor} />
+                <Suspense
+                  fallback={
+                    <div className="h-[76px] w-[80px] animate-pulse rounded-md bg-muted/20" />
+                  }
+                >
+                  <HexColorPicker
+                    color={customColor}
+                    onChange={setCustomColor}
+                  />
+                </Suspense>
               </section>
               <button
                 onClick={() => {
@@ -1356,7 +1383,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               onClick={(e) => e.stopPropagation()}
             >
               <section className="small -mt-2 mb-1">
-                <HexColorPicker color={customColor} onChange={setCustomColor} />
+                <Suspense
+                  fallback={
+                    <div className="h-[76px] w-[80px] animate-pulse rounded-md bg-muted/20" />
+                  }
+                >
+                  <HexColorPicker
+                    color={customColor}
+                    onChange={setCustomColor}
+                  />
+                </Suspense>
               </section>
               <button
                 onClick={() => {
@@ -1375,14 +1411,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   );
 
   // === MAIN RETURN ===
-  const coreContent = (
+  return (
     <div
       ref={containerRef}
       role="presentation"
       className={cn(
         "flex flex-col items-stretch justify-center space-y-2 relative",
         inPanel
-          ? "rounded-none bg-transparent border-none shadow-none p-2"
+          ? "chat-composer-content rounded-xl border p-2.5 shadow-[inset_0_0_18px_rgba(var(--accent-rgb),0.035)]"
           : "rounded-2xl bg-accent/20 border border-accent/30 shadow-lg backdrop-blur-md px-2 pt-1 pb-2",
         className
       )}
@@ -1417,7 +1453,4 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       {renderAttachments()}
     </div>
   );
-
-  if (inPanel) return coreContent;
-  return <OverlayPortal>{coreContent}</OverlayPortal>;
 };

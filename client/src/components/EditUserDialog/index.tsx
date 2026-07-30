@@ -15,48 +15,44 @@ import { Label } from "@/components/ui/label";
 import { OptionDialogContent } from "@/components/ui/option-dialog-content";
 import { useAuth } from "@/contexts";
 import { useToast } from "@/hooks/use-toast";
+import { Room } from "@/types";
+import { updateStoredRoom } from "@/utils";
 import { MAX_LEN } from "@/utils/enums.ts";
 
 interface EditUserDialogProps {
   open: boolean;
   setOpen: (open: boolean) => void;
+  room?: Room;
 }
 
-export const EditUserDialog: FC<EditUserDialogProps> = ({ open, setOpen }) => {
-  const { user, login } = useAuth();
+export const EditUserDialog: FC<EditUserDialogProps> = ({
+  open,
+  setOpen,
+  room
+}) => {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [username, setUsername] = useState("");
   const [usernameError, setUsernameError] = useState<string | null>(null);
+  const roomUser = room?.users.find((candidate) => candidate.id === user?.id);
 
   useEffect(() => {
     if (!open) return;
 
-    // Prefer the live user from context (keeps us in-sync), fallback to localStorage.
-    if (user?.username) {
+    if (roomUser?.username) {
       setUsernameError(null);
-      setUsername(user.username);
+      setUsername(roomUser.username);
       return;
     }
 
-    try {
-      const raw = localStorage.getItem("user");
-      const parsed = raw ? JSON.parse(raw) : null;
-      setUsername(parsed?.username ?? "");
-    } catch (err) {
-      console.warn("Failed to parse username from localStorage:", err);
-      setUsername("");
-    }
-  }, [open, user]);
+    setUsername(user?.username ?? "");
+  }, [open, roomUser?.username, user?.username]);
 
   const [editUserMutation, { loading }] = useEditUserMutation({
     onCompleted: (data) => {
-      // mutation only runs when the username has actually changed, so this is a true update
-      login?.({
-        id: data.editUser.id,
-        username: data.editUser.username,
-        handRaised: data.editUser.handRaised,
-        voteUncensored: data.editUser.voteUncensored
-      });
+      if (room) {
+        updateStoredRoom(room.id, { Username: data.editUser.username });
+      }
       setOpen(false);
 
       toast({
@@ -87,24 +83,25 @@ export const EditUserDialog: FC<EditUserDialogProps> = ({ open, setOpen }) => {
       return;
     }
 
-    if (user && trimmed === (user.username ?? "")) {
+    if (roomUser && trimmed === roomUser.username) {
       setOpen(false);
       setUsername("");
       setUsernameError(null);
       return;
     }
 
-    if (user) {
+    if (user && room) {
       await editUserMutation({
         variables: {
+          roomId: room.id,
           userId: user.id,
           username: trimmed
         }
       });
     } else {
       toast({
-        title: "Not signed in",
-        description: "Please sign in before updating your username",
+        title: "Not in a room",
+        description: "Please join the room before updating your username",
         variant: "destructive"
       });
     }

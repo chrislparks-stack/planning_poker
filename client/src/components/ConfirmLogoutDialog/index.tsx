@@ -54,14 +54,14 @@ export const ConfirmLogoutDialog: FC<ConfirmLogoutDialogProps> = ({
       setLoading(true);
       await onConfirm();
       toast({
-        title: "Signed out",
-        description: "You have been signed out successfully."
+        title: "Left room",
+        description: "You have left this room."
       });
       setOpen(false);
     } catch (err) {
       console.error("Logout failed:", err);
       toast({
-        title: "Sign out failed",
+        title: "Leave room failed",
         description:
           err instanceof Error ? err.message : "An unknown error occurred.",
         variant: "destructive"
@@ -98,10 +98,10 @@ export const ConfirmLogoutDialog: FC<ConfirmLogoutDialogProps> = ({
             </div>
             <div className="min-w-0">
               <DialogTitle className="text-xl font-semibold tracking-tight">
-                Sign out
+                Leave room
               </DialogTitle>
               <DialogDescription className="mt-1 text-sm leading-relaxed">
-                End this session and return to the sign-in screen.
+                Leave this room without affecting your other open rooms.
               </DialogDescription>
             </div>
           </div>
@@ -114,8 +114,8 @@ export const ConfirmLogoutDialog: FC<ConfirmLogoutDialogProps> = ({
             </span>
             <p className="m-0 text-xs leading-relaxed text-muted-foreground">
               {isOwner && isLastUser
-                ? "Because you’re the last person in this room, leaving will remove it. Returning later with the same room ID will ask you to set it up again."
-                : "If you just need a break, signing out won’t delete your rooms or history."}
+                ? "You are the last person in this room. The room will remain available if you return later."
+                : "Your membership will only be removed from this room. Other open rooms will stay connected."}
             </p>
           </div>
 
@@ -149,7 +149,7 @@ export const ConfirmLogoutDialog: FC<ConfirmLogoutDialogProps> = ({
             variant="ghost"
             onClick={handleClose}
             disabled={loading}
-            aria-label="Cancel sign out"
+            aria-label="Cancel leaving room"
           >
             Cancel
           </Button>
@@ -157,13 +157,13 @@ export const ConfirmLogoutDialog: FC<ConfirmLogoutDialogProps> = ({
             variant="destructive"
             onClick={() => void handleConfirm()}
             disabled={loading}
-            aria-label="Confirm sign out"
+            aria-label="Confirm leave room"
           >
             <LogOut
               aria-hidden="true"
               className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`}
             />
-            {loading ? "Signing out…" : "Sign out"}
+            {loading ? "Leaving…" : "Leave room"}
           </Button>
         </DialogFooter>
       </OptionDialogContent>

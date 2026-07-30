@@ -15,7 +15,8 @@ import {
 import { useAuth } from "@/contexts";
 import { useCopyRoomUrlToClipboard } from "@/hooks";
 import { Room, User } from "@/types";
-import { withTestUsers } from "@/utils/testUtils.tsx";
+import { getStoredRoom } from "@/utils";
+import { DEV_TEST_USER_COUNT, withTestUsers } from "@/utils/testUtils.tsx";
 
 interface HeaderProps {
   room?: Room;
@@ -34,7 +35,10 @@ export const Header: FC<HeaderProps> = ({
 }) => {
   const { user } = useAuth();
   const { copyRoomUrlToClipboard } = useCopyRoomUrlToClipboard();
-  const displayUsers = useMemo(() => withTestUsers(0, users), [users]);
+  const displayUsers = useMemo(
+    () => withTestUsers(DEV_TEST_USER_COUNT, users),
+    [users]
+  );
 
   const handleCopyRoomUrl = async () => {
     if (room) {
@@ -42,16 +46,7 @@ export const Header: FC<HeaderProps> = ({
     }
   };
 
-  // read on every render so a new room snapshot always sees fresh storage
-  const storedRoom = (() => {
-    try {
-      const raw = localStorage.getItem("Room");
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (parsed?.RoomID && Array.isArray(parsed?.Cards)) return parsed;
-    } catch {}
-    return null;
-  })();
+  const storedRoom = room ? getStoredRoom(room.id) : null;
 
   function handleOpenChange(open: boolean) {
     onMenuOpenChange?.(open);

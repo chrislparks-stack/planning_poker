@@ -1,4 +1,4 @@
-import { CSSProperties, FC, useEffect, useMemo, useRef, useState } from "react";
+import { CSSProperties, FC, useEffect, useMemo, useState } from "react";
 
 import Mountain from "@/assets/silhouetted-mountain-range-at-dusk.jpg";
 
@@ -22,6 +22,15 @@ type ShootingStar = {
   length: number;
   travel: number;
 };
+
+type StarField = {
+  stars: Star[];
+  crossStars: Star[];
+  crossAuxStars: Star[];
+  backgroundShadows: string;
+};
+
+let cachedStarField: StarField | null = null;
 
 function getAccentRGB(): [number, number, number] {
   const raw = getComputedStyle(document.documentElement)
@@ -78,22 +87,36 @@ export const StarrySky: FC<StarrySkyProps> = ({
   mountains = true
 }) => {
   const [shootingStars, setShootingStars] = useState<ShootingStar[]>([]);
-  const startedRef = useRef(false);
+  const [isPageVisible, setIsPageVisible] = useState(
+    () =>
+      typeof document === "undefined" || document.visibilityState !== "hidden"
+  );
 
   useEffect(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
+    const handleVisibilityChange = () => {
+      setIsPageVisible(document.visibilityState !== "hidden");
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
+
+  useEffect(() => {
+    if (!fallingStars) return;
 
     let id = 0;
     let alive = true;
-    let timeout: number;
+    let timeout = 0;
+    const removalTimeouts = new Set<number>();
 
     const scheduleNext = () => {
+      if (!alive || document.visibilityState === "hidden") return;
       timeout = window.setTimeout(spawn, rand(60_000, 600_000));
     };
 
     const spawn = () => {
-      if (!alive) return;
+      if (!alive || document.visibilityState === "hidden") return;
 
       const star: ShootingStar = {
         id: id++,
@@ -107,24 +130,37 @@ export const StarrySky: FC<StarrySkyProps> = ({
 
       setShootingStars((s) => [...s, star]);
 
-      setTimeout(() => {
+      const removalTimeout = window.setTimeout(() => {
         setShootingStars((s) => s.filter((x) => x.id !== star.id));
+        removalTimeouts.delete(removalTimeout);
       }, star.duration + 200);
+      removalTimeouts.add(removalTimeout);
 
       scheduleNext();
     };
 
+    const handleVisibilityChange = () => {
+      window.clearTimeout(timeout);
+      if (document.visibilityState !== "hidden") scheduleNext();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     scheduleNext();
 
     return () => {
       alive = false;
-      clearTimeout(timeout);
-      startedRef.current = false;
+      window.clearTimeout(timeout);
+      removalTimeouts.forEach((removalTimeout) =>
+        window.clearTimeout(removalTimeout)
+      );
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, []);
+  }, [fallingStars]);
 
   const { stars, crossStars, crossAuxStars, backgroundShadows } =
     useMemo(() => {
+      if (cachedStarField) return cachedStarField;
+
       const stars: Star[] = [];
       const crossStars: Star[] = [];
       const crossAuxStars: Star[] = [];
@@ -238,11 +274,17 @@ export const StarrySky: FC<StarrySkyProps> = ({
 
       const backgroundShadows = generateBackgroundShadows(1000);
 
-      return { stars, crossStars, crossAuxStars, backgroundShadows };
+      cachedStarField = {
+        stars,
+        crossStars,
+        crossAuxStars,
+        backgroundShadows
+      };
+      return cachedStarField;
     }, []);
 
   return (
-    <div className="sky">
+    <div className={`sky${isPageVisible ? "" : " sky-paused"}`}>
       <div className="stars-cross">
         {crossStars.map((s, i) => (
           <div key={i} className={s.className} style={s.style} />

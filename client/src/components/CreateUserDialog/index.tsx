@@ -22,6 +22,7 @@ import { MAX_LEN } from "@/utils/enums.ts";
 
 interface CreateUserDialogProps {
   roomData: Room;
+  existingUser?: User | null;
   onJoin: (
     user: User,
     selectedCards?: (string | number)[],
@@ -36,6 +37,7 @@ const DEFAULT_CARDS = [0, 0.5, 1, 2, 3, 5, 8, 13, 21, "?", "☕"];
 
 export const CreateUserDialog: FC<CreateUserDialogProps> = ({
   roomData,
+  existingUser,
   onJoin,
   open,
   setOpen
@@ -56,7 +58,19 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
 
     setUsernameError(null);
     setRoomNameError(null);
-  }, [open]);
+    setUsername(existingUser?.username ?? "");
+    setRoomName(roomData.name ?? "");
+
+    if (roomData.users.length < 1) {
+      setSelectedCards(DEFAULT_CARDS);
+    }
+  }, [
+    open,
+    existingUser?.username,
+    roomData.id,
+    roomData.name,
+    roomData.users.length
+  ]);
 
   useEffect(() => {
     if (roomData?.users) setUsers(roomData.users);
@@ -67,43 +81,49 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
     username.trim().length > 0 &&
     (users.length > 0 || selectedCards.length > 0);
 
+  const finishJoining = (joiningUser: User, createdUser: boolean) => {
+    const sortedSelectedCards = [...selectedCards].sort(
+      (a, b) =>
+        DEFAULT_CARDS.findIndex((card) => card === a) -
+        DEFAULT_CARDS.findIndex((card) => card === b)
+    );
+
+    if (createdUser) {
+      login?.({
+        id: joiningUser.id,
+        username: joiningUser.username,
+        handRaised: joiningUser.handRaised,
+        voteUncensored: joiningUser.voteUncensored
+      });
+    }
+
+    setOpen(false);
+
+    if (users.length < 1) {
+      onJoin(
+        joiningUser,
+        sortedSelectedCards,
+        joiningUser.id,
+        roomName !== "" ? roomName : null
+      );
+    } else {
+      onJoin(
+        joiningUser,
+        roomData.deck.cards,
+        roomData.roomOwnerId,
+        roomData.name
+      );
+    }
+
+    toast({
+      title: createdUser ? "User created successfully" : "Room setup complete",
+      variant: "default"
+    });
+  };
+
   const [createUserMutation, { loading }] = useCreateUserMutation({
     onCompleted: (data) => {
-      const sortedSelectedCards = [...selectedCards].sort(
-        (a, b) =>
-          DEFAULT_CARDS.findIndex((card) => card === a) -
-          DEFAULT_CARDS.findIndex((card) => card === b)
-      );
-
-      login?.({
-        id: data.createUser.id,
-        username: data.createUser.username,
-        handRaised: data.createUser.handRaised,
-        voteUncensored: data.createUser.voteUncensored
-      });
-
-      setOpen(false);
-
-      if (users.length < 1) {
-        onJoin(
-          data.createUser,
-          sortedSelectedCards,
-          data.createUser.id,
-          roomName !== "" ? roomName : null
-        );
-      } else {
-        onJoin(
-          data.createUser,
-          roomData.deck.cards,
-          roomData.roomOwnerId,
-          roomData.name
-        );
-      }
-
-      toast({
-        title: "User created successfully",
-        variant: "default"
-      });
+      finishJoining(data.createUser, true);
     },
     onError: (error) => {
       toast({
@@ -138,6 +158,17 @@ export const CreateUserDialog: FC<CreateUserDialogProps> = ({
         description: "You must have at least one card selected",
         variant: "destructive"
       });
+      return;
+    }
+
+    if (existingUser) {
+      finishJoining(
+        {
+          ...existingUser,
+          username: username.trim()
+        },
+        false
+      );
       return;
     }
 

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@/test";
+import { fireEvent, render, screen } from "@test";
 
 import { CardPickedIcon } from "./card-picked-icon";
 
