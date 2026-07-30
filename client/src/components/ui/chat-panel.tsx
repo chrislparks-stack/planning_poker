@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import parse, { Element } from "html-react-parser";
-import { Info } from "lucide-react";
+import { Info, MessageCircle, X } from "lucide-react";
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import {
@@ -310,7 +310,11 @@ export const ChatPanel: React.FC<{
     <>
       <motion.aside
         key="chat-panel"
-        initial={false}
+        initial={{
+          x: "100%",
+          opacity: 0,
+          pointerEvents: "none"
+        }}
         animate={{
           x: visible ? 0 : "100%",
           opacity: visible ? 1 : 0,
@@ -319,54 +323,50 @@ export const ChatPanel: React.FC<{
         exit={{ x: "100%", opacity: 0 }}
         transition={{ type: "spring", stiffness: 180, damping: 22 }}
         className={cn(
-          "chat-panel fixed top-[56px] right-0 h-[calc(100vh-56px)] w-[340px] flex flex-col z-[60]",
-          "overflow-hidden border-l border-border/70 backdrop-blur-2xl transform-gpu will-change-transform",
-          "bg-[color-mix(in_oklab,hsl(var(--background))_85%,hsl(var(--accent))_15%)] shadow-[0_0_25px_-6px_rgba(0,0,0,0.25)]",
-          "dark:bg-[hsl(calc(var(--accent-hue)+12)_40%_12%_/_0.9)]",
-          "dark:shadow-[inset_0_0_25px_rgba(255,255,255,0.04),0_0_18px_rgba(var(--accent-rgb),0.25)]",
-          "dark:border-l-accent/25",
-          "before:absolute before:inset-y-0 before:left-0 before:w-[2px] before:bg-gradient-to-b before:from-accent/20 before:via-accent/60 before:to-accent/20 before:blur-[2px]"
+          "chat-panel fixed right-0 top-[56px] z-[60] flex h-[calc(100vh-56px)] w-[340px] flex-col",
+          "transform-gpu overflow-hidden border-l border-border/70 bg-background shadow-[-10px_0_32px_rgba(0,0,0,0.2)] will-change-transform",
+          "dark:border-l-accent/25 dark:shadow-[-10px_0_30px_rgba(0,0,0,0.38),inset_1px_0_18px_rgba(var(--accent-rgb),0.045)]"
         )}
       >
         {/* Header */}
-        <div className="relative flex items-center justify-between px-4 py-2 bg-gradient-to-r from-background/70 via-background/60 to-background/70 backdrop-blur-md overflow-visible z-40">
+        <div className="chat-panel-header relative z-40 flex min-h-[64px] items-center justify-between overflow-visible border-b px-4">
           {/* Title + Info */}
-          <div className="flex items-center gap-2">
-            <h2 className="relative text-lg font-semibold tracking-wide overflow-hidden">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-accent/80 via-accent/60 to-foreground/90 drop-shadow-[0_0_6px_rgba(0,0,0,0.4)]">
-                ✦ Live Chat
-              </span>
-
-              <span
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent bg-[length:200%_100%]
-                  animate-[sheen_6s_linear_infinite] bg-clip-text text-transparent mix-blend-screen pointer-events-none"
-                aria-hidden="true"
-              >
-                ✦ Live Chat
-              </span>
-            </h2>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-accent/35 bg-accent/10 text-accent shadow-[inset_0_0_12px_rgba(var(--accent-rgb),0.08)]">
+              <MessageCircle className="size-4" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="relative overflow-hidden text-xs font-bold uppercase tracking-[0.18em]">
+                <span className="bg-gradient-to-r from-accent/80 via-accent/60 to-foreground/90 bg-clip-text text-transparent drop-shadow-[0_0_6px_rgba(0,0,0,0.4)]">
+                  Live chat
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 animate-[sheen_6s_linear_infinite] bg-gradient-to-r from-transparent via-white/50 to-transparent bg-[length:200%_100%] bg-clip-text text-transparent mix-blend-screen"
+                >
+                  Live chat
+                </span>
+              </h2>
+              <p className="mt-1 text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-accent/65">
+                {messages.length} message{messages.length === 1 ? "" : "s"} ·
+                48h history
+              </p>
+            </div>
 
             {/* Info tooltip icon */}
-            <div className="relative group">
-              <div
-                className="inline-flex items-center justify-center w-2 h-2 mt-3
-                   text-accent/70 bg-background/60 backdrop-blur-sm cursor-help hover:text-accent transition-colors duration-200"
+            <div className="group relative">
+              <button
+                type="button"
+                aria-label="About chat history"
+                className="inline-flex size-6 cursor-help items-center justify-center rounded-md text-accent/55 transition-colors hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/60"
               >
-                <Info
-                  className="w-3.5 h-3.5 block flex-shrink-0"
-                  strokeWidth={1.8}
-                />
-              </div>
+                <Info className="block size-3.5 shrink-0" strokeWidth={1.8} />
+              </button>
 
               {/* Tooltip box */}
-              <div
-                className="absolute top-full mt-1 left-1/2 -translate-x-1/2 w-max max-w-[240px]
-                 text-[10px] text-foreground/90 bg-background/95 border border-border/60 rounded-md px-2 py-1
-                 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300
-                 shadow-[0_0_8px_rgba(0,0,0,0.15)] backdrop-blur-sm z-[999] text-center"
-              >
+              <div className="pointer-events-none absolute right-0 top-full z-[999] mt-1 w-max max-w-[240px] rounded-lg border border-accent/30 bg-background px-3 py-2 text-center text-[0.62rem] leading-relaxed text-foreground/85 opacity-0 shadow-[0_8px_24px_rgba(0,0,0,0.24)] transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
                 <div>Only the most recent 100 messages are available</div>
-                <div className="my-1 h-px w-3/4 mx-auto bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
+                <div className="mx-auto my-1.5 h-px w-3/4 bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
                 <div>
                   Any messages older than 48 hours are automatically removed
                 </div>
@@ -376,11 +376,12 @@ export const ChatPanel: React.FC<{
 
           {/* Close button */}
           <button
+            type="button"
+            aria-label="Close chat"
             onClick={onClose}
-            className="relative text-muted-foreground hover:text-accent transition hover:rotate-90 duration-200
-              before:absolute before:inset-[-6px] before:content-[''] before:cursor-pointer"
+            className="relative flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/60"
           >
-            ✕
+            <X className="size-4" aria-hidden="true" />
           </button>
         </div>
 
@@ -389,15 +390,9 @@ export const ChatPanel: React.FC<{
           ref={scrollRef}
           onScroll={handleScroll}
           className={cn(
-            "flex-1 overflow-y-auto overflow-x-hidden relative px-4 py-5 space-y-4 text-sm scroll-anchoring-fix",
+            "chat-panel-messages scroll-anchoring-fix relative flex-1 space-y-4 overflow-y-auto overflow-x-hidden px-4 py-5 text-sm",
             "scrollbar-thin scrollbar-thumb-accent/40 scrollbar-track-transparent",
-            "bg-gradient-to-b from-background/70 via-background/55 to-background/75 backdrop-blur-md border-t border-border/50",
-            "shadow-[inset_0_2px_8px_rgba(0,0,0,0.15)]",
-            "dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05),_inset_0_-1px_6px_rgba(255,255,255,0.03)]",
-            "dark:bg-gradient-to-b dark:from-[hsl(var(--background)_/_0.9)] dark:via-[hsl(var(--background)_/_0.7)] dark:to-[hsl(var(--background)_/_0.95)]",
-            "dark:after:content-[''] dark:after:absolute dark:after:inset-0 dark:after:bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.04)_0%,transparent_70%)] dark:after:pointer-events-none",
-            "dark:before:absolute dark:before:inset-0 dark:before:bg-[radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.03)_0%,transparent_70%)] dark:before:pointer-events-none",
-            "before:absolute before:top-0 before:left-0 before:w-full before:h-[1px] before:bg-gradient-to-r before:from-transparent before:via-accent/50 before:to-transparent"
+            "shadow-[inset_0_10px_22px_rgba(0,0,0,0.045)]"
           )}
         >
           {messages.length ? (
@@ -444,33 +439,36 @@ export const ChatPanel: React.FC<{
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ type: "spring", stiffness: 140, damping: 18 }}
                   className={cn(
-                    "flex items-end gap-2",
+                    "flex items-end gap-2.5",
                     isSelf ? "justify-end" : "justify-start"
                   )}
                 >
                   {!isSelf && (
                     <div
                       className={cn(
-                        "flex-shrink-0 w-8 h-8 rounded-full border flex items-center justify-center text-xs font-semibold",
-                        "shadow-[0_0_6px_rgba(0,0,0,0.25)] dark:shadow-[0_0_6px_rgba(255,255,255,0.1)]",
-                        "bg-accent/25 border-accent/40",
-                        "text-[color:hsl(var(--foreground-soft))] dark:text-[color:hsl(var(--accent-foreground))]"
+                        "chat-panel-avatar flex size-8 shrink-0 items-center justify-center rounded-lg border text-[0.66rem] font-bold uppercase",
+                        "border-accent/35 bg-accent/10 text-accent shadow-[inset_0_0_12px_rgba(var(--accent-rgb),0.1)]"
                       )}
                     >
                       {initials}
                     </div>
                   )}
 
-                  <div className={cn("flex flex-col", isSelf && "items-end")}>
+                  <div
+                    className={cn(
+                      "flex flex-col",
+                      isSelf ? "items-end" : "items-start"
+                    )}
+                  >
                     <div
                       className={cn(
-                        "px-4 py-2.5 rounded-2xl leading-relaxed backdrop-blur-[3px] border transition-all duration-1000 ease-out",
+                        "chat-panel-bubble rounded-xl border px-3.5 py-2.5 leading-relaxed transition-all duration-700 ease-out",
                         isSelf
-                          ? "bg-accent/45 dark:bg-accent/25 border-accent/40 text-[color:hsl(var(--foreground))] dark:text-[color:hsl(var(--foreground))]"
-                          : "bg-background/45 dark:bg-background/25 border-border text-[color:hsl(var(--foreground))] dark:text-[color:hsl(var(--foreground))]",
+                          ? "chat-panel-bubble-self border-accent/45 text-accent-foreground"
+                          : "chat-panel-bubble-peer text-foreground",
                         !isSelf &&
                           isFresh &&
-                          "ring-2 ring-accent/70 bg-accent/15 shadow-[0_0_18px_rgba(var(--accent-rgb),0.45)]",
+                          "ring-1 ring-accent/65 shadow-[0_0_16px_rgba(var(--accent-rgb),0.26)]",
                         isEmojiOnly &&
                           "bg-transparent border-none shadow-none p-0 leading-none text-[3rem] sm:text-[3.5rem] md:text-[4rem]"
                       )}
@@ -501,31 +499,25 @@ export const ChatPanel: React.FC<{
 
                     <div
                       className={cn(
-                        "mt-1 tracking-tight flex items-center gap-1 transition-all duration-1000 ease-out",
+                        "mt-1.5 flex items-center gap-1.5 text-[0.55rem] font-semibold uppercase tracking-[0.1em] transition-all duration-700 ease-out",
                         isSelf
-                          ? "flex-row-reverse text-accent-foreground/50"
+                          ? "flex-row-reverse text-accent/60"
                           : isFresh
-                          ? "text-accent drop-shadow-[0_0_6px_rgba(var(--accent-rgb),0.7)]"
-                          : "text-muted-foreground/60"
+                          ? "text-accent drop-shadow-[0_0_5px_rgba(var(--accent-rgb),0.45)]"
+                          : "text-muted-foreground/65"
                       )}
                     >
-                      <span className="text-foreground/75 text-[12px]">
-                        {msg.username}
-                      </span>
-                      <span className="text-foreground/30 text-[10px]">•</span>
-                      <span className="text-foreground/50 text-[10px]">
-                        {time}
-                      </span>
+                      <span className="text-foreground/75">{msg.username}</span>
+                      <span className="text-accent/35">·</span>
+                      <span className="text-muted-foreground/75">{time}</span>
                     </div>
                   </div>
 
                   {isSelf && (
                     <div
                       className={cn(
-                        "flex-shrink-0 w-8 h-8 rounded-full border flex items-center justify-center text-xs font-semibold",
-                        "shadow-[0_0_6px_rgba(0,0,0,0.25)] dark:shadow-[0_0_6px_rgba(255,255,255,0.1)]",
-                        "bg-accent/25 border-accent/40",
-                        "text-[color:hsl(var(--foreground-soft))] dark:text-[color:hsl(var(--accent-foreground))]"
+                        "chat-panel-avatar flex size-8 shrink-0 items-center justify-center rounded-lg border text-[0.66rem] font-bold uppercase",
+                        "border-accent/35 bg-accent/10 text-accent shadow-[inset_0_0_12px_rgba(var(--accent-rgb),0.1)]"
                       )}
                     >
                       {initials}
@@ -535,8 +527,18 @@ export const ChatPanel: React.FC<{
               );
             })
           ) : (
-            <div className="text-center text-muted-foreground/70 text-xs mt-10 italic">
-              No messages yet. Start the conversation.
+            <div className="flex min-h-full items-start justify-center pt-8 text-center">
+              <div className="chat-panel-empty w-full rounded-xl border px-5 py-6">
+                <span className="mx-auto flex size-10 items-center justify-center rounded-xl border border-accent/30 bg-accent/10 text-accent">
+                  <MessageCircle className="size-5" aria-hidden="true" />
+                </span>
+                <p className="mt-3 text-[0.64rem] font-bold uppercase tracking-[0.16em] text-accent/80">
+                  Room conversation
+                </p>
+                <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                  No messages yet. Start the conversation.
+                </p>
+              </div>
             </div>
           )}
 
@@ -563,11 +565,11 @@ export const ChatPanel: React.FC<{
                 opacity: { duration: 0.3 }
               }}
               className={cn(
-                "ml-auto mr-3 mt-2 flex items-center gap-1 px-3 py-1.5 rounded-full",
-                "text-xs font-semibold tracking-wide backdrop-blur-md border shadow-md transition-all duration-300",
+                "ml-auto mr-3 mt-2 flex items-center gap-1 rounded-full px-3 py-1.5",
+                "border text-[0.6rem] font-bold uppercase tracking-[0.12em] shadow-md transition-all duration-300",
                 hasNewMessages
-                  ? "border-accent bg-accent/70 text-[color:hsl(var(--accent-foreground))] shadow-[0_0_12px_rgba(var(--accent-rgb),0.6)]"
-                  : "border-accent/40 bg-[color-mix(in_oklab,hsl(var(--accent))_35%,hsl(var(--background))_65%)] text-[color:hsl(var(--accent-foreground))]",
+                  ? "border-accent bg-accent text-accent-foreground shadow-[0_0_12px_rgba(var(--accent-rgb),0.35)]"
+                  : "border-accent/40 bg-background text-accent",
                 showScrollButton
                   ? "sticky bottom-0 -mr-3 pointer-events-auto"
                   : "absolute -mr-3 [right:200vw] pointer-events-none"
@@ -590,8 +592,7 @@ export const ChatPanel: React.FC<{
         </div>
 
         {/* Input area */}
-        <div className="relative border-t border-border/60 bg-gradient-to-t from-background/95 via-background/85 to-background/90 backdrop-blur-2xl p-2 shadow-[0_-4px_14px_rgba(0,0,0,0.25)] dark:shadow-[0_-4px_10px_rgba(255,255,255,0.05)] chat-input-container">
-          <div className="absolute -top-px left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-accent/40 to-transparent blur-[1px]" />
+        <div className="chat-input-container relative p-3">
           {visible && <ChatInput onSend={handleSendChat} inPanel />}
         </div>
       </motion.aside>

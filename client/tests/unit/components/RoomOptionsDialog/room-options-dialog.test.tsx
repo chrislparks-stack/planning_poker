@@ -75,6 +75,8 @@ const room: Room = {
   revealStage: "idle",
   roomOwnerId: "user-1",
   showVoteChanges: true,
+  voteHistory: [],
+  voteQueue: [],
   users: []
 };
 

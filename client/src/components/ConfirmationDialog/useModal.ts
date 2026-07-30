@@ -8,8 +8,7 @@ import {
   useMemo
 } from "react";
 
-import { ConfirmationDialogContext } from "@/components";
-
+import { ConfirmationDialogContext } from "./ConfirmationDialogContext";
 import { ModalOptions } from "./types";
 
 export const useModal = (

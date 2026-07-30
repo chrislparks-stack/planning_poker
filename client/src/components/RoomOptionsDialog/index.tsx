@@ -35,6 +35,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Room } from "@/types";
+import { updateStoredRoom } from "@/utils";
 
 interface RoomOptionsDialogProps {
   open: boolean;
@@ -128,7 +129,6 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
     useToggleCensorVotesMutation();
   const [toggleLockVotes, { loading: lockVotesLoading }] =
     useToggleLockVotesMutation();
-
   const [roomId, setRoomId] = useState("");
   const [roomName, setRoomName] = useState("");
   const [originalName, setOriginalName] = useState("");
@@ -192,16 +192,7 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
 
     await renameRoom({ variables: { roomId, name: trimmed } });
 
-    try {
-      const stored = localStorage.getItem("Room");
-      if (stored) {
-        const roomData = JSON.parse(stored);
-        roomData.RoomName = trimmed;
-        localStorage.setItem("Room", JSON.stringify(roomData));
-      }
-    } catch {
-      console.warn("Failed updating room name in localStorage");
-    }
+    updateStoredRoom(roomId, { RoomName: trimmed });
 
     setOriginalName(trimmed);
     setRoomName(trimmed);
@@ -223,16 +214,7 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
       }
     });
 
-    try {
-      const stored = localStorage.getItem("Room");
-      if (stored) {
-        const roomData = JSON.parse(stored);
-        roomData.Cards = sorted;
-        localStorage.setItem("Room", JSON.stringify(roomData));
-      }
-    } catch {
-      console.warn("Failed updating Room in localStorage");
-    }
+    updateStoredRoom(roomId, { Cards: sorted });
 
     setOriginalCards(sorted);
     toast({
@@ -297,9 +279,9 @@ export const RoomOptionsDialog: FC<RoomOptionsDialogProps> = ({
     },
     {
       id: "confirm-new-game",
-      title: "Confirm before new game",
+      title: "Confirm before starting votes",
       description:
-        "Ask for confirmation before the current votes are cleared and a new round begins.",
+        "Ask for confirmation before starting a new game, revote, or the next queued issue.",
       checked: confirmNewGame,
       disabled: confirmLoading,
       icon: RotateCcw,

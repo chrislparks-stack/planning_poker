@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { beforeAll, vi } from "vitest";
 
-import { render, screen, userEvent } from "@/test";
+import { render, screen, userEvent } from "@test";
 
 import { CardFan } from "./card-fan";
 

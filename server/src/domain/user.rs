@@ -45,7 +45,7 @@ impl From<UserInput> for User {
         let last_card_value = input
             .last_card_picked
             .as_deref()
-            .and_then(|s| crate::domain::user::parse_card_to_number(s));
+            .and_then(crate::domain::user::parse_card_to_number);
 
         User {
             id: input.id,

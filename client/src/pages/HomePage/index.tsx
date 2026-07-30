@@ -4,8 +4,7 @@ import type { Variants } from "framer-motion";
 import { ArrowDownToLine } from "lucide-react";
 import { FC, useEffect, useMemo, useRef, useState } from "react";
 
-import { useCreateRoomMutation, useGetRoomQuery } from "@/api";
-import SummitLogo from "@/assets/SummitLogo.png";
+import { useCreateRoomMutation, useGetRoomLazyQuery } from "@/api";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
 import { Scene } from "@/components/ui/scene.tsx";
@@ -17,6 +16,14 @@ import {
   TooltipProvider
 } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import {
+  getAllStoredRooms,
+  getLastStoredRoom,
+  isRoomStorageKey,
+  removeStoredRoom,
+  setStoredRoom,
+  type StoredRoom
+} from "@/utils";
 import { useTouchInput } from "@/utils/mobileUtils.tsx";
 
 const beginClimbVariants: Variants = {
@@ -191,16 +198,6 @@ export const HomePage: FC = () => {
   });
 
   // ===== Local stored data =====
-  const storedRoom = useMemo(() => {
-    try {
-      const raw = localStorage.getItem("Room");
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (parsed?.RoomID && Array.isArray(parsed?.Cards)) return parsed;
-    } catch {}
-    return null;
-  }, []);
-
   const storedUser = useMemo(() => {
     try {
       const raw = localStorage.getItem("user");
@@ -211,40 +208,105 @@ export const HomePage: FC = () => {
     return null;
   }, []);
 
-  // ===== Verify room exists on server =====
-  const {
-    data,
-    loading: roomCheckLoading,
-    error: roomError
-  } = useGetRoomQuery({
-    variables: { roomId: storedRoom?.RoomID ?? "" },
-    skip: !storedRoom?.RoomID,
-    fetchPolicy: "network-only"
-  });
-
+  const [storedRoom, setStoredRoomState] = useState<StoredRoom | null>(() =>
+    getLastStoredRoom()
+  );
   const [validRoom, setValidRoom] = useState(false);
+  const [roomCheckLoading, setRoomCheckLoading] = useState(
+    () => getAllStoredRooms().length > 0
+  );
+  const [roomStorageRevision, setRoomStorageRevision] = useState(0);
+  const [getRoom] = useGetRoomLazyQuery();
 
   useEffect(() => {
-    if (!storedRoom?.RoomID) return;
+    const handleRoomStorageChange = (event: StorageEvent) => {
+      if (isRoomStorageKey(event.key)) {
+        setRoomStorageRevision((revision) => revision + 1);
+      }
+    };
 
-    if (roomError) {
-      console.warn("Room existence check failed:", roomError.message);
-      setValidRoom(false);
-      return;
-    }
+    window.addEventListener("storage", handleRoomStorageChange);
+    return () => window.removeEventListener("storage", handleRoomStorageChange);
+  }, []);
 
-    // Room exists if the query returned data
-    if (data?.roomById?.id) {
-      setValidRoom(true);
-    } else if (!roomCheckLoading && !data?.roomById?.id) {
+  useEffect(() => {
+    let cancelled = false;
+
+    const validateStoredRooms = async () => {
+      const candidates = getAllStoredRooms();
+
+      if (candidates.length === 0) {
+        setStoredRoomState(null);
+        setValidRoom(false);
+        setRoomCheckLoading(false);
+        return;
+      }
+
+      setRoomCheckLoading(true);
+
+      for (const candidate of candidates) {
+        try {
+          const result = await getRoom({
+            variables: { roomId: candidate.RoomID },
+            fetchPolicy: "network-only"
+          });
+          const room = result.data?.roomById;
+
+          if (!room) {
+            removeStoredRoom(candidate.RoomID);
+            continue;
+          }
+
+          if (cancelled) return;
+
+          const roomUser = room.users.find(
+            (candidateUser) => candidateUser.id === storedUser?.id
+          );
+          const refreshedRoom: StoredRoom = {
+            RoomID: room.id,
+            Cards: room.deck.cards,
+            RoomName: room.name ?? null,
+            RoomOwner: room.roomOwnerId,
+            Username:
+              roomUser?.username ?? candidate.Username ?? storedUser?.username,
+            LastActiveAt: candidate.LastActiveAt
+          };
+
+          setStoredRoom(refreshedRoom, false);
+          setStoredRoomState(refreshedRoom);
+          setValidRoom(true);
+          setRoomCheckLoading(false);
+          return;
+        } catch (error) {
+          console.warn(
+            `Room existence check failed for ${candidate.RoomID}:`,
+            error
+          );
+        }
+      }
+
+      if (!cancelled) {
+        setStoredRoomState(null);
+        setValidRoom(false);
+        setRoomCheckLoading(false);
+      }
+    };
+
+    void validateStoredRooms();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [getRoom, roomStorageRevision, storedUser?.id, storedUser?.username]);
+
+  useEffect(() => {
+    if (!storedRoom?.RoomID) {
       setValidRoom(false);
     }
-  }, [data, roomError, roomCheckLoading, storedRoom?.RoomID, loading]);
+  }, [storedRoom?.RoomID]);
 
   // ===== Handlers =====
   function onCreateRoom() {
-    localStorage.removeItem("Room");
-    localStorage.removeItem("user");
     createRoomMutation({ variables: { cards: [] } });
   }
 
@@ -326,8 +388,11 @@ export const HomePage: FC = () => {
                     </span>
 
                     <img
-                      src={SummitLogo}
+                      src="/SummitLogo.webp"
                       alt="Summit"
+                      width={828}
+                      height={388}
+                      fetchPriority="high"
                       className="w-[clamp(200px,50svh,600px)] h-auto"
                     />
                   </div>
@@ -560,7 +625,7 @@ export const HomePage: FC = () => {
                     >
                       <div className="flex flex-col space-y-2">
                         <p className="text-[0.75rem] uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                          Last Session
+                          Most Recent Activity
                         </p>
 
                         <p className="font-semibold text-black dark:text-white text-base leading-tight truncate">
@@ -568,9 +633,11 @@ export const HomePage: FC = () => {
                         </p>
 
                         <div className="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400">
-                          <span>Last joined as</span>
+                          <span>Joined as</span>
                           <span className="text-accent font-medium">
-                            {storedUser?.username || "Unknown User"}
+                            {storedRoom?.Username ||
+                              storedUser?.username ||
+                              "Unknown User"}
                           </span>
                           {storedRoom?.RoomOwner === storedUser?.id && (
                             <span className="text-[0.65rem] px-2 py-0.5 rounded-md bg-accent text-white font-medium">

@@ -1,9 +1,16 @@
 import { FieldPolicy, FieldReadFunction, TypePolicies, TypePolicy } from '@apollo/client/cache';
-export type ArchivedPlayerVoteKeySpecifier = ('card' | 'userId' | 'username' | 'value' | ArchivedPlayerVoteKeySpecifier)[];
+export type ArchivedPlayerVoteKeySpecifier = ('card' | 'selections' | 'userId' | 'username' | 'value' | ArchivedPlayerVoteKeySpecifier)[];
 export type ArchivedPlayerVoteFieldPolicy = {
 	card?: FieldPolicy<any> | FieldReadFunction<any>,
+	selections?: FieldPolicy<any> | FieldReadFunction<any>,
 	userId?: FieldPolicy<any> | FieldReadFunction<any>,
 	username?: FieldPolicy<any> | FieldReadFunction<any>,
+	value?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type ArchivedVoteSelectionKeySpecifier = ('card' | 'phase' | 'value' | ArchivedVoteSelectionKeySpecifier)[];
+export type ArchivedVoteSelectionFieldPolicy = {
+	card?: FieldPolicy<any> | FieldReadFunction<any>,
+	phase?: FieldPolicy<any> | FieldReadFunction<any>,
 	value?: FieldPolicy<any> | FieldReadFunction<any>
 };
 export type ChatMessageKeySpecifier = ('content' | 'contentType' | 'formattedContent' | 'id' | 'position' | 'roomId' | 'timestamp' | 'userId' | 'username' | ChatMessageKeySpecifier)[];
@@ -35,8 +42,9 @@ export type GameFieldPolicy = {
 	id?: FieldPolicy<any> | FieldReadFunction<any>,
 	table?: FieldPolicy<any> | FieldReadFunction<any>
 };
-export type MutationRootKeySpecifier = ('banUser' | 'cancelRevealCountdown' | 'createRoom' | 'createUser' | 'editUser' | 'joinRoom' | 'kickUser' | 'logout' | 'markChatSeen' | 'pickCard' | 'renameRoom' | 'resetGame' | 'sendChatMessage' | 'sendReaction' | 'setRoomOwner' | 'setVoteUncensored' | 'showCards' | 'startRevealCountdown' | 'startRevote' | 'toggleCensorVotes' | 'toggleConfirmNewGame' | 'toggleCountdownOption' | 'toggleLockVotes' | 'toggleShowVoteChanges' | 'unbanUser' | 'updateDeck' | MutationRootKeySpecifier)[];
+export type MutationRootKeySpecifier = ('addVoteQueueItem' | 'banUser' | 'cancelRevealCountdown' | 'createRoom' | 'createUser' | 'editUser' | 'joinRoom' | 'kickUser' | 'leaveRoom' | 'logout' | 'markChatSeen' | 'pickCard' | 'removeVoteQueueItem' | 'renameRoom' | 'renameVoteQueueItem' | 'reorderVoteQueueItem' | 'resetGame' | 'returnCurrentVoteQueueItem' | 'sendChatMessage' | 'sendReaction' | 'setCurrentIssueTitle' | 'setRoomOwner' | 'setVoteUncensored' | 'showCards' | 'startNextQueueItem' | 'startRevealCountdown' | 'startRevote' | 'startVoteQueueItem' | 'toggleCensorVotes' | 'toggleConfirmNewGame' | 'toggleCountdownOption' | 'toggleLockVotes' | 'toggleShowVoteChanges' | 'unbanUser' | 'updateDeck' | MutationRootKeySpecifier)[];
 export type MutationRootFieldPolicy = {
+	addVoteQueueItem?: FieldPolicy<any> | FieldReadFunction<any>,
 	banUser?: FieldPolicy<any> | FieldReadFunction<any>,
 	cancelRevealCountdown?: FieldPolicy<any> | FieldReadFunction<any>,
 	createRoom?: FieldPolicy<any> | FieldReadFunction<any>,
@@ -44,18 +52,26 @@ export type MutationRootFieldPolicy = {
 	editUser?: FieldPolicy<any> | FieldReadFunction<any>,
 	joinRoom?: FieldPolicy<any> | FieldReadFunction<any>,
 	kickUser?: FieldPolicy<any> | FieldReadFunction<any>,
+	leaveRoom?: FieldPolicy<any> | FieldReadFunction<any>,
 	logout?: FieldPolicy<any> | FieldReadFunction<any>,
 	markChatSeen?: FieldPolicy<any> | FieldReadFunction<any>,
 	pickCard?: FieldPolicy<any> | FieldReadFunction<any>,
+	removeVoteQueueItem?: FieldPolicy<any> | FieldReadFunction<any>,
 	renameRoom?: FieldPolicy<any> | FieldReadFunction<any>,
+	renameVoteQueueItem?: FieldPolicy<any> | FieldReadFunction<any>,
+	reorderVoteQueueItem?: FieldPolicy<any> | FieldReadFunction<any>,
 	resetGame?: FieldPolicy<any> | FieldReadFunction<any>,
+	returnCurrentVoteQueueItem?: FieldPolicy<any> | FieldReadFunction<any>,
 	sendChatMessage?: FieldPolicy<any> | FieldReadFunction<any>,
 	sendReaction?: FieldPolicy<any> | FieldReadFunction<any>,
+	setCurrentIssueTitle?: FieldPolicy<any> | FieldReadFunction<any>,
 	setRoomOwner?: FieldPolicy<any> | FieldReadFunction<any>,
 	setVoteUncensored?: FieldPolicy<any> | FieldReadFunction<any>,
 	showCards?: FieldPolicy<any> | FieldReadFunction<any>,
+	startNextQueueItem?: FieldPolicy<any> | FieldReadFunction<any>,
 	startRevealCountdown?: FieldPolicy<any> | FieldReadFunction<any>,
 	startRevote?: FieldPolicy<any> | FieldReadFunction<any>,
+	startVoteQueueItem?: FieldPolicy<any> | FieldReadFunction<any>,
 	toggleCensorVotes?: FieldPolicy<any> | FieldReadFunction<any>,
 	toggleConfirmNewGame?: FieldPolicy<any> | FieldReadFunction<any>,
 	toggleCountdownOption?: FieldPolicy<any> | FieldReadFunction<any>,
@@ -70,7 +86,7 @@ export type QueryRootFieldPolicy = {
 	rooms?: FieldPolicy<any> | FieldReadFunction<any>,
 	userRooms?: FieldPolicy<any> | FieldReadFunction<any>
 };
-export type RoomKeySpecifier = ('bannedUsers' | 'censorVotes' | 'chatHistory' | 'confirmNewGame' | 'countdownEnabled' | 'countdownValue' | 'deck' | 'game' | 'hasUnreadChat' | 'id' | 'isGameOver' | 'lockVotes' | 'name' | 'previousRound' | 'revealStage' | 'roomOwnerId' | 'showVoteChanges' | 'users' | RoomKeySpecifier)[];
+export type RoomKeySpecifier = ('bannedUsers' | 'censorVotes' | 'chatHistory' | 'confirmNewGame' | 'countdownEnabled' | 'countdownValue' | 'currentIssueTitle' | 'currentQueueItemId' | 'deck' | 'game' | 'hasUnreadChat' | 'id' | 'isGameOver' | 'lockVotes' | 'name' | 'previousRound' | 'revealStage' | 'roomOwnerId' | 'showVoteChanges' | 'unreadChatCount' | 'users' | 'voteHistory' | 'voteHistoryRevision' | 'voteQueue' | RoomKeySpecifier)[];
 export type RoomFieldPolicy = {
 	bannedUsers?: FieldPolicy<any> | FieldReadFunction<any>,
 	censorVotes?: FieldPolicy<any> | FieldReadFunction<any>,
@@ -78,6 +94,8 @@ export type RoomFieldPolicy = {
 	confirmNewGame?: FieldPolicy<any> | FieldReadFunction<any>,
 	countdownEnabled?: FieldPolicy<any> | FieldReadFunction<any>,
 	countdownValue?: FieldPolicy<any> | FieldReadFunction<any>,
+	currentIssueTitle?: FieldPolicy<any> | FieldReadFunction<any>,
+	currentQueueItemId?: FieldPolicy<any> | FieldReadFunction<any>,
 	deck?: FieldPolicy<any> | FieldReadFunction<any>,
 	game?: FieldPolicy<any> | FieldReadFunction<any>,
 	hasUnreadChat?: FieldPolicy<any> | FieldReadFunction<any>,
@@ -89,7 +107,11 @@ export type RoomFieldPolicy = {
 	revealStage?: FieldPolicy<any> | FieldReadFunction<any>,
 	roomOwnerId?: FieldPolicy<any> | FieldReadFunction<any>,
 	showVoteChanges?: FieldPolicy<any> | FieldReadFunction<any>,
-	users?: FieldPolicy<any> | FieldReadFunction<any>
+	unreadChatCount?: FieldPolicy<any> | FieldReadFunction<any>,
+	users?: FieldPolicy<any> | FieldReadFunction<any>,
+	voteHistory?: FieldPolicy<any> | FieldReadFunction<any>,
+	voteHistoryRevision?: FieldPolicy<any> | FieldReadFunction<any>,
+	voteQueue?: FieldPolicy<any> | FieldReadFunction<any>
 };
 export type RoomEventKeySpecifier = ('eventType' | 'room' | 'roomId' | 'targetUserId' | RoomEventKeySpecifier)[];
 export type RoomEventFieldPolicy = {
@@ -105,10 +127,12 @@ export type RoomReactionFieldPolicy = {
 	roomId?: FieldPolicy<any> | FieldReadFunction<any>,
 	userId?: FieldPolicy<any> | FieldReadFunction<any>
 };
-export type RoundVoteHistoryKeySpecifier = ('completedAt' | 'id' | 'roundNumber' | 'votes' | RoundVoteHistoryKeySpecifier)[];
+export type RoundVoteHistoryKeySpecifier = ('completedAt' | 'id' | 'issueTitle' | 'revoteCount' | 'roundNumber' | 'votes' | RoundVoteHistoryKeySpecifier)[];
 export type RoundVoteHistoryFieldPolicy = {
 	completedAt?: FieldPolicy<any> | FieldReadFunction<any>,
 	id?: FieldPolicy<any> | FieldReadFunction<any>,
+	issueTitle?: FieldPolicy<any> | FieldReadFunction<any>,
+	revoteCount?: FieldPolicy<any> | FieldReadFunction<any>,
 	roundNumber?: FieldPolicy<any> | FieldReadFunction<any>,
 	votes?: FieldPolicy<any> | FieldReadFunction<any>
 };
@@ -136,10 +160,19 @@ export type UserCardFieldPolicy = {
 	card?: FieldPolicy<any> | FieldReadFunction<any>,
 	userId?: FieldPolicy<any> | FieldReadFunction<any>
 };
+export type VoteQueueItemKeySpecifier = ('id' | 'title' | VoteQueueItemKeySpecifier)[];
+export type VoteQueueItemFieldPolicy = {
+	id?: FieldPolicy<any> | FieldReadFunction<any>,
+	title?: FieldPolicy<any> | FieldReadFunction<any>
+};
 export type StrictTypedTypePolicies = {
 	ArchivedPlayerVote?: Omit<TypePolicy, "fields" | "keyFields"> & {
 		keyFields?: false | ArchivedPlayerVoteKeySpecifier | (() => undefined | ArchivedPlayerVoteKeySpecifier),
 		fields?: ArchivedPlayerVoteFieldPolicy,
+	},
+	ArchivedVoteSelection?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | ArchivedVoteSelectionKeySpecifier | (() => undefined | ArchivedVoteSelectionKeySpecifier),
+		fields?: ArchivedVoteSelectionFieldPolicy,
 	},
 	ChatMessage?: Omit<TypePolicy, "fields" | "keyFields"> & {
 		keyFields?: false | ChatMessageKeySpecifier | (() => undefined | ChatMessageKeySpecifier),
@@ -192,6 +225,10 @@ export type StrictTypedTypePolicies = {
 	UserCard?: Omit<TypePolicy, "fields" | "keyFields"> & {
 		keyFields?: false | UserCardKeySpecifier | (() => undefined | UserCardKeySpecifier),
 		fields?: UserCardFieldPolicy,
+	},
+	VoteQueueItem?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | VoteQueueItemKeySpecifier | (() => undefined | VoteQueueItemKeySpecifier),
+		fields?: VoteQueueItemFieldPolicy,
 	}
 };
 export type TypedTypePolicies = StrictTypedTypePolicies & TypePolicies;

@@ -32,19 +32,22 @@ test.describe("Room Account Menu Functionality", () => {
     ).toBeVisible();
   });
 
-  test("should allow logging out", async () => {
+  test("should allow leaving the current room", async () => {
     await openMenu(page);
-    await logout(page);
-    await verifyLoggedOut(page);
+    await leaveRoom(page);
+    await verifyLeftRoom(page);
   });
 
-  test("should allow joining room after logout", async () => {
+  test("should allow rejoining a room after leaving", async () => {
+    const roomUrl = page.url();
     await openMenu(page);
-    await logout(page);
-    await verifyLoggedOut(page);
+    await leaveRoom(page);
+    await verifyLeftRoom(page);
 
-    const newUsername = "UserComeBack";
-    await joinRoom(page, newUsername);
+    await page.goto(roomUrl);
+    await expect(
+      page.getByTestId("player").filter({ hasText: "TestUser" })
+    ).toBeVisible();
 
     await openMenu(page);
     await verifyMenuItems(page);
@@ -63,7 +66,9 @@ async function verifyMenuItems(page: Page) {
     page.getByRole("menuitem", { name: "Change Username" })
   ).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Support" })).toBeVisible();
-  await expect(page.getByRole("menuitem", { name: "Logout" })).toBeVisible();
+  await expect(
+    page.getByRole("menuitem", { name: "Leave Room" })
+  ).toBeVisible();
 }
 
 async function changeUsername(page: Page, newUsername: string) {
@@ -78,13 +83,12 @@ async function changeUsername(page: Page, newUsername: string) {
   ).not.toBeVisible();
 }
 
-async function logout(page: Page) {
-  await page.getByRole("menuitem", { name: "Logout" }).click();
-  await expect(page.getByRole("heading", { name: "Sign out" })).toBeVisible();
-  await page.getByRole("button", { name: "Confirm sign out" }).click();
+async function leaveRoom(page: Page) {
+  await page.getByRole("menuitem", { name: "Leave Room" }).click();
+  await expect(page.getByRole("heading", { name: "Leave room" })).toBeVisible();
+  await page.getByRole("button", { name: "Confirm leave room" }).click();
 }
 
-async function verifyLoggedOut(page: Page) {
-  // logging out on a room page reopens the join dialog
-  await expect(page.getByPlaceholder("Enter username")).toBeVisible();
+async function verifyLeftRoom(page: Page) {
+  await expect(page).toHaveURL("http://localhost:5173/");
 }
