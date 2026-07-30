@@ -1,4 +1,6 @@
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -8,8 +10,13 @@ import {
 import type { RefObject } from "react";
 import { createPortal } from "react-dom";
 
-import { ChatInput } from "@/components/ui/chat-input";
 import { cn } from "@/lib/utils";
+
+const ChatInput = lazy(() =>
+  import("@/components/ui/chat-input").then(({ ChatInput: Input }) => ({
+    default: Input
+  }))
+);
 
 type Phase = "idle" | "enter-pre" | "enter" | "exit";
 
@@ -150,13 +157,22 @@ export const ChatInputWrapper = ({
       style={{ left: 0, top: 0, visibility: "hidden" }}
       onAnimationEnd={handleAnimEnd}
     >
-      <ChatInput
-        onSend={handleSend}
-        onClose={handleChildClose}
-        className={animClasses}
-        isLeftSide={isLeftSide}
-        isTopSide={isTopSide}
-      />
+      <Suspense
+        fallback={
+          <div
+            aria-hidden="true"
+            className="h-24 w-[220px] rounded-xl border border-border bg-popover/95"
+          />
+        }
+      >
+        <ChatInput
+          onSend={handleSend}
+          onClose={handleChildClose}
+          className={animClasses}
+          isLeftSide={isLeftSide}
+          isTopSide={isTopSide}
+        />
+      </Suspense>
     </div>,
     document.body
   );

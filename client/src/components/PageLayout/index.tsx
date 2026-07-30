@@ -1,14 +1,27 @@
 import { AnimatePresence } from "framer-motion";
-import { ReactNode, RefObject, useEffect, useRef, useState } from "react";
+import {
+  lazy,
+  ReactNode,
+  RefObject,
+  Suspense,
+  useEffect,
+  useRef,
+  useState
+} from "react";
 
 import { Header } from "@/components/Header";
-import { ChatPanel } from "@/components/ui/chat-panel.tsx";
 import { ChatRevealPrompt } from "@/components/ui/chat-reveal";
 import { ThemeHint } from "@/components/ui/theme-hint.tsx";
 import { useAuth } from "@/contexts";
 import { Room, User } from "@/types";
 import { CardPositionProvider } from "@/utils/cardPositionContext.tsx";
 import { getCookie, setCookie } from "@/utils/cookies.ts";
+
+const ChatPanel = lazy(() =>
+  import("@/components/ui/chat-panel.tsx").then(({ ChatPanel: Panel }) => ({
+    default: Panel
+  }))
+);
 
 export function PageLayout({
   children,
@@ -27,6 +40,7 @@ export function PageLayout({
   const [menuOpen, setMenuOpen] = useState(false);
   const [showThemeHint, setShowThemeHint] = useState(false);
   const [highlightAppearance, setHighlightAppearance] = useState(false);
+  const [chatPanelLoaded, setChatPanelLoaded] = useState(Boolean(showChat));
   const cardRefs = useRef<Record<string, RefObject<HTMLDivElement>>>({});
 
   useEffect(() => {
@@ -74,6 +88,10 @@ export function PageLayout({
     }
   }, [menuOpen, showThemeHint]);
 
+  useEffect(() => {
+    if (showChat) setChatPanelLoaded(true);
+  }, [showChat]);
+
   return (
     <CardPositionProvider cardRefs={cardRefs}>
       <div className="h-dvh flex flex-col">
@@ -104,12 +122,16 @@ export function PageLayout({
         )}
         <main className="flex flex-1 min-h-0 flex-col overflow-hidden relative">
           {children}
-          <ChatPanel
-            room={room}
-            user={room?.users.find((roomUser) => roomUser.id === user?.id)}
-            visible={showChat ?? false}
-            onClose={() => setShowChat?.(false)}
-          />
+          {chatPanelLoaded && (
+            <Suspense fallback={null}>
+              <ChatPanel
+                room={room}
+                user={room?.users.find((roomUser) => roomUser.id === user?.id)}
+                visible={showChat ?? false}
+                onClose={() => setShowChat?.(false)}
+              />
+            </Suspense>
+          )}
         </main>
       </div>
     </CardPositionProvider>

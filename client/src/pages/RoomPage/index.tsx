@@ -1,8 +1,9 @@
 import { useParams, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { validate as validateUUID } from "uuid";
 
 import {
+  useGetRoomVoteHistoryLazyQuery,
   useGetRoomQuery,
   useJoinRoomMutation,
   useRoomEventsSubscription,
@@ -17,7 +18,6 @@ import { Room } from "@/components/Room";
 import { RoomOptionsDialog } from "@/components/RoomOptionsDialog";
 import { StarrySky } from "@/components/StarrySky";
 import { ResultsTag } from "@/components/ui/results-tag.tsx";
-import { VoteDistributionChart } from "@/components/vote-distribution-chart";
 import { VoteSessionPanel } from "@/components/VoteSessionPanel";
 import { useAuth } from "@/contexts";
 import { useBackgroundConfig } from "@/contexts/BackgroundContext.tsx";
@@ -30,6 +30,12 @@ import {
   touchStoredRoom,
   updateStoredRoom
 } from "@/utils";
+
+const VoteDistributionChart = lazy(() =>
+  import("@/components/vote-distribution-chart").then(
+    ({ VoteDistributionChart: Chart }) => ({ default: Chart })
+  )
+);
 
 export function RoomPage() {
   const { roomId } = useParams({ from: "/room/$roomId" });
@@ -57,8 +63,16 @@ export function RoomPage() {
 
   const { data: subscriptionData, error: roomSubscriptionError } =
     useRoomSubscription({
-      variables: { roomId }
+      variables: { roomId, userId: user?.id }
     });
+
+  const [
+    getVoteHistory,
+    { data: voteHistoryData, error: voteHistoryQueryError }
+  ] = useGetRoomVoteHistoryLazyQuery({
+    fetchPolicy: "network-only"
+  });
+  const voteHistoryRevisionRef = useRef<string | null>(null);
 
   const { data: roomEventsData, error: roomEventsError } =
     useRoomEventsSubscription({
@@ -318,9 +332,49 @@ export function RoomPage() {
     }
   }
 
-  const room =
-    subscriptionData?.room ?? roomData?.roomById ?? joinRoomData?.joinRoom;
+  const room = useMemo(() => {
+    const initialRoom = roomData?.roomById ?? joinRoomData?.joinRoom;
+
+    return subscriptionData?.room
+      ? {
+          ...subscriptionData.room,
+          chatHistory: initialRoom?.chatHistory ?? [],
+          voteHistory:
+            (voteHistoryData?.roomById?.id === subscriptionData.room.id
+              ? voteHistoryData.roomById.voteHistory
+              : undefined) ??
+            initialRoom?.voteHistory ??
+            []
+        }
+      : initialRoom;
+  }, [
+    joinRoomData?.joinRoom,
+    roomData?.roomById,
+    subscriptionData?.room,
+    voteHistoryData?.roomById?.id,
+    voteHistoryData?.roomById?.voteHistory
+  ]);
   const hasLoadedRoom = Boolean(room);
+
+  useEffect(() => {
+    const revision = subscriptionData?.room.voteHistoryRevision;
+    if (!revision || voteHistoryRevisionRef.current === revision) return;
+
+    const initialRevision =
+      roomData?.roomById?.voteHistoryRevision ??
+      joinRoomData?.joinRoom.voteHistoryRevision;
+    voteHistoryRevisionRef.current = revision;
+
+    if (revision === initialRevision) return;
+
+    void getVoteHistory({ variables: { roomId } });
+  }, [
+    getVoteHistory,
+    joinRoomData?.joinRoom.voteHistoryRevision,
+    roomData?.roomById?.voteHistoryRevision,
+    roomId,
+    subscriptionData?.room.voteHistoryRevision
+  ]);
 
   useEffect(() => {
     if (!hasLoadedRoom) return;
@@ -466,6 +520,16 @@ export function RoomPage() {
     }
   }, [roomEventsError, toast]);
 
+  useEffect(() => {
+    if (!redirectingRef.current && voteHistoryQueryError) {
+      toast({
+        title: "Error",
+        description: `Vote history: ${voteHistoryQueryError.message}`,
+        variant: "destructive"
+      });
+    }
+  }, [voteHistoryQueryError, toast]);
+
   return (
     <div>
       {!room ? (
@@ -527,7 +591,16 @@ export function RoomPage() {
                                 background.enabled && background.id === "starry"
                               }
                             />
-                            <VoteDistributionChart room={room} />
+                            <Suspense
+                              fallback={
+                                <div
+                                  aria-hidden="true"
+                                  className="min-h-[184px] min-w-[220px] max-w-[520px] flex-1"
+                                />
+                              }
+                            >
+                              <VoteDistributionChart room={room} />
+                            </Suspense>
                           </div>
                         )}
                       </div>

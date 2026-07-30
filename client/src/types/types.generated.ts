@@ -375,14 +375,21 @@ export type Room = {
   revealStage?: Maybe<Scalars['String']['output']>;
   roomOwnerId?: Maybe<Scalars['UUID']['output']>;
   showVoteChanges: Scalars['Boolean']['output'];
+  unreadChatCount?: Maybe<Scalars['Int']['output']>;
   users: Array<User>;
   voteHistory: Array<RoundVoteHistory>;
+  voteHistoryRevision?: Maybe<Scalars['String']['output']>;
   voteQueue: Array<VoteQueueItem>;
 };
 
 
 export type RoomHasUnreadChatArgs = {
   userId: Scalars['UUID']['input'];
+};
+
+
+export type RoomUnreadChatCountArgs = {
+  userId?: InputMaybe<Scalars['UUID']['input']>;
 };
 
 export type RoomEvent = {

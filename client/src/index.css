@@ -948,6 +948,20 @@ body.dialog-open .chat-panel {
   -webkit-backdrop-filter: blur(18px) saturate(135%);
 }
 
+.chat-emoji-picker-viewport > div {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+}
+
+.chat-emoji-picker-viewport > div > * {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+}
+
 .chat-panel-bubble {
   backdrop-filter: blur(16px) saturate(145%);
   -webkit-backdrop-filter: blur(16px) saturate(145%);
@@ -1431,16 +1445,30 @@ body.dialog-open .chat-panel {
     border-radius: 50%;
     background-color: white;
     opacity: 1;
-    will-change: transform, opacity;
   }
 
   .blink {
     animation: blink ease-in-out infinite;
+    will-change: opacity;
+  }
+
+  .sky-paused .blink,
+  .sky-paused .celestial-rotation,
+  .sky-paused .shooting-star {
+    animation-play-state: paused;
   }
 
   @keyframes blink {
     50% {
       opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sky .blink,
+    .sky .celestial-rotation,
+    .sky .shooting-star {
+      animation-play-state: paused;
     }
   }
 

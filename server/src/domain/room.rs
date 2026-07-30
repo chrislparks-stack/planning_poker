@@ -575,20 +575,43 @@ impl Room {
     }
 
     pub fn has_unread_chat_internal(&self, user_id: EntityId) -> bool {
+        self.unread_chat_count_internal(user_id) > 0
+    }
+
+    pub fn unread_chat_count_internal(&self, user_id: EntityId) -> i32 {
         let user = match self.users.iter().find(|u| u.id == user_id) {
             Some(u) => u,
-            None => return false,
+            None => return 0,
         };
 
-        let latest_message = match self.chat_history.last() {
-            Some(msg) => msg,
-            None => return false,
-        };
+        let start_index = user
+            .last_seen_chat_message_id
+            .and_then(|seen_id| {
+                self.chat_history
+                    .iter()
+                    .position(|message| message.id == seen_id)
+            })
+            .map_or(0, |index| index + 1);
 
-        match user.last_seen_chat_message_id {
-            Some(seen_id) => seen_id != latest_message.id,
-            None => true,
-        }
+        self.chat_history[start_index..]
+            .iter()
+            .filter(|message| message.user_id != user_id)
+            .count() as i32
+    }
+
+    pub fn vote_history_revision_internal(&self) -> String {
+        self.vote_history.last().map_or_else(
+            || "0".to_string(),
+            |round| {
+                format!(
+                    "{}:{}:{}:{}",
+                    self.vote_history.len(),
+                    round.id,
+                    round.revote_count,
+                    round.completed_at.timestamp_millis()
+                )
+            },
+        )
     }
 
     pub fn mark_chat_seen(&mut self, user_id: EntityId) {
@@ -607,5 +630,69 @@ impl Room {
 impl Room {
     async fn has_unread_chat(&self, user_id: EntityId) -> Option<bool> {
         Some(self.has_unread_chat_internal(user_id))
+    }
+
+    async fn unread_chat_count(&self, user_id: Option<EntityId>) -> Option<i32> {
+        Some(
+            user_id
+                .map(|id| self.unread_chat_count_internal(id))
+                .unwrap_or(0),
+        )
+    }
+
+    async fn vote_history_revision(&self) -> Option<String> {
+        Some(self.vote_history_revision_internal())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Room;
+    use crate::domain::{chat::ChatMessage, user::User};
+
+    #[test]
+    fn unread_chat_count_excludes_own_messages_and_resets_when_seen() {
+        let mut room = Room::new_with_id(None, None, vec![]);
+        let current_user = User::new("Chris".to_string());
+        let other_user = User::new("Justin".to_string());
+        let current_user_id = current_user.id;
+        let other_user_id = other_user.id;
+        room.users = vec![current_user, other_user];
+
+        room.push_chat(ChatMessage::new(
+            room.id,
+            current_user_id,
+            "Chris".to_string(),
+            "Own message".to_string(),
+            None,
+            "text".to_string(),
+            None,
+        ));
+        assert_eq!(room.unread_chat_count_internal(current_user_id), 0);
+
+        room.push_chat(ChatMessage::new(
+            room.id,
+            other_user_id,
+            "Justin".to_string(),
+            "First reply".to_string(),
+            None,
+            "text".to_string(),
+            None,
+        ));
+        room.push_chat(ChatMessage::new(
+            room.id,
+            other_user_id,
+            "Justin".to_string(),
+            "Second reply".to_string(),
+            None,
+            "text".to_string(),
+            None,
+        ));
+        assert_eq!(room.unread_chat_count_internal(current_user_id), 2);
+        assert!(room.has_unread_chat_internal(current_user_id));
+
+        room.mark_chat_seen(current_user_id);
+        assert_eq!(room.unread_chat_count_internal(current_user_id), 0);
+        assert!(!room.has_unread_chat_internal(current_user_id));
     }
 }

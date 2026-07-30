@@ -310,7 +310,11 @@ export const ChatPanel: React.FC<{
     <>
       <motion.aside
         key="chat-panel"
-        initial={false}
+        initial={{
+          x: "100%",
+          opacity: 0,
+          pointerEvents: "none"
+        }}
         animate={{
           x: visible ? 0 : "100%",
           opacity: visible ? 1 : 0,

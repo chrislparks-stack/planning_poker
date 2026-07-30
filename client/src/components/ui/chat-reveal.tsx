@@ -95,7 +95,7 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({
     };
   }, [menuOpen]);
 
-  const unreadCount = React.useMemo(() => {
+  const fallbackUnreadCount = React.useMemo(() => {
     if (!room?.chatHistory || !user?.id) return 0;
 
     const roomUser = room?.users.find((u) => u.id === user?.id);
@@ -120,6 +120,7 @@ export const ChatRevealPrompt: React.FC<ChatRevealPromptProps> = ({
       .filter((m) => m.userId !== user.id).length;
   }, [room?.chatHistory, room?.users, user?.id]);
 
+  const unreadCount = room?.unreadChatCount ?? fallbackUnreadCount;
   const hasUnread = unreadCount > 0;
 
   return (

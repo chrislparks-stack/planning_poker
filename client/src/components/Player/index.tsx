@@ -20,7 +20,7 @@ import {
 import darkModeDiscussion from "@/assets/dark-mode-discussion.gif";
 import lightModeDiscussion from "@/assets/light-mode-discussion.gif";
 import noVoteGif from "@/assets/no-vote.gif";
-import { useTheme } from "@/components";
+import { useTheme } from "@/components/theme-provider";
 import { CardPickedIcon } from "@/components/ui/card-picked-icon.tsx";
 import { CensoredVote } from "@/components/ui/censored-vote.tsx";
 import { ChatInputWrapper } from "@/components/ui/chat-input-wrapper.tsx";
@@ -33,15 +33,6 @@ import { useBackgroundConfig } from "@/contexts/BackgroundContext.tsx";
 import { useToast } from "@/hooks/use-toast";
 import { ReactionKind, Room, User } from "@/types";
 import { useCardPosition } from "@/utils/cardPositionContext.tsx";
-
-if (typeof window !== "undefined") {
-  // picked.gif is a one-shot animation. Preloading it can advance its shared
-  // Chromium animation timeline before the submitted-card state is mounted.
-  [darkModeDiscussion, lightModeDiscussion, noVoteGif].forEach((src) => {
-    const img = new Image();
-    img.src = src;
-  });
-}
 
 interface CardIconImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   alt: string;

@@ -100,6 +100,7 @@ fragment RoomFragment on Room {
   lockVotes
   currentIssueTitle
   currentQueueItemId
+  voteHistoryRevision
   voteQueue {
     ...VoteQueueItemFragment
   }
@@ -114,13 +115,43 @@ fragment RoomFragment on Room {
   }
 }
 
+fragment RoomLiveFragment on Room {
+  id
+  name
+  isGameOver
+  roomOwnerId
+  users {
+    ...UserFragment
+  }
+  bannedUsers
+  deck {
+    ...DeckFragment
+  }
+  game {
+    ...GameFragment
+  }
+  countdownEnabled
+  revealStage
+  countdownValue
+  confirmNewGame
+  showVoteChanges
+  censorVotes
+  lockVotes
+  currentIssueTitle
+  currentQueueItemId
+  voteHistoryRevision
+  voteQueue {
+    ...VoteQueueItemFragment
+  }
+  previousRound {
+    ...RoundVoteHistoryFragment
+  }
+}
+
 fragment RoomEventFragment on RoomEvent {
   roomId
   eventType
   targetUserId
-  room {
-    ...RoomFragment
-  }
 }
 
 fragment RoomReactionFragment on RoomReaction {
@@ -270,7 +301,11 @@ mutation Logout($userId: UUID!) {
 
 mutation PickCard($userId: UUID!, $roomId: UUID!, $card: String!) {
   pickCard(userId: $userId, roomId: $roomId, card: $card) {
-    ...RoomFragment
+    id
+    users {
+      id
+      lastCardPicked
+    }
   }
 }
 
@@ -374,6 +409,7 @@ mutation MarkChatSeen($roomId: UUID!, $userId: UUID!) {
   markChatSeen(roomId: $roomId, userId: $userId) {
     id
     hasUnreadChat(userId: $userId)
+    unreadChatCount(userId: $userId)
   }
 }
 
@@ -388,9 +424,10 @@ mutation SendReaction(
 }
 
 # === Subscriptions & Queries ===
-subscription Room($roomId: UUID!) {
+subscription Room($roomId: UUID!, $userId: UUID) {
   room(roomId: $roomId) {
-    ...RoomFragment
+    ...RoomLiveFragment
+    unreadChatCount(userId: $userId)
   }
 }
 
@@ -416,6 +453,7 @@ subscription RoomUnread($roomId: UUID!, $userId: UUID!) {
   room(roomId: $roomId) {
     id
     hasUnreadChat(userId: $userId)
+    unreadChatCount(userId: $userId)
   }
 }
 
@@ -425,9 +463,19 @@ query GetRoom($roomId: UUID!) {
   }
 }
 
+query GetRoomVoteHistory($roomId: UUID!) {
+  roomById(roomId: $roomId) {
+    id
+    voteHistory {
+      ...RoundVoteHistoryFragment
+    }
+  }
+}
+
 query GetRoomUnread($roomId: UUID!, $userId: UUID!) {
   roomById(roomId: $roomId) {
     id
     hasUnreadChat(userId: $userId)
+    unreadChatCount(userId: $userId)
   }
 }

@@ -72,7 +72,8 @@ describe("ChatInputWrapper", () => {
       </>
     );
 
-    const wrapper = screen.getByTestId("floating-chat-input").parentElement!;
+    const wrapper = (await screen.findByTestId("floating-chat-input"))
+      .parentElement!;
     await waitFor(() => {
       expect(wrapper).toHaveStyle({
         left: "376px",
@@ -111,7 +112,8 @@ describe("ChatInputWrapper", () => {
       </>
     );
 
-    const wrapper = screen.getByTestId("floating-chat-input").parentElement!;
+    const wrapper = (await screen.findByTestId("floating-chat-input"))
+      .parentElement!;
     await waitFor(() => {
       expect(wrapper).toHaveStyle({
         left: "96px",

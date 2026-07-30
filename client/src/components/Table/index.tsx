@@ -331,17 +331,27 @@ export const Table: FC<TableProps> = ({
   }
 
   const [animatedProgress, setAnimatedProgress] = useState(0);
+  const animatedProgressRef = useRef(0);
   useEffect(() => {
-    let frame: number;
+    let frame = 0;
     const animate = () => {
-      setAnimatedProgress((previous) => {
-        const difference = votePercentage - previous;
-        return Math.abs(difference) < 0.5
-          ? votePercentage
-          : previous + difference * 0.1;
-      });
+      const previous = animatedProgressRef.current;
+      const difference = votePercentage - previous;
+
+      if (Math.abs(difference) < 0.5) {
+        if (previous !== votePercentage) {
+          animatedProgressRef.current = votePercentage;
+          setAnimatedProgress(votePercentage);
+        }
+        return;
+      }
+
+      const next = previous + difference * 0.1;
+      animatedProgressRef.current = next;
+      setAnimatedProgress(next);
       frame = requestAnimationFrame(animate);
     };
+
     frame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(frame);
   }, [votePercentage]);

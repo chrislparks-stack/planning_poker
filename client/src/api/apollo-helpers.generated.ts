@@ -86,7 +86,7 @@ export type QueryRootFieldPolicy = {
 	rooms?: FieldPolicy<any> | FieldReadFunction<any>,
 	userRooms?: FieldPolicy<any> | FieldReadFunction<any>
 };
-export type RoomKeySpecifier = ('bannedUsers' | 'censorVotes' | 'chatHistory' | 'confirmNewGame' | 'countdownEnabled' | 'countdownValue' | 'currentIssueTitle' | 'currentQueueItemId' | 'deck' | 'game' | 'hasUnreadChat' | 'id' | 'isGameOver' | 'lockVotes' | 'name' | 'previousRound' | 'revealStage' | 'roomOwnerId' | 'showVoteChanges' | 'users' | 'voteHistory' | 'voteQueue' | RoomKeySpecifier)[];
+export type RoomKeySpecifier = ('bannedUsers' | 'censorVotes' | 'chatHistory' | 'confirmNewGame' | 'countdownEnabled' | 'countdownValue' | 'currentIssueTitle' | 'currentQueueItemId' | 'deck' | 'game' | 'hasUnreadChat' | 'id' | 'isGameOver' | 'lockVotes' | 'name' | 'previousRound' | 'revealStage' | 'roomOwnerId' | 'showVoteChanges' | 'unreadChatCount' | 'users' | 'voteHistory' | 'voteHistoryRevision' | 'voteQueue' | RoomKeySpecifier)[];
 export type RoomFieldPolicy = {
 	bannedUsers?: FieldPolicy<any> | FieldReadFunction<any>,
 	censorVotes?: FieldPolicy<any> | FieldReadFunction<any>,
@@ -107,8 +107,10 @@ export type RoomFieldPolicy = {
 	revealStage?: FieldPolicy<any> | FieldReadFunction<any>,
 	roomOwnerId?: FieldPolicy<any> | FieldReadFunction<any>,
 	showVoteChanges?: FieldPolicy<any> | FieldReadFunction<any>,
+	unreadChatCount?: FieldPolicy<any> | FieldReadFunction<any>,
 	users?: FieldPolicy<any> | FieldReadFunction<any>,
 	voteHistory?: FieldPolicy<any> | FieldReadFunction<any>,
+	voteHistoryRevision?: FieldPolicy<any> | FieldReadFunction<any>,
 	voteQueue?: FieldPolicy<any> | FieldReadFunction<any>
 };
 export type RoomEventKeySpecifier = ('eventType' | 'room' | 'roomId' | 'targetUserId' | RoomEventKeySpecifier)[];
